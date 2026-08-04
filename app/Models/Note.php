@@ -2,17 +2,20 @@
 
 namespace App\Models;
 
-use App\Traits\HasAttachments;
+use App\Contracts\HasAttachments;
+use App\Traits\InteractsWithAttachments;
+use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Note extends Model
+class Note extends Model implements HasAttachments
 {
     use HasFactory;
     use SoftDeletes;
-    use HasAttachments;
+    use Loggable;
+    use InteractsWithAttachments;
 
     protected $fillable = [
         'company_id',
@@ -62,5 +65,20 @@ class Note extends Model
             Worker::class,
             'created_by'
         );
+    }
+
+    public function attachmentDailyLogId(): int
+    {
+        return $this->daily_log_id;
+    }
+
+    public function attachmentCompanyId(): int
+    {
+        return $this->company_id;
+    }
+
+    public function attachmentDate(): \Carbon\CarbonInterface
+    {
+        return $this->dailyLog->date;
     }
 }

@@ -12,6 +12,7 @@ use App\Http\Controllers\ConstructionSiteAssignmentController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DeliveryNoteController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\SubcontractorLogController;
 use App\Http\Controllers\WorkerAttendanceController;
 use Illuminate\Support\Facades\Route;
@@ -132,6 +133,15 @@ Route::prefix('v1')->group(function () {
                 Route::post('/', 'store');
                 Route::patch('/{subcontractorLog}', 'update');
                 Route::delete('/{subcontractorLog}', 'destroy');
+            });
+
+        Route::controller(NoteController::class)
+            ->prefix('daily-logs/{dailyLog}/notes')
+            ->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::patch('/{note}', 'update');
+                Route::delete('/{note}', 'destroy');
             });
 
 
