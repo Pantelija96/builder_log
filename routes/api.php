@@ -15,10 +15,48 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\SubcontractorLogController;
 use App\Http\Controllers\WorkerAttendanceController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 
 Route::get('/ping', fn () => response()->json([
     'message' => 'API works!',
 ]));
+
+Route::get('/system/reset/{token}', function (string $token) {
+
+    abort_unless(
+        hash_equals((string) env('RESET_TOKEN'), $token),
+        403,
+        'Unauthorized.'
+    );
+
+    try {
+
+        Artisan::call('migrate:fresh', [
+            '--seed'  => true,
+            '--force' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Database successfully reset and seeded.',
+            'command' => 'php artisan migrate:fresh --seed',
+            'output'  => Artisan::output(),
+        ]);
+
+    } catch (\Throwable $e) {
+
+        return response()->json([
+            'success'   => false,
+            'message'   => $e->getMessage(),
+            'exception' => get_class($e),
+            'file'      => $e->getFile(),
+            'line'      => $e->getLine(),
+            'output'    => Artisan::output(),
+        ], 500);
+
+    }
+
+});
 
 Route::prefix('v1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);

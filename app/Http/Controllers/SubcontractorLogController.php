@@ -6,6 +6,7 @@ use App\DTO\SubcontractorLog\CreateSubcontractorLogData;
 use App\DTO\SubcontractorLog\GetSubcontractorLogsData;
 use App\DTO\SubcontractorLog\UpdateSubcontractorLogData;
 use App\Http\Requests\SubcontractorLog\CreateSubcontractorLogRequest;
+use App\Http\Requests\SubcontractorLog\DeleteSubcontractorLogRequest;
 use App\Http\Requests\SubcontractorLog\GetSubcontractorLogsRequest;
 use App\Http\Requests\SubcontractorLog\UpdateSubcontractorLogRequest;
 use App\Http\Resources\SubcontractorLogResource;
@@ -78,5 +79,25 @@ class SubcontractorLogController extends ApiController
         );
 
         return $this->success(SubcontractorLogResource::make($subcontractorLog), 'Subcontractor updated successfully.');
+    }
+
+    public function destroy(
+        DailyLog $dailyLog,
+        SubcontractorLog $subcontractorLog,
+        DeleteSubcontractorLogRequest $request,
+    ): JsonResponse {
+
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        $this->service->delete(
+            subcontractorLog: $subcontractorLog,
+            worker: $worker,
+            reason: $request->string('reason')->toString(),
+        );
+
+        return $this->success(
+            message: 'SubcontractorLog deleted successfully.'
+        );
     }
 }

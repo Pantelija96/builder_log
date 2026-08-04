@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Actions\SubcontractorLog\CreateSubcontractorLogAction;
+use App\Actions\SubcontractorLog\DeleteSubcontractorLogAction;
 use App\Actions\SubcontractorLog\UpdateSubcontractorLogAction;
 use App\DTO\SubcontractorLog\CreateSubcontractorLogData;
 use App\DTO\SubcontractorLog\GetSubcontractorLogsData;
@@ -18,6 +19,7 @@ class SubcontractorLogService
     public function __construct(
         private readonly CreateSubcontractorLogAction $createAction,
         private readonly UpdateSubcontractorLogAction $updateAction,
+        private readonly DeleteSubcontractorLogAction $deleteAction,
     ) {
     }
 
@@ -58,6 +60,19 @@ class SubcontractorLogService
             $data,
             $worker,
             $reason,
+        );
+    }
+
+    public function delete(
+        SubcontractorLog $subcontractorLog,
+        Worker $worker,
+        string $reason,
+    ): void {
+
+        $this->deleteAction->execute(
+            subcontractorLog: $subcontractorLog,
+            currentWorker: $worker,
+            reason: $reason,
         );
     }
 }
