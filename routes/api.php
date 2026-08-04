@@ -121,6 +121,8 @@ Route::prefix('v1')->group(function () {
             ->group(function () {
                 Route::get('/', 'index');
                 Route::post('/', 'store');
+                Route::patch('/{deliveryNote}', 'update');
+                Route::delete('/{deliveryNote}', 'destroy');
             });
 
         Route::controller(SubcontractorLogController::class)
