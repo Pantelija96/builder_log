@@ -91,4 +91,50 @@ class NotificationService
             ],
         );
     }
+
+    public function taskCompleted(Worker $worker, Task $task, Worker $completedBy,): Notification
+    {
+        return $this->create(
+            worker: $worker,
+            type: NotificationType::TASK,
+            title: 'Task completed',
+            message: sprintf(
+                '%s %s completed task "%s".',
+                $completedBy->first_name,
+                $completedBy->last_name,
+                $task->title,
+            ),
+            payload: [
+                'task_id' => $task->id,
+                'completed_by' => $completedBy->id,
+            ],
+        );
+    }
+
+    public function taskReopened(Worker $worker, Task $task, Worker $reopenedBy,): Notification
+    {
+        return $this->create(
+            worker: $worker,
+            type: NotificationType::TASK,
+            title: 'Task reopened',
+            message: sprintf(
+                '%s %s reopened task "%s".',
+                $reopenedBy->first_name,
+                $reopenedBy->last_name,
+                $task->title,
+            ),
+            payload: [
+                'task_id' => $task->id,
+                'reopened_by' => $reopenedBy->id,
+            ],
+        );
+    }
+
+    public function deleteTaskNotifications(Task $task): void
+    {
+        Notification::query()
+            ->where('type', NotificationType::TASK)
+            ->where('payload->task_id', $task->id)
+            ->forceDelete();
+    }
 }

@@ -94,4 +94,16 @@ enum LogEvent: string
     case SUBCONTRACTOR_LOG_UPDATED = 'subcontractor.log.updated';
     case SUBCONTRACTOR_LOG_CREATED = 'subcontractor.log.created';
     case SUBCONTRACTOR_LOG_DELETED = 'subcontractor.log.deleted';
+
+    /*
+    |--------------------------------------------------------------------------
+    | Tasks
+    |--------------------------------------------------------------------------
+    */
+
+    case TASK_CREATED = 'task.created';
+    case TASK_UPDATED = 'task.updated';
+    case TASK_DELETED = 'task.deleted';
+    case TASK_COMPLETED = 'task.completed';
+    case TASK_REOPENED = 'task.reopened';
 }

@@ -43,11 +43,8 @@ class LoggingService
             'subject_type' => $subject->getMorphClass(),
             'subject_id' => $subject->getKey(),
             'description' => __('activity.' . $event->value),
-            'date' => $context['date']->format('Y-m-d'),
+            'date' => ($context['date'] ?? now())->format('Y-m-d'),
         ];
-
-//        dd($data);
-
         ActivityLog::create($data);
     }
 

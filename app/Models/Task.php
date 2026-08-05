@@ -2,17 +2,18 @@
 
 namespace App\Models;
 
-use App\Traits\HasAttachments;
+use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
-    use HasAttachments;
     use HasFactory;
     use SoftDeletes;
+    use Loggable;
 
     protected $fillable = [
         'company_id',
@@ -25,6 +26,7 @@ class Task extends Model
         'read_at',
         'completed_at',
         'created_by',
+        'completed_by'
     ];
 
     protected function casts(): array
@@ -70,5 +72,44 @@ class Task extends Model
     public function isCompleted(): bool
     {
         return $this->completed_at !== null;
+    }
+
+    public function completedBy(): BelongsTo
+    {
+        return $this->belongsTo(
+            Worker::class,
+            'completed_by'
+        );
+    }
+
+    public function markAsRead(): void
+    {
+        if ($this->isRead()) {
+            return;
+        }
+
+        $this->update([
+            'read_at' => now(),
+        ]);
+    }
+
+    public function markAsCompleted(Worker $worker): void
+    {
+        if ($this->isCompleted()) {
+            return;
+        }
+
+        $this->update([
+            'completed_at' => now(),
+            'completed_by' => $worker->id,
+        ]);
+    }
+
+    public function reopen(): void
+    {
+        $this->update([
+            'completed_at' => null,
+            'completed_by' => null,
+        ]);
     }
 }

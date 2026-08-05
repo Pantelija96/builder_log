@@ -15,6 +15,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SubcontractorLogController;
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\WorkerAttendanceController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -151,6 +152,24 @@ Route::prefix('v1')->group(function () {
                 Route::get('/', 'index');
                 Route::get('/unread-count', 'unreadCount');
                 Route::patch('/{notification}/read', 'read');
+            });
+
+        Route::controller(TaskController::class)
+            ->prefix('tasks')
+            ->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::patch('/{task}', 'update');
+                Route::delete('/{task}', 'destroy');
+            });
+
+        Route::controller(TaskController::class)
+            ->prefix('my/tasks')
+            ->group(function () {
+                Route::get('/', 'myTasks');
+                Route::patch('/{task}/read', 'read');
+                Route::patch('/{task}/complete', 'complete');
+                Route::patch('/{task}/reopen', 'reopen');
             });
 
 

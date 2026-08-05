@@ -6,7 +6,7 @@ use App\Actions\Attachment\DeleteAttachmentAction;
 use App\Actions\Attachment\UploadAttachmentAction;
 use App\Actions\Attachment\UploadAttachmentsAction;
 use App\Contracts\HasAttachments;
-use App\DTO\Attachment\UploadAttachmentData;
+use App\DTO\Attachment\StoredAttachmentData;
 use App\Exceptions\BusinessException;
 use App\Models\Attachment;
 use App\Models\Worker;

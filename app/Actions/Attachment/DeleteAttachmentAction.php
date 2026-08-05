@@ -2,7 +2,6 @@
 
 namespace App\Actions\Attachment;
 
-use App\Contracts\HasAttachments;
 use App\Enums\LogEvent;
 use App\Exceptions\BusinessException;
 use App\Models\Attachment;
