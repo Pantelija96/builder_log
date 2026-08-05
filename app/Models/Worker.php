@@ -163,4 +163,9 @@ class Worker extends Authenticatable
         return $this->belongsToMany(ConstructionSite::class)
             ->withTimestamps();
     }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
+    }
 }

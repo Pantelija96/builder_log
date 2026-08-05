@@ -13,6 +13,7 @@ use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DeliveryNoteController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SubcontractorLogController;
 use App\Http\Controllers\WorkerAttendanceController;
 use Illuminate\Support\Facades\Route;
@@ -142,6 +143,14 @@ Route::prefix('v1')->group(function () {
                 Route::post('/', 'store');
                 Route::patch('/{note}', 'update');
                 Route::delete('/{note}', 'destroy');
+            });
+
+        Route::controller(NotificationController::class)
+            ->prefix('notifications')
+            ->group(function () {
+                Route::get('/', 'index');
+                Route::get('/unread-count', 'unreadCount');
+                Route::patch('/{notification}/read', 'read');
             });
 
 
