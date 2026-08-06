@@ -62,4 +62,15 @@ class FinancialSummaryService
             utilization: $utilization,
         );
     }
+
+    public function cashAdvancesForSiteManager(
+        Worker $siteManager,
+    ): Collection
+    {
+        return $siteManager
+            ->cashAdvances()
+            ->with('creator')
+            ->latest('date')
+            ->get();
+    }
 }

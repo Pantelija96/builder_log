@@ -9,6 +9,7 @@ use App\Http\Requests\Expense\CreateExpenseRequest;
 use App\Http\Requests\Expense\DeleteExpenseRequest;
 use App\Http\Requests\Expense\GetExpensesRequest;
 use App\Http\Requests\Expense\UpdateExpenseRequest;
+use App\Http\Resources\CashAdvanceResource;
 use App\Http\Resources\ExpenseResource;
 use App\Models\DailyLog;
 use App\Models\Expense;
@@ -120,6 +121,11 @@ class ExpenseController extends ApiController
                 $dailyLog->siteManager,
             );
 
+        $cashAdvances = $this->financialSummaryService
+            ->cashAdvancesForSiteManager(
+                $dailyLog->siteManager,
+            );
+
         return $this->success([
             'expenses' => ExpenseResource::collection(
                 $expenses,
@@ -127,6 +133,10 @@ class ExpenseController extends ApiController
 
             'summary' => FinancialSummaryResource::make(
                 $summary,
+            ),
+
+            'cash_advances' => CashAdvanceResource::collection(
+                $cashAdvances,
             ),
         ]);
     }

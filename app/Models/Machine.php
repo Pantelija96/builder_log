@@ -84,6 +84,6 @@ class Machine extends Model
 
     public function isOwnedByWorker(): bool
     {
-        return $this->owner_type === OwnerType::WORKER;
+        return $this->owner_type === OwnerType::COMPANY;
     }
 }

@@ -30,6 +30,25 @@ class UpdateNoteRequest extends FormRequest
                 'string',
                 'max:500',
             ],
+
+            'attachments' => [
+                'sometimes',
+                'array',
+            ],
+
+            'attachments.*' => [
+                'file',
+                'max:10240',
+            ],
+
+            'delete_attachments' => [
+                'sometimes',
+                'array',
+            ],
+
+            'delete_attachments.*' => [
+                'integer',
+            ],
         ];
     }
 }
