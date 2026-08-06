@@ -11,6 +11,7 @@ readonly class UpdateDeliveryNoteData
         public string $name,
         public ?string $description,
         public array $attachments,
+        public array $deleteAttachments,
     ) {
     }
 
@@ -18,14 +19,15 @@ readonly class UpdateDeliveryNoteData
     {
         return new self(
             supplierId: $request->integer('supplier_id'),
-
             name: $request->string('name')->toString(),
-
             description: $request->filled('description')
                 ? $request->string('description')->toString()
                 : null,
-
             attachments: $request->file('attachments', []),
+            deleteAttachments: $request->input(
+                'delete_attachments',
+                [],
+            ),
         );
     }
 }

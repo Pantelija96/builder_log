@@ -2,6 +2,7 @@
 
 namespace App\Actions\DeliveryNote;
 
+use App\Actions\Attachment\SynchronizeAttachmentsAction;
 use App\Actions\BaseAction;
 use App\DTO\DeliveryNote\UpdateDeliveryNoteData;
 use App\Enums\LogEvent;
@@ -19,6 +20,7 @@ class UpdateDeliveryNoteAction extends BaseAction
 
     public function __construct(
         private readonly LoggingService $logging,
+        private readonly SynchronizeAttachmentsAction $synchronizeAttachmentsAction,
     ) {
     }
 
@@ -47,6 +49,14 @@ class UpdateDeliveryNoteAction extends BaseAction
                 'name' => $data->name,
                 'description' => $data->description,
             ]);
+
+            $this->synchronizeAttachmentsAction->execute(
+                attachable: $deliveryNote,
+                uploadedFiles: $data->attachments,
+                deleteAttachmentIds: $data->deleteAttachments,
+                worker: $currentWorker,
+                reason: $reason,
+            );
 
             $this->logging->audit(
                 actor: $currentWorker,

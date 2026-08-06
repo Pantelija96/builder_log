@@ -30,6 +30,25 @@ class UpdateExpenseRequest extends FormRequest
                 'numeric',
                 'gt:0',
             ],
+
+            'attachments' => [
+                'sometimes',
+                'array',
+            ],
+
+            'attachments.*' => [
+                'file',
+                'max:10240',
+            ],
+
+            'delete_attachments' => [
+                'sometimes',
+                'array',
+            ],
+
+            'delete_attachments.*' => [
+                'integer',
+            ],
         ];
     }
 }

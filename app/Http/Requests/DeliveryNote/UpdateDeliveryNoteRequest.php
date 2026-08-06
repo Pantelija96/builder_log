@@ -33,14 +33,22 @@ class UpdateDeliveryNoteRequest extends FormRequest
             ],
 
             'attachments' => [
-                'nullable',
+                'sometimes',
                 'array',
             ],
 
             'attachments.*' => [
                 'file',
-                'mimes:jpg,jpeg,png,pdf,doc,docx,xls,xlsx',
                 'max:10240',
+            ],
+
+            'delete_attachments' => [
+                'sometimes',
+                'array',
+            ],
+
+            'delete_attachments.*' => [
+                'integer',
             ],
 
             'reason' => [

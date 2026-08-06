@@ -2,6 +2,7 @@
 
 namespace App\Actions\Expense;
 
+use App\Actions\Attachment\SynchronizeAttachmentsAction;
 use App\Actions\BaseAction;
 use App\DTO\Expense\UpdateExpenseData;
 use App\Enums\LogEvent;
@@ -20,6 +21,7 @@ class UpdateExpenseAction extends BaseAction
 
     public function __construct(
         private readonly LoggingService $logging,
+        private readonly SynchronizeAttachmentsAction $synchronizeAttachmentsAction,
     ) {
     }
 
@@ -43,6 +45,14 @@ class UpdateExpenseAction extends BaseAction
                 'description' => $data->description,
                 'amount' => $data->amount,
             ]);
+
+            $this->synchronizeAttachmentsAction->execute(
+                attachable: $expense,
+                uploadedFiles: $data->attachments,
+                deleteAttachmentIds: $data->deleteAttachments,
+                worker: $currentWorker,
+                reason: $reason,
+            );
 
             $this->logging->activity(
                 actor: $currentWorker,
