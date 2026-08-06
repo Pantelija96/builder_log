@@ -137,4 +137,16 @@ class NotificationService
             ->where('payload->task_id', $task->id)
             ->forceDelete();
     }
+
+    public function markTaskNotificationAsRead(Worker $worker, Task $task,): void {
+
+        Notification::query()
+            ->whereBelongsTo($worker)
+            ->where('type', NotificationType::TASK)
+            ->where('payload->task_id', $task->id)
+            ->whereNull('read_at')
+            ->update([
+                'read_at' => now(),
+            ]);
+    }
 }

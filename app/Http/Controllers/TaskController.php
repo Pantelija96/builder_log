@@ -108,9 +108,15 @@ class TaskController extends ApiController
 
     public function read(Task $task,): JsonResponse
     {
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
         return $this->success(
             TaskResource::make(
-                $this->taskService->markAsRead($task)
+                $this->taskService->markAsRead(
+                    task: $task,
+                    worker: $worker,
+                )
             ),
             'Task marked as read.',
         );

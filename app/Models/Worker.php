@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WorkerRole;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -43,6 +44,14 @@ class Worker extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function scopeSiteManagers(Builder $query,): Builder
+    {
+        return $query->where(
+            'role',
+            WorkerRole::SITE_MANAGER,
+        );
     }
 
     public function company(): BelongsTo
@@ -167,5 +176,10 @@ class Worker extends Authenticatable
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
+    }
+
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(Expense::class, 'site_manager_id');
     }
 }

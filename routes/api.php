@@ -8,10 +8,12 @@ use App\Http\Controllers\Api\SubcontractorController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\WorkerController;
 use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\CashAdvanceController;
 use App\Http\Controllers\ConstructionSiteAssignmentController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DeliveryNoteController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\FinancialSummaryController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SubcontractorLogController;
@@ -99,6 +101,7 @@ Route::prefix('v1')->group(function () {
             ->prefix('daily-logs/{dailyLog}/expenses')
             ->group(function () {
                 Route::get('/', 'index');
+                Route::get('/history', 'history');
                 Route::post('/', 'store');
                 Route::patch('/{expense}', 'update');
                 Route::delete('/{expense}', 'destroy');
@@ -170,6 +173,24 @@ Route::prefix('v1')->group(function () {
                 Route::patch('/{task}/read', 'read');
                 Route::patch('/{task}/complete', 'complete');
                 Route::patch('/{task}/reopen', 'reopen');
+            });
+
+        Route::controller(CashAdvanceController::class)
+            ->prefix('cash-advances')
+            ->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::patch('/{cashAdvance}', 'update');
+                Route::delete('/{cashAdvance}', 'destroy');
+
+            });
+
+
+        Route::controller(FinancialSummaryController::class)
+            ->prefix('financial-summary')
+            ->group(function () {
+                Route::get('/', 'index');
+
             });
 
 

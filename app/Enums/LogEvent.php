@@ -106,4 +106,13 @@ enum LogEvent: string
     case TASK_DELETED = 'task.deleted';
     case TASK_COMPLETED = 'task.completed';
     case TASK_REOPENED = 'task.reopened';
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cash Advance
+    |--------------------------------------------------------------------------
+    */
+    case CASH_ADVANCE_CREATED = 'cash_advance.created';
+    case CASH_ADVANCE_UPDATED = 'cash_advance.updated';
+    case CASH_ADVANCE_DELETED = 'cash_advance.deleted';
 }

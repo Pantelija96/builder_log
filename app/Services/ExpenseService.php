@@ -60,9 +60,17 @@ class ExpenseService
 
     public function get(DailyLog $dailyLog, GetExpensesData $data,): Collection {
         return (new ExpenseFilter($data))
-            ->apply($this->query($dailyLog))
-            ->offset($data->list->offset)
-            ->limit($data->list->limit)
+            ->apply(
+                Expense::query()
+                    ->where(
+                        'site_manager_id',
+                        $dailyLog->site_manager_id,
+                    )
+                    ->where(
+                        'construction_site_id',
+                        $dailyLog->construction_site_id,
+                    )
+            )
             ->get();
     }
 
@@ -92,5 +100,34 @@ class ExpenseService
             $currentWorker,
             $reason,
         );
+    }
+
+    public function getHistory(
+        DailyLog $dailyLog,
+        GetExpensesData $data,
+    ): Collection {
+
+        return (new ExpenseFilter($data))
+            ->apply(
+                Expense::query()
+                    ->where(
+                        'site_manager_id',
+                        $dailyLog->site_manager_id,
+                    )
+                    ->where(
+                        'construction_site_id',
+                        $dailyLog->construction_site_id,
+                    )
+                    ->with([
+                        'creator',
+                        'siteManager',
+                        'constructionSite',
+                        'dailyLog',
+                        'attachments',
+                    ])
+            )
+            ->offset($data->list->offset)
+            ->limit($data->list->limit)
+            ->get();
     }
 }

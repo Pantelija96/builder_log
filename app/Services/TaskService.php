@@ -113,9 +113,11 @@ class TaskService
             $reason,
         );
     }
-    public function markAsRead(Task $task,): Task {
+    public function markAsRead(Task $task, Worker $worker,): Task
+    {
         return $this->markAsRead->execute(
-            $task
+            task: $task,
+            worker: $worker,
         );
     }
     public function complete(Task $task, Worker $worker,): Task {

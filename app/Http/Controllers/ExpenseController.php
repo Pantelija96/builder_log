@@ -16,11 +16,14 @@ use App\Models\Worker;
 use App\Services\ExpenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
+use App\Http\Resources\FinancialSummaryResource;
+use App\Services\FinancialSummaryService;
 
 class ExpenseController extends ApiController
 {
     public function __construct(
         private readonly ExpenseService $expenseService,
+        private readonly FinancialSummaryService $financialSummaryService,
     ) {
     }
 
@@ -55,13 +58,26 @@ class ExpenseController extends ApiController
         );
     }
 
-    public function index(DailyLog $dailyLog, GetExpensesRequest $request): JsonResponse {
-
-        return $this->success(
-            ExpenseResource::collection(
-                $this->expenseService->get($dailyLog, GetExpensesData::fromRequest($request))
-            )
+    public function index(DailyLog $dailyLog, GetExpensesRequest $request,): JsonResponse
+    {
+        $expenses = $this->expenseService->get(
+            $dailyLog,
+            GetExpensesData::fromRequest($request),
         );
+
+        $summary = $this->financialSummaryService
+            ->summaryForSiteManager(
+                $dailyLog->siteManager
+            );
+
+        return $this->success([
+            'expenses' => ExpenseResource::collection(
+                $expenses
+            ),
+            'summary' => FinancialSummaryResource::make(
+                $summary
+            ),
+        ]);
     }
 
     public function update(DailyLog $dailyLog, Expense $expense, UpdateExpenseRequest $request): JsonResponse {
@@ -87,5 +103,31 @@ class ExpenseController extends ApiController
         return $this->success(
             message: 'Expense deleted successfully.'
         );
+    }
+
+    public function history(
+        DailyLog $dailyLog,
+        GetExpensesRequest $request,
+    ): JsonResponse {
+
+        $expenses = $this->expenseService->getHistory(
+            $dailyLog,
+            GetExpensesData::fromRequest($request),
+        );
+
+        $summary = $this->financialSummaryService
+            ->summaryForSiteManager(
+                $dailyLog->siteManager,
+            );
+
+        return $this->success([
+            'expenses' => ExpenseResource::collection(
+                $expenses,
+            ),
+
+            'summary' => FinancialSummaryResource::make(
+                $summary,
+            ),
+        ]);
     }
 }
