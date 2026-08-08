@@ -57,6 +57,11 @@ class Machine extends Model
         return $this->hasOne(Truck::class);
     }
 
+    public function assignments(): HasMany
+    {
+        return $this->hasMany(MachineAssignment::class);
+    }
+
     public function isExcavator(): bool
     {
         return $this->type === MachineType::EXCAVATOR;
@@ -72,11 +77,6 @@ class Machine extends Model
         return $this->status === MachineStatus::ACTIVE;
     }
 
-    public function assignments(): HasMany
-    {
-        return $this->hasMany(MachineAssignment::class);
-    }
-
     public function isOwnedByCompany(): bool
     {
         return $this->owner_type === OwnerType::COMPANY;
@@ -84,6 +84,6 @@ class Machine extends Model
 
     public function isOwnedByWorker(): bool
     {
-        return $this->owner_type === OwnerType::COMPANY;
+        return $this->owner_type === OwnerType::WORKER;
     }
 }

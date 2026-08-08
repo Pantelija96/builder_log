@@ -25,19 +25,12 @@ readonly class GetMachinesData
     {
         return new self(
             list: ListQueryData::fromRequest($request),
-
             companyId: $request->validated('company_id'),
-
             type: $request->enum('type', MachineType::class),
-
             name: $request->validated('name'),
-
             status: $request->enum('status', MachineStatus::class),
-
             ownerType: $request->enum('owner_type', OwnerType::class),
-
             ownerId: $request->validated('owner_id'),
-
             exclude_type: $request->enum('exclude_type', MachineType::class),
         );
     }

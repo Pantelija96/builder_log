@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
 use App\DTO\Machine\CreateMachineData;
 use App\DTO\Machine\UpdateMachineData;
 use App\DTO\Requests\GetMachinesData;
-use App\Http\Controllers\ApiController;
 use App\Http\Requests\Get\GetMachinesRequest;
 use App\Http\Requests\Machine\CreateMachineRequest;
 use App\Http\Requests\Machine\DeleteMachineRequest;
@@ -19,18 +18,24 @@ use Illuminate\Http\JsonResponse;
 class MachineController extends ApiController
 {
     public function __construct(
-        protected readonly MachineService $machineService,
+        private readonly MachineService $machineService,
     ) {
     }
 
-    public function index(GetMachinesRequest $request)
-    {
-        $data = GetMachinesData::fromRequest($request);
+    public function index(
+        GetMachinesRequest $request,
+    ): JsonResponse {
 
-        $machines = $this->machineService->getAll($data);
+        /** @var Worker $worker */
+        $worker = auth()->user();
 
         return $this->success(
-            data: MachineResource::collection($machines),
+            MachineResource::collection(
+                $this->machineService->get(
+                    currentWorker: $worker,
+                    data: GetMachinesData::fromRequest($request),
+                )
+            )
         );
     }
 

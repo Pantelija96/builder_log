@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class MachineAssignment extends Model
 {
     use HasFactory;
     use SoftDeletes;
+    use Loggable;
 
     protected $fillable = [
         'company_id',
@@ -20,6 +21,8 @@ class MachineAssignment extends Model
         'site_manager_id',
         'machine_id',
         'worker_id',
+        'started_at',
+        'finished_at',
         'date',
         'created_by',
     ];
@@ -28,6 +31,8 @@ class MachineAssignment extends Model
     {
         return [
             'date' => 'date',
+            'started_at' => 'datetime',
+            'finished_at' => 'datetime',
         ];
     }
 
@@ -61,7 +66,10 @@ class MachineAssignment extends Model
 
     public function worker(): BelongsTo
     {
-        return $this->belongsTo(Worker::class);
+        return $this->belongsTo(
+            Worker::class,
+            'worker_id'
+        );
     }
 
     public function creator(): BelongsTo
@@ -70,15 +78,5 @@ class MachineAssignment extends Model
             Worker::class,
             'created_by'
         );
-    }
-
-    public function excavatorLog(): HasOne
-    {
-        return $this->hasOne(ExcavatorLog::class);
-    }
-
-    public function truckLog(): HasOne
-    {
-        return $this->hasOne(TruckLog::class);
     }
 }

@@ -55,6 +55,11 @@ class Company extends Model
         );
     }
 
+    public function machines(): HasMany
+    {
+        return $this->hasMany(Machine::class);
+    }
+
     public function tasks(): HasMany
     {
         return $this->hasMany(Task::class);

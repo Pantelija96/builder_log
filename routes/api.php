@@ -15,6 +15,7 @@ use App\Http\Controllers\DeliveryNoteController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FinancialSummaryController;
+use App\Http\Controllers\MachineAssignmentController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SubcontractorLogController;
@@ -201,7 +202,23 @@ Route::prefix('v1')->group(function () {
                 Route::patch('/{document}', 'update',);
                 Route::delete('/{document}', 'destroy',);
                 Route::get('/{document}/download', 'download',)->name('documents.download');
+            });
 
+        Route::controller(MachineAssignmentController::class)
+            ->group(function () {
+                Route::get('/machine-assignments', 'index');
+                Route::post('/daily-logs/{dailyLog}/machine-assignments', 'store');
+                Route::delete('/machine-assignments/{machineAssignment}', 'destroy');
+            });
+
+        Route::controller(MachineController::class)
+            ->prefix('machines')
+            ->group(function () {
+//                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::get('/{machine}', 'show');
+                Route::patch('/{machine}', 'update');
+                Route::delete('/{machine}', 'destroy');
             });
 
 

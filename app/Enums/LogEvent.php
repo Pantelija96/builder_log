@@ -56,6 +56,12 @@ enum LogEvent: string
     case MACHINE_UPDATED = 'machine.updated';
     case MACHINE_DELETED = 'machine.deleted';
 
+    case MACHINE_ASSIGNMENT_DELETED = 'machine.assignment.deleted';
+
+    case MACHINE_ASSIGNMENT_CREATED = 'machine.assignment.created';
+
+    case MACHINE_ASSIGNMENT_UPDATED = 'machine.assignment.updated';
+
     /*
     |--------------------------------------------------------------------------
     | Delivery Notes

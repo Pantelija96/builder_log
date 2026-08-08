@@ -40,11 +40,18 @@ return new class extends Migration
                 ->restrictOnDelete();
 
             $table->foreignId('worker_id')
+                ->nullable()
                 ->constrained('workers')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
-            $table->date('date')->index();
+            $table->timestamp('started_at');
+
+            $table->timestamp('finished_at')
+                ->nullable();
+
+            $table->date('date')
+                ->index();
 
             $table->foreignId('created_by')
                 ->constrained('workers')
@@ -54,10 +61,20 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(
-                ['machine_id', 'date'],
-                'machine_assignments_machine_date_unique'
-            );
+            $table->index([
+                'machine_id',
+                'date',
+            ]);
+
+            $table->index([
+                'construction_site_id',
+                'date',
+            ]);
+
+            $table->index([
+                'site_manager_id',
+                'date',
+            ]);
         });
     }
 

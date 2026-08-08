@@ -17,30 +17,19 @@ class MachineResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-
             'id' => $this->id,
-
             'company_id' => $this->company_id,
-
             'name' => $this->name,
-
             'type' => $this->type,
-
             'status' => $this->status,
-
             'owner_type' => $this->owner_type,
-
             'owner_id' => $this->owner_id,
-
             'image_path' => $this->image_path,
-
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-
             'company' => new CompanyResource(
                 $this->whenLoaded('company')
             ),
-
             'owner' => match (true) {
                 $this->owner instanceof Company => new CompanyResource($this->owner),
                 $this->owner instanceof Supplier => new SupplierResource($this->owner),
