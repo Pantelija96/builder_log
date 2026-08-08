@@ -12,6 +12,7 @@ use App\Http\Controllers\CashAdvanceController;
 use App\Http\Controllers\ConstructionSiteAssignmentController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DeliveryNoteController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FinancialSummaryController;
 use App\Http\Controllers\NoteController;
@@ -190,6 +191,16 @@ Route::prefix('v1')->group(function () {
             ->prefix('financial-summary')
             ->group(function () {
                 Route::get('/', 'index');
+            });
+
+        Route::prefix('documents')
+            ->controller(DocumentController::class)
+            ->group(function () {
+                Route::get('/', 'getAll',);
+                Route::post('/', 'store',);
+                Route::patch('/{document}', 'update',);
+                Route::delete('/{document}', 'destroy',);
+                Route::get('/{document}/download', 'download',)->name('documents.download');
 
             });
 

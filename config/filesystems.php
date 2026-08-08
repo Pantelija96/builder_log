@@ -82,4 +82,9 @@ return [
         'directory' => env('ATTACHMENTS_DIRECTORY', 'attachments'),
     ],
 
+    'documents' => [
+        'disk' => env('DOCUMENTS_DISK', 'public'),
+        'directory' => env('DOCUMENTS_DIRECTORY', 'documents'),
+    ],
+
 ];

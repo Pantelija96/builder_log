@@ -115,4 +115,13 @@ enum LogEvent: string
     case CASH_ADVANCE_CREATED = 'cash_advance.created';
     case CASH_ADVANCE_UPDATED = 'cash_advance.updated';
     case CASH_ADVANCE_DELETED = 'cash_advance.deleted';
+
+    /*
+   |--------------------------------------------------------------------------
+   | Document
+   |--------------------------------------------------------------------------
+   */
+    case DOCUMENT_UPDATED = 'document.updated';
+    case DOCUMENT_DELETED = 'document.deleted';
+    case DOCUMENT_CREATED = 'document.created';
 }
