@@ -209,6 +209,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/machine-assignments', 'index');
                 Route::post('/daily-logs/{dailyLog}/machine-assignments', 'store');
                 Route::delete('/machine-assignments/{machineAssignment}', 'destroy');
+                Route::patch('/machine-assignments/{machineAssignment}', 'update');
             });
 
         Route::controller(MachineController::class)

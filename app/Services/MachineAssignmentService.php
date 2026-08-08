@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Actions\MachineAssignment\CreateMachineAssignmentAction;
 use App\Actions\MachineAssignment\DeleteMachineAssignmentAction;
+use App\Actions\MachineAssignment\UpdateMachineAssignmentAction;
 use App\DTO\MachineAssignment\CreateMachineAssignmentData;
 use App\DTO\MachineAssignment\GetMachineAssignmentsData;
+use App\DTO\MachineAssignment\UpdateMachineAssignmentData;
 use App\Models\DailyLog;
 use App\Models\MachineAssignment;
 use App\Models\Worker;
@@ -17,6 +19,7 @@ class MachineAssignmentService
     public function __construct(
         private readonly CreateMachineAssignmentAction $createMachineAssignmentAction,
         private readonly DeleteMachineAssignmentAction $deleteMachineAssignmentAction,
+        private readonly UpdateMachineAssignmentAction $updateMachineAssignmentAction,
     ) {
     }
 
@@ -97,6 +100,31 @@ class MachineAssignmentService
 
         $this->deleteMachineAssignmentAction->execute(
             assignment: $assignment,
+            currentWorker: $currentWorker,
+            reason: $reason,
+        );
+    }
+
+    public function update(
+        MachineAssignment $assignment,
+        UpdateMachineAssignmentData $data,
+        Worker $currentWorker,
+        ?string $reason = null,
+    ): MachineAssignment {
+
+        $this->ensureCompanyAccess(
+            assignment: $assignment,
+            currentWorker: $currentWorker,
+        );
+
+        $this->ensureCanManageAssignment(
+            assignment: $assignment,
+            currentWorker: $currentWorker,
+        );
+
+        return $this->updateMachineAssignmentAction->execute(
+            assignment: $assignment,
+            data: $data,
             currentWorker: $currentWorker,
             reason: $reason,
         );

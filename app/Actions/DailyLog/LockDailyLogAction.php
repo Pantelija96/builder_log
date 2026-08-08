@@ -3,6 +3,7 @@
 namespace App\Actions\DailyLog;
 
 use App\Actions\BaseAction;
+use App\Actions\MachineAssignment\CloseOpenMachineAssignmentsAction;
 use App\Enums\LogEvent;
 use App\Models\DailyLog;
 use App\Models\Worker;
@@ -16,6 +17,7 @@ class LockDailyLogAction extends BaseAction
 
     public function __construct(
         private readonly LoggingService $logging,
+        private readonly CloseOpenMachineAssignmentsAction $closeOpenMachineAssignmentsAction,
     ) {
     }
 
@@ -30,6 +32,10 @@ class LockDailyLogAction extends BaseAction
 
         return $this->transaction(function () use ($dailyLog, $worker) {
             $oldValues = $dailyLog->getOriginal();
+
+            $this->closeOpenMachineAssignmentsAction->execute(
+                $dailyLog
+            );
 
             $dailyLog->update([
                 'is_locked' => true,

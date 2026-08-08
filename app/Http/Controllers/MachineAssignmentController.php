@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\DTO\MachineAssignment\CreateMachineAssignmentData;
 use App\DTO\MachineAssignment\GetMachineAssignmentsData;
+use App\DTO\MachineAssignment\UpdateMachineAssignmentData;
 use App\Http\Requests\Machine\CreateMachineAssignmentRequest;
 use App\Http\Requests\Machine\DeleteMachineAssignmentRequest;
 use App\Http\Requests\Machine\GetMachineAssignmentsRequest;
+use App\Http\Requests\Machine\UpdateMachineAssignmentRequest;
 use App\Http\Resources\MachineAssignmentResource;
 use App\Models\DailyLog;
 use App\Models\MachineAssignment;
@@ -74,6 +76,27 @@ class MachineAssignmentController extends ApiController
 
         return $this->success(
             message: 'Machine assignment deleted successfully.',
+        );
+    }
+
+    public function update(
+        MachineAssignment $machineAssignment,
+        UpdateMachineAssignmentRequest $request,
+    ): JsonResponse {
+
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        $assignment = $this->machineAssignmentService->update(
+            assignment: $machineAssignment,
+            data: UpdateMachineAssignmentData::fromRequest($request),
+            currentWorker: $worker,
+            reason: $request->string('reason')->toString(),
+        );
+
+        return $this->success(
+            MachineAssignmentResource::make($assignment),
+            'Machine assignment updated successfully.',
         );
     }
 }
