@@ -74,6 +74,11 @@ class Worker extends Authenticatable
         return $this->role === WorkerRole::OPERATOR;
     }
 
+    public function isDriver(): bool
+    {
+        return $this->role === WorkerRole::DRIVER;
+    }
+
     public function isWorker(): bool
     {
         return $this->role === WorkerRole::WORKER;

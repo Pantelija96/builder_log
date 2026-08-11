@@ -130,4 +130,20 @@ enum LogEvent: string
     case DOCUMENT_UPDATED = 'document.updated';
     case DOCUMENT_DELETED = 'document.deleted';
     case DOCUMENT_CREATED = 'document.created';
+
+    /*
+   |--------------------------------------------------------------------------
+   | Truck log
+   |--------------------------------------------------------------------------
+   */
+    case TRUCK_LOG_UPDATED = 'truck.log.updated';
+    case TRUCK_LOG_DELETED = 'truck.log.deleted';
+
+    /*
+   |--------------------------------------------------------------------------
+   | Excavator log
+   |--------------------------------------------------------------------------
+   */
+    case EXCAVATOR_LOG_UPDATED = 'excavator.log.updated';
+    case EXCAVATOR_LOG_DELETED = 'excavator.log.deleted';
 }

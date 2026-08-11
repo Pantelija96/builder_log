@@ -6,6 +6,7 @@ use App\Actions\MachineAssignment\CreateMachineAssignmentAction;
 use App\Actions\MachineAssignment\DeleteMachineAssignmentAction;
 use App\Actions\MachineAssignment\UpdateMachineAssignmentAction;
 use App\DTO\MachineAssignment\CreateMachineAssignmentData;
+use App\DTO\MachineAssignment\CreateMachineAssignmentForOperatorData;
 use App\DTO\MachineAssignment\GetMachineAssignmentsData;
 use App\DTO\MachineAssignment\UpdateMachineAssignmentData;
 use App\Models\DailyLog;
@@ -75,8 +76,26 @@ class MachineAssignmentService
             currentWorker: $currentWorker,
         );
 
-        return $this->createMachineAssignmentAction->execute(
+        return $this->createMachineAssignmentAction->executeForDailyLog(
             dailyLog: $dailyLog,
+            data: $data,
+            currentWorker: $currentWorker,
+        );
+    }
+
+    /**
+     * Create assignment when Operator selects a machine himself.
+     */
+    public function createForOperator(
+        CreateMachineAssignmentForOperatorData $data,
+        Worker $currentWorker,
+    ): MachineAssignment {
+
+        if (! $currentWorker->isOperator()) {
+            abort(403);
+        }
+
+        return $this->createMachineAssignmentAction->executeForOperator(
             data: $data,
             currentWorker: $currentWorker,
         );

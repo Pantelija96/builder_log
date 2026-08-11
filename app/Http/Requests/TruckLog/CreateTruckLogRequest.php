@@ -1,10 +1,11 @@
 <?php
 
-namespace App\Http\Requests\Machine;
+namespace App\Http\Requests\TruckLog;
 
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class CreateMachineAssignmentRequest extends FormRequest
+class CreateTruckLogRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -20,15 +21,15 @@ class CreateMachineAssignmentRequest extends FormRequest
                 'exists:machines,id',
             ],
 
-            'site_manager_started_at' => [
-                'required',
-                'date',
+            'worker_id' => [
+                'nullable',
+                'integer',
+                'exists:workers,id',
             ],
 
-            'site_manager_finished_at' => [
-                'nullable',
+            'date' => [
+                'required',
                 'date',
-                'after_or_equal:site_manager_started_at',
             ],
         ];
     }

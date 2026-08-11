@@ -14,7 +14,7 @@ class ConstructionSiteService
     {
         $query = ConstructionSite::query();
 
-        if (! $worker->isAdmin()) {
+        if ($worker->isSiteManager()) {
             $query->whereHas('siteManagers', function ($q) use ($worker) {
                 $q->whereKey($worker->id);
             });

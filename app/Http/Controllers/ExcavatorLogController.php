@@ -1,0 +1,102 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\DTO\ExcavatorLog\CreateExcavatorLogData;
+use App\DTO\ExcavatorLog\UpdateExcavatorLogData;
+use App\DTO\MachineAssignment\CreateMachineAssignmentForOperatorData;
+use App\Http\Requests\ExcavatorLog\CreateExcavatorLogForOperatorRequest;
+use App\Http\Requests\ExcavatorLog\CreateExcavatorLogRequest;
+use App\Http\Requests\ExcavatorLog\DeleteExcavatorLogRequest;
+use App\Http\Requests\ExcavatorLog\UpdateExcavatorLogRequest;
+use App\Http\Resources\ExcavatorLogResource;
+use App\Models\ExcavatorLog;
+use App\Models\Worker;
+use App\Services\ExcavatorLogService;
+use Illuminate\Http\JsonResponse;
+
+class ExcavatorLogController extends ApiController
+{
+    public function __construct(
+        private readonly ExcavatorLogService $excavatorLogService,
+    ) {
+    }
+
+    public function store(
+        CreateExcavatorLogRequest $request,
+    ): JsonResponse {
+
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        $excavatorLog = $this->excavatorLogService->create(
+            data: CreateExcavatorLogData::fromRequest($request),
+            currentWorker: $worker,
+        );
+
+        return $this->success(
+            ExcavatorLogResource::make($excavatorLog),
+            'Excavator log created successfully.',
+        );
+    }
+
+    public function storeForOperator(
+        CreateExcavatorLogForOperatorRequest $request,
+    ): JsonResponse {
+
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        $excavatorLog = $this->excavatorLogService->createForOperator(
+            data: CreateMachineAssignmentForOperatorData::fromRequest(
+                $request
+            ),
+            currentWorker: $worker,
+        );
+
+        return $this->success(
+            ExcavatorLogResource::make($excavatorLog),
+            'Excavator log created successfully.',
+        );
+    }
+
+    public function update(
+        ExcavatorLog $excavatorLog,
+        UpdateExcavatorLogRequest $request,
+    ): JsonResponse {
+
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        $excavatorLog = $this->excavatorLogService->update(
+            excavatorLog: $excavatorLog,
+            data: UpdateExcavatorLogData::fromRequest($request),
+            currentWorker: $worker,
+            reason: $request->string('reason')->toString(),
+        );
+
+        return $this->success(
+            ExcavatorLogResource::make($excavatorLog),
+            'Excavator log updated successfully.',
+        );
+    }
+
+    public function destroy(
+        ExcavatorLog $excavatorLog,
+        DeleteExcavatorLogRequest $request,
+    ): JsonResponse {
+
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        $this->excavatorLogService->delete(
+            excavatorLog: $excavatorLog,
+            currentWorker: $worker,
+            reason: $request->string('reason')->toString(),
+        );
+
+        return $this->success(
+            message: 'Excavator log deleted successfully.',
+        );
+    }
+}

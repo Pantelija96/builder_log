@@ -7,5 +7,6 @@ enum WorkerRole: string
     case ADMIN = 'admin';
     case SITE_MANAGER = 'site_manager';
     case OPERATOR = 'operator';
+    case DRIVER = 'driver';
     case WORKER = 'worker';
 }

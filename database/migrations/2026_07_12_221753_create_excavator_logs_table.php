@@ -30,8 +30,17 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
-            $table->timestamp('started_at');
-            $table->timestamp('finished_at')->nullable();
+            $table->timestamp('site_manager_started_at')
+                ->nullable();
+
+            $table->timestamp('site_manager_finished_at')
+                ->nullable();
+
+            $table->timestamp('operator_started_at')
+                ->nullable();
+
+            $table->timestamp('operator_finished_at')
+                ->nullable();
 
             $table->decimal('work_hours', 8, 2)
                 ->default(0);

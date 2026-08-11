@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             MachineSeeder::class,
             ExcavatorSeeder::class,
             TruckSeeder::class,
+            ConstructionSiteManagerSeeder::class,
         ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,13 +12,19 @@ class ExcavatorLog extends Model
 {
     use HasFactory;
     use SoftDeletes;
+    use Loggable;
 
     protected $fillable = [
         'machine_assignment_id',
         'worker_id',
         'created_by',
-        'started_at',
-        'finished_at',
+
+        'site_manager_started_at',
+        'site_manager_finished_at',
+
+        'operator_started_at',
+        'operator_finished_at',
+
         'work_hours',
         'fuel_added',
         'fuel_remaining',
@@ -27,8 +34,12 @@ class ExcavatorLog extends Model
     protected function casts(): array
     {
         return [
-            'started_at' => 'datetime',
-            'finished_at' => 'datetime',
+            'site_manager_started_at' => 'datetime',
+            'site_manager_finished_at' => 'datetime',
+
+            'operator_started_at' => 'datetime',
+            'operator_finished_at' => 'datetime',
+
             'work_hours' => 'decimal:2',
             'fuel_added' => 'decimal:2',
             'fuel_remaining' => 'decimal:2',

@@ -9,8 +9,8 @@ readonly class CreateMachineAssignmentData
 {
     public function __construct(
         public int $machineId,
-        public Carbon $startedAt,
-        public ?Carbon $finishedAt,
+        public Carbon $siteManagerStartedAt,
+        public ?Carbon $siteManagerFinishedAt,
     ) {
     }
 
@@ -19,12 +19,16 @@ readonly class CreateMachineAssignmentData
     ): self {
         return new self(
             machineId: (int) $request->validated('machine_id'),
-            startedAt: Carbon::parse(
-                $request->validated('started_at')
+
+            siteManagerStartedAt: Carbon::parse(
+                $request->validated('site_manager_started_at')
             ),
-            finishedAt: $request->validated('finished_at')
+
+            siteManagerFinishedAt: $request->validated(
+                'site_manager_finished_at'
+            )
                 ? Carbon::parse(
-                    $request->validated('finished_at')
+                    $request->validated('site_manager_finished_at')
                 )
                 : null,
         );

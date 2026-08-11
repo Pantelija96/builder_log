@@ -62,10 +62,10 @@ class WorkerSeeder extends Seeder
         ]);
 
         /*
-        |--------------------------------------------------------------------------
-        | Operators
-        |--------------------------------------------------------------------------
-        */
+         |--------------------------------------------------------------------------
+         | Operators
+         |--------------------------------------------------------------------------
+         */
 
         $operators = [
             [
@@ -97,6 +97,48 @@ class WorkerSeeder extends Seeder
                 ),
                 'role' => WorkerRole::OPERATOR,
                 'username' => $operator['username'],
+                'password' => 'password',
+                'email' => null,
+                'is_active' => true,
+            ]);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Drivers
+        |--------------------------------------------------------------------------
+        */
+
+        $drivers = [
+            [
+                'first_name' => 'Vladan',
+                'last_name' => 'Jovanović',
+                'username' => 'driver01',
+            ],
+            [
+                'first_name' => 'Mladen',
+                'last_name' => 'Simić',
+                'username' => 'driver02',
+            ],
+            [
+                'first_name' => 'Nenad',
+                'last_name' => 'Stojanović',
+                'username' => 'driver03',
+            ],
+        ];
+
+        foreach ($drivers as $index => $driver) {
+
+            Worker::create([
+                'company_id' => $company->id,
+                'first_name' => $driver['first_name'],
+                'last_name' => $driver['last_name'],
+                'phone' => sprintf(
+                    '+38160255%04d',
+                    $index + 1
+                ),
+                'role' => WorkerRole::DRIVER,
+                'username' => $driver['username'],
                 'password' => 'password',
                 'email' => null,
                 'is_active' => true,

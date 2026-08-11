@@ -13,6 +13,7 @@ use App\Http\Controllers\ConstructionSiteAssignmentController;
 use App\Http\Controllers\DailyLogController;
 use App\Http\Controllers\DeliveryNoteController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\ExcavatorLogController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FinancialSummaryController;
 use App\Http\Controllers\MachineAssignmentController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SubcontractorLogController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TruckLogController;
 use App\Http\Controllers\WorkerAttendanceController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -27,6 +29,14 @@ use Illuminate\Support\Facades\Artisan;
 Route::get('/ping', fn () => response()->json([
     'message' => 'API works!',
 ]));
+
+Route::get('/test', function (){
+    dd(
+        config('app.timezone'),
+        now()->toDateTimeString(),
+        now()->timezoneName,
+    );
+});
 
 Route::get('/system/reset/{token}', function (string $token) {
 
@@ -205,11 +215,13 @@ Route::prefix('v1')->group(function () {
             });
 
         Route::controller(MachineAssignmentController::class)
+            ->prefix('machine-assignments')
             ->group(function () {
-                Route::get('/machine-assignments', 'index');
-                Route::post('/daily-logs/{dailyLog}/machine-assignments', 'store');
-                Route::delete('/machine-assignments/{machineAssignment}', 'destroy');
-                Route::patch('/machine-assignments/{machineAssignment}', 'update');
+                Route::get('/', 'index');
+                Route::post('/daily-logs/{dailyLog}', 'store');
+                Route::delete('/{machineAssignment}', 'destroy');
+                Route::patch('/{machineAssignment}', 'update');
+                Route::post('/operator', 'storeForOperator',);
             });
 
         Route::controller(MachineController::class)
@@ -220,6 +232,25 @@ Route::prefix('v1')->group(function () {
                 Route::get('/{machine}', 'show');
                 Route::patch('/{machine}', 'update');
                 Route::delete('/{machine}', 'destroy');
+            });
+
+        Route::controller(TruckLogController::class)
+            ->prefix('truck-logs')
+            ->group(function () {
+                Route::get('/', 'index');
+                Route::get('/{truckLog}', 'show');
+                Route::post('/', 'store');
+                Route::patch('/{truckLog}', 'update');
+                Route::delete('/{truckLog}', 'destroy');
+            });
+
+        Route::controller(ExcavatorLogController::class)
+            ->prefix('excavator-logs')
+            ->group(function () {
+                Route::post('/', 'store');
+                Route::patch('/{excavatorLog}', 'update',);
+                Route::delete('/{excavatorLog}', 'destroy',);
+                Route::post('/operator', 'storeForOperator',);
             });
 
 

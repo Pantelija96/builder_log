@@ -20,6 +20,7 @@ return new class extends Migration
                 ->restrictOnDelete();
 
             $table->foreignId('daily_log_id')
+                ->nullable()
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
@@ -30,6 +31,7 @@ return new class extends Migration
                 ->restrictOnDelete();
 
             $table->foreignId('site_manager_id')
+                ->nullable()
                 ->constrained('workers')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
@@ -45,9 +47,16 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
-            $table->timestamp('started_at');
+            $table->timestamp('site_manager_started_at')
+                ->nullable();
 
-            $table->timestamp('finished_at')
+            $table->timestamp('site_manager_finished_at')
+                ->nullable();
+
+            $table->timestamp('operator_started_at')
+                ->nullable();
+
+            $table->timestamp('operator_finished_at')
                 ->nullable();
 
             $table->date('date')
