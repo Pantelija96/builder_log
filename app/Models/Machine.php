@@ -91,4 +91,9 @@ class Machine extends Model
     {
         return $this->owner_type === OwnerType::WORKER;
     }
+
+    public function machineAssignments(): HasMany
+    {
+        return $this->hasMany(MachineAssignment::class);
+    }
 }

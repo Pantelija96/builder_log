@@ -9,6 +9,7 @@ use App\Http\Requests\TruckLog\CreateTruckLogRequest;
 use App\Http\Requests\TruckLog\DeleteTruckLogRequest;
 use App\Http\Requests\TruckLog\GetTruckLogsRequest;
 use App\Http\Requests\TruckLog\UpdateTruckLogRequest;
+use App\Http\Resources\MachineResource;
 use App\Http\Resources\TruckLogResource;
 use App\Models\TruckLog;
 use App\Models\Worker;
@@ -106,6 +107,21 @@ class TruckLogController extends ApiController
 
         return $this->success(
             message: 'Truck log deleted successfully.',
+        );
+    }
+
+    public function available(): JsonResponse
+    {
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        $trucks = $this->truckLogService->getAvailable(
+            currentWorker: $worker,
+        );
+
+        return $this->success(
+            MachineResource::collection($trucks),
+            'Available trucks retrieved successfully.',
         );
     }
 }

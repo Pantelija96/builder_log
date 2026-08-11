@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\DTO\Machine\CreateMachineData;
 use App\DTO\Machine\UpdateMachineData;
 use App\DTO\Requests\GetMachinesData;
+use App\Enums\MachineType;
 use App\Http\Requests\Get\GetMachinesRequest;
 use App\Http\Requests\Machine\CreateMachineRequest;
 use App\Http\Requests\Machine\DeleteMachineRequest;
@@ -14,6 +15,7 @@ use App\Models\Machine;
 use App\Models\Worker;
 use App\Services\MachineService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class MachineController extends ApiController
 {
@@ -118,6 +120,30 @@ class MachineController extends ApiController
 
         return $this->success(
             message: 'Machine deleted successfully.',
+        );
+    }
+
+    public function available(Request $request): JsonResponse
+    {
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        $type = MachineType::tryFrom(
+            $request->query('type')
+        );
+
+        if ($type === null) {
+            abort(422, 'Invalid machine type.');
+        }
+
+        $machines = $this->machineService->getAvailable(
+            currentWorker: $worker,
+            type: $type,
+        );
+
+        return $this->success(
+            MachineResource::collection($machines),
+            'Available machines retrieved successfully.',
         );
     }
 }

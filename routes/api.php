@@ -85,7 +85,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/workers', [WorkerController::class, 'index']);
         Route::get('/companies', [CompanyController::class, 'index']);
         Route::get('/construction-sites', [ConstructionSiteController::class, 'index']);
-        Route::get('/machines', [MachineController::class, 'index']);
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/subcontractors', [SubcontractorController::class, 'index']);
         Route::get('/expenses', [ExpenseController::class, 'getAll']);
@@ -227,7 +226,8 @@ Route::prefix('v1')->group(function () {
         Route::controller(MachineController::class)
             ->prefix('machines')
             ->group(function () {
-//                Route::get('/', 'index');
+                Route::get('/', 'index');
+                Route::get('/available', 'available');
                 Route::post('/', 'store');
                 Route::get('/{machine}', 'show');
                 Route::patch('/{machine}', 'update');
@@ -238,6 +238,7 @@ Route::prefix('v1')->group(function () {
             ->prefix('truck-logs')
             ->group(function () {
                 Route::get('/', 'index');
+                Route::get('/available', 'available');
                 Route::get('/{truckLog}', 'show');
                 Route::post('/', 'store');
                 Route::patch('/{truckLog}', 'update');

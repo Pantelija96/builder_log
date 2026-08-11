@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Actions\Truck\GetAvailableTrucksAction;
 use App\Actions\TruckLog\CreateTruckLogAction;
 use App\Actions\TruckLog\DeleteTruckLogAction;
 use App\Actions\TruckLog\UpdateTruckLogAction;
@@ -20,6 +21,7 @@ class TruckLogService
         private readonly CreateTruckLogAction $createTruckLogAction,
         private readonly UpdateTruckLogAction $updateTruckLogAction,
         private readonly DeleteTruckLogAction $deleteTruckLogAction,
+        private readonly GetAvailableTrucksAction $getAvailableTrucksAction,
     ) {
     }
 
@@ -100,6 +102,15 @@ class TruckLogService
         $this->ensureCompanyAccess(truckLog: $truckLog, currentWorker: $currentWorker,);
         $this->ensureCanUpdate(truckLog: $truckLog, currentWorker: $currentWorker,);
         $this->deleteTruckLogAction->execute(truckLog: $truckLog, currentWorker: $currentWorker, reason: $reason,);
+    }
+
+    public function getAvailable(
+        Worker $currentWorker,
+    ): Collection {
+
+        return $this->getAvailableTrucksAction->execute(
+            currentWorker: $currentWorker,
+        );
     }
 
     private function applyWorkerScope(Builder $query, Worker $currentWorker,): void

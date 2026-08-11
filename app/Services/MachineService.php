@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Actions\Machine\CreateMachineAction;
 use App\Actions\Machine\DeleteMachineAction;
+use App\Actions\Machine\GetAvailableMachinesAction;
 use App\Actions\Machine\UpdateMachineAction;
 use App\DTO\Machine\CreateMachineData;
 use App\DTO\Machine\UpdateMachineData;
 use App\DTO\Requests\GetMachinesData;
+use App\Enums\MachineType;
 use App\Models\Machine;
 use App\Models\Worker;
 use App\QueryFilters\MachineFilter;
@@ -19,6 +21,7 @@ class MachineService
         private readonly CreateMachineAction $createMachineAction,
         private readonly UpdateMachineAction $updateMachineAction,
         private readonly DeleteMachineAction $deleteMachineAction,
+        private readonly GetAvailableMachinesAction $getAvailableMachinesAction,
     ) {
     }
 
@@ -133,6 +136,17 @@ class MachineService
             machine: $machine,
             currentWorker: $currentWorker,
             reason: $reason,
+        );
+    }
+
+    public function getAvailable(
+        Worker $currentWorker,
+        MachineType $type,
+    ): Collection {
+
+        return $this->getAvailableMachinesAction->execute(
+            currentWorker: $currentWorker,
+            type: $type,
         );
     }
 
