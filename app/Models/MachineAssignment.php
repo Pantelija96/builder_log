@@ -22,10 +22,6 @@ class MachineAssignment extends Model
         'site_manager_id',
         'machine_id',
         'worker_id',
-        'site_manager_started_at',
-        'site_manager_finished_at',
-        'operator_started_at',
-        'operator_finished_at',
         'date',
         'created_by',
     ];
@@ -34,10 +30,6 @@ class MachineAssignment extends Model
     {
         return [
             'date' => 'date',
-            'site_manager_started_at' => 'datetime',
-            'site_manager_finished_at' => 'datetime',
-            'operator_started_at' => 'datetime',
-            'operator_finished_at' => 'datetime',
         ];
     }
 

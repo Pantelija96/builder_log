@@ -3,6 +3,7 @@
 namespace App\Http\Requests\ExcavatorLog;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CreateExcavatorLogRequest extends FormRequest
 {
@@ -14,16 +15,32 @@ class CreateExcavatorLogRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'machine_assignment_id' => [
+            'machine_id' => [
                 'required',
                 'integer',
-                'exists:machine_assignments,id',
+                'exists:machines,id',
             ],
 
             'worker_id' => [
-                'nullable',
+                'required',
                 'integer',
                 'exists:workers,id',
+            ],
+
+            'site_manager_started_at' => [
+                'nullable',
+                'date',
+            ],
+
+            'site_manager_finished_at' => [
+                'nullable',
+                'date',
+                'after_or_equal:site_manager_started_at',
+            ],
+
+            'note_site_manager' => [
+                'nullable',
+                'string',
             ],
         ];
     }

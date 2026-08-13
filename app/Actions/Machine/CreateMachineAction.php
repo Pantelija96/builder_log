@@ -9,16 +9,13 @@ use App\Models\Worker;
 
 class CreateMachineAction extends BaseAction
 {
-    public function execute(
-        CreateMachineData $data,
-        Worker $currentWorker,
-    ): Machine {
-
+    public function execute(CreateMachineData $data, Worker $currentWorker,): Machine
+    {
         return $this->transaction(function () use (
             $data,
             $currentWorker,
-        ) {
-
+        )
+        {
             $machine = Machine::create([
                 'company_id' => $currentWorker->company_id,
                 'name' => $data->name,

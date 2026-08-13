@@ -11,14 +11,10 @@ class DeleteMachineAction
 {
     public function __construct(
         private readonly LoggingService $logging,
-    ) {
-    }
+    ) {}
 
-    public function execute(
-        Machine $machine,
-        Worker $currentWorker,
-        string $reason,
-    ): void {
+    public function execute(Machine $machine, Worker $currentWorker, string $reason,): void
+    {
         $oldValues = $machine->getAttributes();
 
         $this->logging->activity(

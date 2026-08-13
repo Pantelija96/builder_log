@@ -9,17 +9,14 @@ use App\Models\Worker;
 
 class UpdateMachineAction extends BaseAction
 {
-    public function execute(
-        Machine $machine,
-        UpdateMachineData $data,
-        Worker $currentWorker,
-    ): Machine {
-
+    public function execute(Machine $machine, UpdateMachineData $data, Worker $currentWorker,): Machine
+    {
         return $this->transaction(function () use (
             $machine,
             $data,
             $currentWorker,
-        ) {
+        )
+        {
 
             $machine->update([
                 'name' => $data->name,

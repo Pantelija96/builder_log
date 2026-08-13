@@ -19,17 +19,10 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->string('name', 150)->index();
-
             $table->string('type', 50)->index();
-
             $table->morphs('owner');
-
-            $table->string('status', 50)
-                ->default(MachineStatus::ACTIVE->value)
-                ->index();
-
+            $table->string('status', 50)->default(MachineStatus::ACTIVE->value)->index();
             $table->string('image_path')->nullable();
 
             $table->timestamps();

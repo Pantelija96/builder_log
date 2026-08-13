@@ -14,22 +14,13 @@ class MachineAssignmentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'machine' => MachineResource::make(
-                $this->whenLoaded('machine'),
-            ),
-            'construction_site' => ConstructionSiteResource::make(
-                $this->whenLoaded('constructionSite'),
-            ),
-            'site_manager' => WorkerResource::make(
-                $this->whenLoaded('siteManager'),
-            ),
-            'worker' => WorkerResource::make(
-                $this->whenLoaded('worker'),
-            ),
-            'started_at' => $this->started_at,
-            'finished_at' => $this->finished_at,
+            'machine' => MachineResource::make($this->whenLoaded('machine')),
+            'construction_site' => ConstructionSiteResource::make($this->whenLoaded('constructionSite')),
+            'site_manager' => WorkerResource::make($this->whenLoaded('siteManager')),
+            'worker' => WorkerResource::make($this->whenLoaded('worker')),
             'date' => $this->date,
             'created_at' => $this->created_at,
+            'updated_at' => $this->updated_at,
         ];
     }
 }

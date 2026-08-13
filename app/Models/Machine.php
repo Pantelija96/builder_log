@@ -62,7 +62,7 @@ class Machine extends Model
         return $this->hasMany(TruckLog::class);
     }
 
-    public function assignments(): HasMany
+    public function machineAssignments(): HasMany
     {
         return $this->hasMany(MachineAssignment::class);
     }
@@ -90,10 +90,5 @@ class Machine extends Model
     public function isOwnedByWorker(): bool
     {
         return $this->owner_type === OwnerType::WORKER;
-    }
-
-    public function machineAssignments(): HasMany
-    {
-        return $this->hasMany(MachineAssignment::class);
     }
 }

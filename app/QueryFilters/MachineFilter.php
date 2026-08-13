@@ -2,7 +2,7 @@
 
 namespace App\QueryFilters;
 
-use App\DTO\Requests\GetMachinesData;
+use App\DTO\Machine\GetMachinesData;
 use Illuminate\Database\Eloquent\Builder;
 
 class MachineFilter extends BaseFilter

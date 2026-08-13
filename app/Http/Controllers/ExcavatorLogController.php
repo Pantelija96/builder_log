@@ -3,13 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\DTO\ExcavatorLog\CreateExcavatorLogData;
+use App\DTO\ExcavatorLog\CreateExcavatorLogForOperatorData;
 use App\DTO\ExcavatorLog\UpdateExcavatorLogData;
-use App\DTO\MachineAssignment\CreateMachineAssignmentForOperatorData;
 use App\Http\Requests\ExcavatorLog\CreateExcavatorLogForOperatorRequest;
 use App\Http\Requests\ExcavatorLog\CreateExcavatorLogRequest;
 use App\Http\Requests\ExcavatorLog\DeleteExcavatorLogRequest;
 use App\Http\Requests\ExcavatorLog\UpdateExcavatorLogRequest;
 use App\Http\Resources\ExcavatorLogResource;
+use App\Http\Resources\MachineResource;
+use App\Models\DailyLog;
 use App\Models\ExcavatorLog;
 use App\Models\Worker;
 use App\Services\ExcavatorLogService;
@@ -19,17 +21,15 @@ class ExcavatorLogController extends ApiController
 {
     public function __construct(
         private readonly ExcavatorLogService $excavatorLogService,
-    ) {
-    }
+    ) {}
 
-    public function store(
-        CreateExcavatorLogRequest $request,
-    ): JsonResponse {
-
+    public function store(DailyLog $dailyLog, CreateExcavatorLogRequest $request,): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 
         $excavatorLog = $this->excavatorLogService->create(
+            dailyLog: $dailyLog,
             data: CreateExcavatorLogData::fromRequest($request),
             currentWorker: $worker,
         );
@@ -40,17 +40,13 @@ class ExcavatorLogController extends ApiController
         );
     }
 
-    public function storeForOperator(
-        CreateExcavatorLogForOperatorRequest $request,
-    ): JsonResponse {
-
+    public function storeForOperator(CreateExcavatorLogForOperatorRequest $request,): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 
         $excavatorLog = $this->excavatorLogService->createForOperator(
-            data: CreateMachineAssignmentForOperatorData::fromRequest(
-                $request
-            ),
+            data: CreateExcavatorLogForOperatorData::fromRequest($request),
             currentWorker: $worker,
         );
 
@@ -60,11 +56,8 @@ class ExcavatorLogController extends ApiController
         );
     }
 
-    public function update(
-        ExcavatorLog $excavatorLog,
-        UpdateExcavatorLogRequest $request,
-    ): JsonResponse {
-
+    public function update(ExcavatorLog $excavatorLog, UpdateExcavatorLogRequest $request,): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -81,11 +74,8 @@ class ExcavatorLogController extends ApiController
         );
     }
 
-    public function destroy(
-        ExcavatorLog $excavatorLog,
-        DeleteExcavatorLogRequest $request,
-    ): JsonResponse {
-
+    public function destroy(ExcavatorLog $excavatorLog, DeleteExcavatorLogRequest $request,): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -97,6 +87,21 @@ class ExcavatorLogController extends ApiController
 
         return $this->success(
             message: 'Excavator log deleted successfully.',
+        );
+    }
+
+    public function available(): JsonResponse
+    {
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        return $this->success(
+            MachineResource::collection(
+                $this->excavatorLogService->getAvailable(
+                    currentWorker: $worker,
+                )
+            ),
+            'Available excavators retrieved successfully.',
         );
     }
 }

@@ -4,13 +4,15 @@ namespace App\Services;
 
 use App\Actions\ExcavatorLog\CreateExcavatorLogAction;
 use App\Actions\ExcavatorLog\DeleteExcavatorLogAction;
+use App\Actions\ExcavatorLog\GetAvailableExcavatorsAction;
 use App\Actions\ExcavatorLog\UpdateExcavatorLogAction;
-use App\Actions\MachineAssignment\CreateMachineAssignmentAction;
 use App\DTO\ExcavatorLog\CreateExcavatorLogData;
+use App\DTO\ExcavatorLog\CreateExcavatorLogForOperatorData;
 use App\DTO\ExcavatorLog\UpdateExcavatorLogData;
-use App\DTO\MachineAssignment\CreateMachineAssignmentForOperatorData;
+use App\Models\DailyLog;
 use App\Models\ExcavatorLog;
 use App\Models\Worker;
+use Illuminate\Database\Eloquent\Collection;
 
 class ExcavatorLogService
 {
@@ -18,47 +20,35 @@ class ExcavatorLogService
         private readonly CreateExcavatorLogAction $createExcavatorLogAction,
         private readonly UpdateExcavatorLogAction $updateExcavatorLogAction,
         private readonly DeleteExcavatorLogAction $deleteExcavatorLogAction,
-        private readonly CreateMachineAssignmentAction $createMachineAssignmentAction,
-    ) {
-    }
+        private readonly GetAvailableExcavatorsAction $getAvailableExcavatorsAction,
+    ) {}
 
-    public function create(
-        CreateExcavatorLogData $data,
-        Worker $currentWorker,
-    ): ExcavatorLog {
-
+    public function create(DailyLog $dailyLog, CreateExcavatorLogData $data, Worker $currentWorker,): ExcavatorLog
+    {
         return $this->createExcavatorLogAction->execute(
+            dailyLog: $dailyLog,
             data: $data,
             currentWorker: $currentWorker,
         );
     }
 
-    public function createForOperator(
-        CreateMachineAssignmentForOperatorData $data,
-        Worker $currentWorker,
-    ): ExcavatorLog {
-
-        $assignment = $this->createMachineAssignmentAction
-            ->executeForOperator(
-                data: $data,
-                currentWorker: $currentWorker,
-            );
-
-        return $this->createExcavatorLogAction->execute(
-            data: new CreateExcavatorLogData(
-                machineAssignmentId: $assignment->id,
-            ),
+    public function createForOperator(CreateExcavatorLogForOperatorData $data, Worker $currentWorker,): ExcavatorLog
+    {
+        return $this->createExcavatorLogAction->executeForOperator(
+            data: $data,
             currentWorker: $currentWorker,
         );
     }
 
-    public function update(
-        ExcavatorLog $excavatorLog,
-        UpdateExcavatorLogData $data,
-        Worker $currentWorker,
-        ?string $reason = null,
-    ): ExcavatorLog {
+    public function getAvailable(Worker $currentWorker,): Collection
+    {
+        return $this->getAvailableExcavatorsAction->execute(
+            currentWorker: $currentWorker,
+        );
+    }
 
+    public function update(ExcavatorLog $excavatorLog, UpdateExcavatorLogData $data, Worker $currentWorker, ?string $reason = null,): ExcavatorLog
+    {
         $this->ensureCompanyAccess(
             excavatorLog: $excavatorLog,
             currentWorker: $currentWorker,
@@ -77,12 +67,8 @@ class ExcavatorLogService
         );
     }
 
-    public function delete(
-        ExcavatorLog $excavatorLog,
-        Worker $currentWorker,
-        string $reason,
-    ): void {
-
+    public function delete(ExcavatorLog $excavatorLog, Worker $currentWorker, string $reason,): void
+    {
         $this->ensureCompanyAccess(
             excavatorLog: $excavatorLog,
             currentWorker: $currentWorker,
@@ -100,11 +86,8 @@ class ExcavatorLogService
         );
     }
 
-    private function ensureCompanyAccess(
-        ExcavatorLog $excavatorLog,
-        Worker $currentWorker,
-    ): void {
-
+    private function ensureCompanyAccess(ExcavatorLog $excavatorLog, Worker $currentWorker,): void
+    {
         if (
             $excavatorLog->machineAssignment->company_id
             !== $currentWorker->company_id
@@ -113,34 +96,19 @@ class ExcavatorLogService
         }
     }
 
-    private function ensureCanUpdate(
-        ExcavatorLog $excavatorLog,
-        Worker $currentWorker,
-    ): void {
-
+    private function ensureCanUpdate(ExcavatorLog $excavatorLog, Worker $currentWorker,): void
+    {
         if ($currentWorker->isAdmin()) {
             return;
         }
 
-        /*
-         * Site Manager can manage logs belonging
-         * to his own machine assignments.
-         */
-        if (
-            $currentWorker->isSiteManager()
-            && $excavatorLog->machineAssignment->site_manager_id
-            === $currentWorker->id
-        ) {
+        if ($currentWorker->isSiteManager() && $excavatorLog->machineAssignment->site_manager_id === $currentWorker->id)
+        {
             return;
         }
 
-        /*
-         * Operator can manage his own excavator log.
-         */
-        if (
-            $currentWorker->isOperator()
-            && $excavatorLog->worker_id === $currentWorker->id
-        ) {
+        if ($currentWorker->isOperator() && $excavatorLog->worker_id === $currentWorker->id)
+        {
             return;
         }
 

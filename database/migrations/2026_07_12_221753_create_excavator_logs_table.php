@@ -19,39 +19,23 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('worker_id')
                 ->constrained('workers')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('created_by')
                 ->constrained('workers')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
-            $table->timestamp('site_manager_started_at')
-                ->nullable();
-
-            $table->timestamp('site_manager_finished_at')
-                ->nullable();
-
-            $table->timestamp('operator_started_at')
-                ->nullable();
-
-            $table->timestamp('operator_finished_at')
-                ->nullable();
-
-            $table->decimal('work_hours', 8, 2)
-                ->default(0);
-
-            $table->decimal('fuel_added', 10, 2)
-                ->default(0);
-
-            $table->decimal('fuel_remaining', 10, 2)
-                ->nullable();
-
-            $table->text('note')->nullable();
+            $table->timestamp('site_manager_started_at')->nullable();
+            $table->timestamp('site_manager_finished_at')->nullable();
+            $table->timestamp('operator_started_at')->nullable();
+            $table->timestamp('operator_finished_at')->nullable();
+            $table->decimal('work_hours', 8, 2)->default(0);
+            $table->decimal('fuel_added', 10, 2)->default(0);
+            $table->decimal('fuel_remaining', 10, 2)->nullable();
+            $table->text('note_site_manager')->nullable();
+            $table->text('note_operator')->nullable();
 
             $table->timestamps();
             $table->softDeletes();

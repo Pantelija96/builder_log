@@ -3,7 +3,8 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\ConstructionSiteController;
-use App\Http\Controllers\Api\MachineController;
+//use App\Http\Controllers\Api\MachineGetController;
+use \App\Http\Controllers\MachineController;
 use App\Http\Controllers\Api\SubcontractorController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\WorkerController;
@@ -217,17 +218,13 @@ Route::prefix('v1')->group(function () {
             ->prefix('machine-assignments')
             ->group(function () {
                 Route::get('/', 'index');
-                Route::post('/daily-logs/{dailyLog}', 'store');
-                Route::delete('/{machineAssignment}', 'destroy');
-                Route::patch('/{machineAssignment}', 'update');
-                Route::post('/operator', 'storeForOperator',);
+                Route::get('/current-excavator', 'current');
             });
 
         Route::controller(MachineController::class)
             ->prefix('machines')
             ->group(function () {
                 Route::get('/', 'index');
-                Route::get('/available', 'available');
                 Route::post('/', 'store');
                 Route::get('/{machine}', 'show');
                 Route::patch('/{machine}', 'update');
@@ -248,10 +245,11 @@ Route::prefix('v1')->group(function () {
         Route::controller(ExcavatorLogController::class)
             ->prefix('excavator-logs')
             ->group(function () {
-                Route::post('/', 'store');
-                Route::patch('/{excavatorLog}', 'update',);
-                Route::delete('/{excavatorLog}', 'destroy',);
-                Route::post('/operator', 'storeForOperator',);
+                Route::get('/available', 'available');
+                Route::post('/daily-logs/{dailyLog}', 'store');
+                Route::post('/operator', 'storeForOperator');
+                Route::patch('/{excavatorLog}', 'update');
+                Route::delete('/{excavatorLog}', 'destroy');
             });
 
 

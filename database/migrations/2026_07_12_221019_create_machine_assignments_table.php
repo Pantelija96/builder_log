@@ -18,50 +18,29 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('daily_log_id')
                 ->nullable()
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('construction_site_id')
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('site_manager_id')
                 ->nullable()
                 ->constrained('workers')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('machine_id')
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('worker_id')
-                ->nullable()
                 ->constrained('workers')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
-            $table->timestamp('site_manager_started_at')
-                ->nullable();
-
-            $table->timestamp('site_manager_finished_at')
-                ->nullable();
-
-            $table->timestamp('operator_started_at')
-                ->nullable();
-
-            $table->timestamp('operator_finished_at')
-                ->nullable();
-
-            $table->date('date')
-                ->index();
-
+            $table->date('date')->index();
             $table->foreignId('created_by')
                 ->constrained('workers')
                 ->cascadeOnUpdate()
@@ -74,14 +53,16 @@ return new class extends Migration
                 'machine_id',
                 'date',
             ]);
-
             $table->index([
                 'construction_site_id',
                 'date',
             ]);
-
             $table->index([
                 'site_manager_id',
+                'date',
+            ]);
+            $table->index([
+                'worker_id',
                 'date',
             ]);
         });

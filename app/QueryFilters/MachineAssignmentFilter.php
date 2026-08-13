@@ -34,6 +34,11 @@ class MachineAssignmentFilter extends BaseFilter
             )
 
             ->when(
+                $this->data->workerId,
+                fn (Builder $query) => $query->where('worker_id', $this->data->workerId,)
+            )
+
+            ->when(
                 $this->data->constructionSiteId,
                 fn (Builder $query) => $query->where(
                     'construction_site_id',

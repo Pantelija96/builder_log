@@ -14,7 +14,7 @@ class CloseOpenMachineAssignmentsAction
 
         $assignments = MachineAssignment::query()
             ->where('daily_log_id', $dailyLog->id)
-            ->whereNull('finished_at')
+            ->whereNull(['site_manager_finished_at', 'operator_finished_at'])
             ->get();
 
         $defaultWorkHours = (int) env('DEFAULT_MACHINE_WORK_HOURS', 9);
@@ -35,7 +35,8 @@ class CloseOpenMachineAssignmentsAction
             }
 
             $assignment->update([
-                'finished_at' => $finishedAt,
+                'site_manager_finished_at' => $finishedAt,
+                'operator_finished_at' => $finishedAt,
             ]);
         }
     }

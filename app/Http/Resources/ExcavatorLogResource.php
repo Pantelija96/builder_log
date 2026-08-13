@@ -7,6 +7,9 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 class ExcavatorLogResource extends JsonResource
 {
+    /**
+     * @return array<string, mixed>
+     */
     public function toArray(Request $request): array
     {
         return [
@@ -21,7 +24,8 @@ class ExcavatorLogResource extends JsonResource
             'work_hours' => $this->work_hours,
             'fuel_added' => $this->fuel_added,
             'fuel_remaining' => $this->fuel_remaining,
-            'note' => $this->note,
+            'note_site_manager' => $this->note_site_manager,
+            'note_operator' => $this->note_operator,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'machine_assignment' => MachineAssignmentResource::make($this->whenLoaded('machineAssignment')),

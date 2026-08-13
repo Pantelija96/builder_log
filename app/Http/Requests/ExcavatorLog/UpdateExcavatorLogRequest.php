@@ -61,7 +61,13 @@ class UpdateExcavatorLogRequest extends FormRequest
                 'min:0',
             ],
 
-            'note' => [
+            'note_site_manager' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'note_operator' => [
                 'sometimes',
                 'nullable',
                 'string',

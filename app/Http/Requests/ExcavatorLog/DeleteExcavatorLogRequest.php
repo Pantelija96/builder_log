@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\ExcavatorLog;
 
-class DeleteExcavatorLogRequest
+use Illuminate\Foundation\Http\FormRequest;
+
+class DeleteExcavatorLogRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -15,7 +17,7 @@ class DeleteExcavatorLogRequest
             'reason' => [
                 'required',
                 'string',
-                'max:500',
+                'max:1000',
             ],
         ];
     }

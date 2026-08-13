@@ -19,9 +19,7 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
-
-            $table->decimal('initial_work_hours', 10, 2)
-                ->default(0);
+            $table->decimal('initial_work_hours', 10, 2)->default(0);
 
             $table->timestamps();
             $table->softDeletes();

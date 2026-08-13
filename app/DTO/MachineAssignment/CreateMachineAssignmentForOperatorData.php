@@ -12,17 +12,11 @@ readonly class CreateMachineAssignmentForOperatorData
     ) {
     }
 
-    public static function fromRequest(
-        Request $request,
-    ): self {
+    public static function fromRequest(Request $request,): self
+    {
         return new self(
-            constructionSiteId: $request->integer(
-                'construction_site_id'
-            ),
-
-            machineId: $request->integer(
-                'machine_id'
-            ),
+            constructionSiteId: $request->integer('construction_site_id'),
+            machineId: $request->integer('machine_id'),
         );
     }
 }

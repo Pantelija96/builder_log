@@ -25,6 +25,22 @@ class CreateExcavatorLogForOperatorRequest extends FormRequest
                 'integer',
                 'exists:machines,id',
             ],
+
+            'operator_started_at' => [
+                'nullable',
+                'date',
+            ],
+
+            'operator_finished_at' => [
+                'nullable',
+                'date',
+                'after_or_equal:operator_started_at',
+            ],
+
+            'note_operator' => [
+                'nullable',
+                'string',
+            ],
         ];
     }
 }

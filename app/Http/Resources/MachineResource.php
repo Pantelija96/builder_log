@@ -34,6 +34,7 @@ class MachineResource extends JsonResource
                 $this->owner instanceof Company => new CompanyResource($this->owner),
                 $this->owner instanceof Supplier => new SupplierResource($this->owner),
                 $this->owner instanceof Subcontractor => new SubcontractorResource($this->owner),
+                $this->owner instanceof Worker => new WorkerResource($this->owner),
                 default => null,
             },
         ];

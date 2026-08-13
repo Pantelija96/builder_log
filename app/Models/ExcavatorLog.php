@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\Loggable;
 
 class ExcavatorLog extends Model
 {
@@ -28,7 +28,9 @@ class ExcavatorLog extends Model
         'work_hours',
         'fuel_added',
         'fuel_remaining',
-        'note',
+
+        'note_site_manager',
+        'note_operator',
     ];
 
     protected function casts(): array
@@ -58,9 +60,18 @@ class ExcavatorLog extends Model
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(
-            Worker::class,
-            'created_by'
-        );
+        return $this->belongsTo(Worker::class, 'created_by');
+    }
+
+    public function logContext(): array
+    {
+        $assignment = $this->machineAssignment;
+
+        return [
+            'company_id' => $assignment->company_id,
+            'daily_log_id' => $assignment->daily_log_id,
+            'construction_site_id' => $assignment->construction_site_id,
+            'date' => $assignment->date,
+        ];
     }
 }
