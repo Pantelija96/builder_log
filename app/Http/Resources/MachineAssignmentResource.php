@@ -18,6 +18,7 @@ class MachineAssignmentResource extends JsonResource
             'construction_site' => ConstructionSiteResource::make($this->whenLoaded('constructionSite')),
             'site_manager' => WorkerResource::make($this->whenLoaded('siteManager')),
             'worker' => WorkerResource::make($this->whenLoaded('worker')),
+            'excavatorLog' => ExcavatorLogResource::make($this->whenLoaded('excavatorLog')),
             'date' => $this->date,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

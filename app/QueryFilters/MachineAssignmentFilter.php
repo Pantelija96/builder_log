@@ -17,10 +17,8 @@ class MachineAssignmentFilter extends BaseFilter
 
     protected array $sortable = self::SORTABLE;
 
-    public function __construct(
-        protected readonly GetMachineAssignmentsData $data,
-    ) {
-    }
+    public function __construct(protected readonly GetMachineAssignmentsData $data,)
+    {}
 
     public function apply(Builder $query): Builder
     {
