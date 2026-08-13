@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Actions\ExcavatorLog\CreateExcavatorLogAction;
 use App\Actions\ExcavatorLog\DeleteExcavatorLogAction;
 use App\Actions\ExcavatorLog\GetAvailableExcavatorsAction;
+use App\Actions\ExcavatorLog\GetOccupiedExcavatorsAction;
 use App\Actions\ExcavatorLog\UpdateExcavatorLogAction;
 use App\DTO\ExcavatorLog\CreateExcavatorLogData;
 use App\DTO\ExcavatorLog\CreateExcavatorLogForOperatorData;
@@ -21,6 +22,7 @@ class ExcavatorLogService
         private readonly UpdateExcavatorLogAction $updateExcavatorLogAction,
         private readonly DeleteExcavatorLogAction $deleteExcavatorLogAction,
         private readonly GetAvailableExcavatorsAction $getAvailableExcavatorsAction,
+        private readonly GetOccupiedExcavatorsAction $getOccupiedExcavatorsAction,
     ) {}
 
     public function create(DailyLog $dailyLog, CreateExcavatorLogData $data, Worker $currentWorker,): ExcavatorLog
@@ -43,6 +45,13 @@ class ExcavatorLogService
     public function getAvailable(Worker $currentWorker,): Collection
     {
         return $this->getAvailableExcavatorsAction->execute(
+            currentWorker: $currentWorker,
+        );
+    }
+
+    public function getOccupied(Worker $currentWorker,): Collection
+    {
+        return $this->getOccupiedExcavatorsAction->execute(
             currentWorker: $currentWorker,
         );
     }

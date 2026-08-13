@@ -43,6 +43,11 @@ class CreateWorkerAttendanceAction extends BaseAction
                 'created_by' => $currentWorker->id,
             ])->refresh();
 
+            Worker::query()->whereKey($data->workerId)
+                ->update([
+                    'is_available' => false,
+                ]);
+
             $this->logging->activity(
                 actor: $currentWorker,
                 subject: $attendance,

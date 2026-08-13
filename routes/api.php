@@ -246,8 +246,11 @@ Route::prefix('v1')->group(function () {
             ->prefix('excavator-logs')
             ->group(function () {
                 Route::get('/available', 'available');
+                Route::get('/occupied', 'occupied');
+
                 Route::post('/daily-logs/{dailyLog}', 'store');
                 Route::post('/operator', 'storeForOperator');
+
                 Route::patch('/{excavatorLog}', 'update');
                 Route::delete('/{excavatorLog}', 'destroy');
             });

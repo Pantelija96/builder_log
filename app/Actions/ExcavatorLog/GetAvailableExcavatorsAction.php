@@ -21,18 +21,26 @@ class GetAvailableExcavatorsAction
             ->where('type', MachineType::EXCAVATOR,)
             ->where('status', MachineStatus::ACTIVE,)
             ->whereDoesntHave(
-                'machineAssignments.excavatorLog',
-                function (Builder $query) use ($now) {
-                    $query->where(function (Builder $query) use ($now) {
-                        $query
-                            ->whereNull('site_manager_finished_at')
-                            ->orWhere('site_manager_finished_at', '>', $now,);
-                    })
-                        ->orWhere(function (Builder $query) use ($now) {
-                            $query
-                                ->whereNull('operator_finished_at')
-                                ->orWhere('operator_finished_at', '>', $now,);
-                        });
+                'machineAssignments',
+                function (Builder $assignmentQuery) use ($now) {
+                    $assignmentQuery
+                        ->whereDate('date', today())
+                        ->whereHas(
+                            'excavatorLog',
+                            function (Builder $query) use ($now) {
+                                $query
+                                    ->where(function (Builder $query) use ($now) {
+                                        $query
+                                            ->whereNull('site_manager_finished_at')
+                                            ->orWhere('site_manager_finished_at', '>', $now,);
+                                    })
+                                    ->orWhere(function (Builder $query) use ($now) {
+                                        $query
+                                            ->whereNull('operator_finished_at')
+                                            ->orWhere('operator_finished_at', '>', $now,);
+                                    });
+                            }
+                        );
                 }
             )
             ->with([

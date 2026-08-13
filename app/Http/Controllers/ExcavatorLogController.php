@@ -10,6 +10,7 @@ use App\Http\Requests\ExcavatorLog\CreateExcavatorLogRequest;
 use App\Http\Requests\ExcavatorLog\DeleteExcavatorLogRequest;
 use App\Http\Requests\ExcavatorLog\UpdateExcavatorLogRequest;
 use App\Http\Resources\ExcavatorLogResource;
+use App\Http\Resources\MachineAssignmentResource;
 use App\Http\Resources\MachineResource;
 use App\Models\DailyLog;
 use App\Models\ExcavatorLog;
@@ -102,6 +103,21 @@ class ExcavatorLogController extends ApiController
                 )
             ),
             'Available excavators retrieved successfully.',
+        );
+    }
+
+    public function occupied(): JsonResponse
+    {
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        return $this->success(
+            MachineAssignmentResource::collection(
+                $this->excavatorLogService->getOccupied(
+                    currentWorker: $worker,
+                )
+            ),
+            'Occupied excavators retrieved successfully.',
         );
     }
 }
