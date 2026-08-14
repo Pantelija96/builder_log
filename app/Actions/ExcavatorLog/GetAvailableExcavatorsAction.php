@@ -17,9 +17,18 @@ class GetAvailableExcavatorsAction
         $now = now();
 
         return Machine::query()
-            ->where('company_id',$currentWorker->company_id,)
-            ->where('type', MachineType::EXCAVATOR,)
-            ->where('status', MachineStatus::ACTIVE,)
+            ->where(
+                'company_id',
+                $currentWorker->company_id,
+            )
+            ->where(
+                'type',
+                MachineType::EXCAVATOR,
+            )
+            ->where(
+                'status',
+                MachineStatus::ACTIVE,
+            )
             ->whereDoesntHave(
                 'machineAssignments',
                 function (Builder $assignmentQuery) use ($now) {
@@ -31,13 +40,13 @@ class GetAvailableExcavatorsAction
                                 $query
                                     ->where(function (Builder $query) use ($now) {
                                         $query
+                                            ->whereNull('site_manager_started_at')
+                                            ->orWhere('site_manager_started_at', '<=', $now,);
+                                    })
+                                    ->where(function (Builder $query) use ($now) {
+                                        $query
                                             ->whereNull('site_manager_finished_at')
                                             ->orWhere('site_manager_finished_at', '>', $now,);
-                                    })
-                                    ->orWhere(function (Builder $query) use ($now) {
-                                        $query
-                                            ->whereNull('operator_finished_at')
-                                            ->orWhere('operator_finished_at', '>', $now,);
                                     });
                             }
                         );

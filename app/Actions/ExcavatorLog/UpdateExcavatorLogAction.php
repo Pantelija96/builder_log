@@ -56,18 +56,6 @@ class UpdateExcavatorLogAction extends BaseAction
             }
 
             /*
-             * Ako operator zavrsi sa masinom, a sef gradilista nije oznacio kad masina zavrsava
-             * to operatorovo vreme ce se koristiti kao kraj koriscenja masine
-             */
-            if (in_array('operator_finished_at', $data->providedFields, true,)
-                && $data->operatorFinishedAt !== null
-                && $excavatorLog->site_manager_finished_at === null
-                && ! in_array('site_manager_finished_at', $data->providedFields, true,))
-            {
-                $values['site_manager_finished_at'] = $data->operatorFinishedAt;
-            }
-
-            /*
              * Work data
              */
 

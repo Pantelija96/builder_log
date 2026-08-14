@@ -7,8 +7,9 @@ use Carbon\CarbonInterface;
 
 class CloseOpenMachineAssignmentsAction
 {
-    public function execute(CarbonInterface $date,): void
-    {
+    public function execute(
+        CarbonInterface $date,
+    ): void {
         $assignments = MachineAssignment::query()
             ->whereDate('date', $date)
             ->with('excavatorLog')
@@ -16,7 +17,9 @@ class CloseOpenMachineAssignmentsAction
 
         $defaultWorkHours = (float) env('DEFAULT_MACHINE_WORK_HOURS', 9);
 
-        $endOfDay = $date->copy()->endOfDay();
+        $endOfDay = $date
+            ->copy()
+            ->endOfDay();
 
         foreach ($assignments as $assignment) {
             $log = $assignment->excavatorLog;
@@ -25,63 +28,41 @@ class CloseOpenMachineAssignmentsAction
                 continue;
             }
 
-            $siteManagerStartedAt = $log->site_manager_started_at;
-            $siteManagerFinishedAt = $log->site_manager_finished_at;
+            $startedAt = $log->site_manager_started_at;
+            $finishedAt = $log->site_manager_finished_at;
 
-            $operatorStartedAt = $log->operator_started_at;
-            $operatorFinishedAt = $log->operator_finished_at;
+            /*
+             * ----------------------------------------------------------
+             * Site Manager is the source of truth.
+             * ----------------------------------------------------------
+             */
 
-            $siteManagerHasCompletePair = $siteManagerStartedAt !== null && $siteManagerFinishedAt !== null;
-            $operatorHasCompletePair = $operatorStartedAt !== null && $operatorFinishedAt !== null;
+            if ($startedAt === null && $finishedAt === null) {
+                $log->update([
+                    'site_manager_finished_at' => $endOfDay,
+                    'work_hours' => $defaultWorkHours,
+                ]);
 
-            $sourceStartedAt = null;
-            $sourceFinishedAt = null;
-
-            if ($siteManagerHasCompletePair && $operatorHasCompletePair) {
-                if ($siteManagerFinishedAt->greaterThanOrEqual($operatorFinishedAt)
-                )
-                {
-                    $sourceStartedAt = $siteManagerStartedAt;
-                    $sourceFinishedAt = $siteManagerFinishedAt;
-                }
-                else {
-                    $sourceStartedAt = $operatorStartedAt;
-                    $sourceFinishedAt = $operatorFinishedAt;
-                }
-            }
-            elseif ($siteManagerHasCompletePair)
-            {
-                $sourceStartedAt = $siteManagerStartedAt;
-                $sourceFinishedAt = $siteManagerFinishedAt;
-            }
-            elseif ($operatorHasCompletePair)
-            {
-                $sourceStartedAt = $operatorStartedAt;
-                $sourceFinishedAt = $operatorFinishedAt;
+                continue;
             }
 
+            if ($startedAt !== null && $finishedAt === null) {
+                $finishedAt = $endOfDay;
+                $log->update([
+                    'site_manager_finished_at' => $finishedAt,
+                    'work_hours' => $startedAt->diffInMinutes($finishedAt) / 60,
+                ]);
 
-            $values = [];
-
-            if ($siteManagerFinishedAt === null)
-            {
-                $values['site_manager_finished_at'] = $endOfDay;
+                continue;
             }
 
-            if ($operatorFinishedAt === null)
-            {
-                $values['operator_finished_at'] = $endOfDay;
+            if ($startedAt !== null && $finishedAt !== null) {
+                $log->update([
+                    'work_hours' => $startedAt->diffInMinutes($finishedAt) / 60,
+                ]);
+
+                continue;
             }
-
-
-            if ($sourceStartedAt !== null && $sourceFinishedAt !== null)
-            {
-                $values['work_hours'] = $sourceStartedAt->diffInMinutes($sourceFinishedAt) / 60;
-            } else {
-                $values['work_hours'] = $defaultWorkHours;
-            }
-
-            $log->update($values);
         }
     }
 }

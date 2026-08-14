@@ -9,8 +9,9 @@ use Illuminate\Database\Eloquent\Builder;
 
 class GetCurrentMachineAssignmentAction extends BaseAction
 {
-    public function execute(Worker $currentWorker,): ?MachineAssignment
-    {
+    public function execute(
+        Worker $currentWorker,
+    ): ?MachineAssignment {
         $now = now();
 
         return MachineAssignment::query()
@@ -23,13 +24,13 @@ class GetCurrentMachineAssignmentAction extends BaseAction
                     $query
                         ->where(function (Builder $query) use ($now) {
                             $query
-                                ->whereNull('site_manager_finished_at')
-                                ->orWhere('site_manager_finished_at', '>', $now,);
+                                ->whereNull('site_manager_started_at')
+                                ->orWhere('site_manager_started_at', '<=', $now,);
                         })
                         ->where(function (Builder $query) use ($now) {
                             $query
-                                ->whereNull('operator_finished_at')
-                                ->orWhere('operator_finished_at', '>', $now,);
+                                ->whereNull('site_manager_finished_at')
+                                ->orWhere('site_manager_finished_at', '>', $now,);
                         });
                 }
             )

@@ -26,6 +26,16 @@ class ClosePreviousDayCommand extends Command
     {
         $date = today()->subDay();
 
+        /*
+         * 1. Close open machine logs.
+         */
+        $this->closeOpenMachineAssignmentsAction->execute(
+            date: $date,
+        );
+
+        /*
+         * 2. Lock all DailyLogs from the previous day.
+         */
         DailyLog::query()
             ->whereDate('date', $date)
             ->where('is_locked', false)
@@ -37,11 +47,9 @@ class ClosePreviousDayCommand extends Command
                 }
             });
 
-        $this->closeOpenMachineAssignmentsAction->execute(
-            date: $date,
-        );
-
-
+        /*
+         * 3. Make workers available.
+         */
         $workerIds = WorkerAttendance::query()
             ->whereDate('date', $date)
             ->distinct()

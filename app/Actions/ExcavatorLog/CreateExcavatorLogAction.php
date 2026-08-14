@@ -114,7 +114,7 @@ class CreateExcavatorLogAction extends BaseAction
 
             $this->ensureExcavatorIsAvailable(
                 machineId: $machine->id,
-                startedAt: $data->operatorStartedAt ?? now(),
+                startedAt: now(),
             );
 
             $dailyLog = DailyLog::query()
@@ -213,21 +213,18 @@ class CreateExcavatorLogAction extends BaseAction
             ->whereHas(
                 'machineAssignment',
                 function (Builder $query) use ($machineId) {
-                    $query->where('machine_id', $machineId,);
+                    $query->where('machine_id', $machineId);
                 }
             )
             ->where(function (Builder $query) use ($startedAt) {
                 $query
-                    ->where(function (Builder $query) use ($startedAt) {
-                        $query
-                            ->whereNull('site_manager_finished_at')
-                            ->orWhere('site_manager_finished_at', '>', $startedAt,);
-                    })
-                    ->orWhere(function (Builder $query) use ($startedAt) {
-                        $query
-                            ->whereNull('operator_finished_at')
-                            ->orWhere('operator_finished_at', '>', $startedAt,);
-                    });
+                    ->whereNull('site_manager_started_at')
+                    ->orWhere('site_manager_started_at', '<=', $startedAt,);
+            })
+            ->where(function (Builder $query) use ($startedAt) {
+                $query
+                    ->whereNull('site_manager_finished_at')
+                    ->orWhere('site_manager_finished_at', '>', $startedAt,);
             })
             ->exists();
 

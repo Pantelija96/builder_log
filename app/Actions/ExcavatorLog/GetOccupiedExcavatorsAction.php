@@ -17,15 +17,14 @@ class GetOccupiedExcavatorsAction extends BaseAction
         $now = now();
 
         return MachineAssignment::query()
-            ->where('company_id', $currentWorker->company_id,
-            )
+            ->where('company_id', $currentWorker->company_id,)
             ->whereDate('date', today(),)
             ->whereHas(
                 'machine',
                 function (Builder $query) {
                     $query
-                        ->where('type', MachineType::EXCAVATOR,)
-                        ->where('status', MachineStatus::ACTIVE,);
+                        ->where('type', MachineType::EXCAVATOR)
+                        ->where('status', MachineStatus::ACTIVE);
                 }
             )
             ->whereHas(
@@ -34,13 +33,13 @@ class GetOccupiedExcavatorsAction extends BaseAction
                     $query
                         ->where(function (Builder $query) use ($now) {
                             $query
+                                ->whereNull('site_manager_started_at')
+                                ->orWhere('site_manager_started_at', '<=', $now,);
+                        })
+                        ->where(function (Builder $query) use ($now) {
+                            $query
                                 ->whereNull('site_manager_finished_at')
                                 ->orWhere('site_manager_finished_at', '>', $now,);
-                        })
-                        ->orWhere(function (Builder $query) use ($now) {
-                            $query
-                                ->whereNull('operator_finished_at')
-                                ->orWhere('operator_finished_at', '>', $now,);
                         });
                 }
             )
