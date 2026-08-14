@@ -20,6 +20,13 @@ class UpdateExcavatorRequest extends FormRequest
                 'min:0',
             ],
 
+            'total_work_hours' => [
+                'nullable',
+                'sometimes',
+                'numeric',
+                'min:0',
+            ],
+
             'reason' => [
                 'sometimes',
                 'nullable',

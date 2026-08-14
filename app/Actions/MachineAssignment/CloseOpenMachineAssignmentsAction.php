@@ -2,24 +2,25 @@
 
 namespace App\Actions\MachineAssignment;
 
+use App\Models\DailyLog;
 use App\Models\MachineAssignment;
 use Carbon\CarbonInterface;
 
 class CloseOpenMachineAssignmentsAction
 {
-    public function execute(
-        CarbonInterface $date,
-    ): void {
+    public function execute(CarbonInterface $date): void
+    {
         $assignments = MachineAssignment::query()
             ->whereDate('date', $date)
-            ->with('excavatorLog')
+            ->with([
+                'excavatorLog',
+                'machine.excavator',
+            ])
             ->get();
 
         $defaultWorkHours = (float) env('DEFAULT_MACHINE_WORK_HOURS', 9);
 
-        $endOfDay = $date
-            ->copy()
-            ->endOfDay();
+        $endOfDay = $date->copy()->endOfDay();
 
         foreach ($assignments as $assignment) {
             $log = $assignment->excavatorLog;
@@ -28,41 +29,63 @@ class CloseOpenMachineAssignmentsAction
                 continue;
             }
 
-            $startedAt = $log->site_manager_started_at;
-            $finishedAt = $log->site_manager_finished_at;
+            /*
+             * Close missing Site Manager finish time.
+             */
+            if ($log->site_manager_finished_at === null) {
+                $log->site_manager_finished_at = $endOfDay;
+            }
 
             /*
-             * ----------------------------------------------------------
-             * Site Manager is the source of truth.
-             * ----------------------------------------------------------
+             * Close missing Operator finish time.
              */
-
-            if ($startedAt === null && $finishedAt === null) {
-                $log->update([
-                    'site_manager_finished_at' => $endOfDay,
-                    'work_hours' => $defaultWorkHours,
-                ]);
-
-                continue;
+            if ($log->operator_finished_at === null) {
+                $log->operator_finished_at = $endOfDay;
             }
 
-            if ($startedAt !== null && $finishedAt === null) {
-                $finishedAt = $endOfDay;
-                $log->update([
-                    'site_manager_finished_at' => $finishedAt,
-                    'work_hours' => $startedAt->diffInMinutes($finishedAt) / 60,
-                ]);
+            /*
+             * Calculate machine work hours from machine-hour readings.
+             */
+            $startWorkHours = $log->start_work_hours;
+            $finishWorkHours = $log->finish_work_hours;
 
-                continue;
+            if ($startWorkHours !== null && $finishWorkHours !== null)
+            {
+                $workHours = (float) $finishWorkHours - (float) $startWorkHours;
+
+                $log->work_hours = $workHours;
+
+                /*
+                 * Final machine-hour reading is the source of truth.
+                 */
+                $assignment->machine
+                    ->excavator
+                    ->update([
+                        'total_work_hours' => $finishWorkHours,
+                    ]);
+            }
+            elseif ($startWorkHours !== null) {
+                /*
+                 * We know where the machine started, but there is no final reading.
+                 */
+                $log->work_hours = $defaultWorkHours;
+
+                $assignment->machine
+                    ->excavator
+                    ->increment('total_work_hours', $defaultWorkHours);
+            }
+            else {
+                /*
+                 * No machine-hour readings at all.
+                 */
+                $log->work_hours = $defaultWorkHours;
+
+                $assignment->machine
+                    ->excavator
+                    ->increment('total_work_hours', $defaultWorkHours);
             }
 
-            if ($startedAt !== null && $finishedAt !== null) {
-                $log->update([
-                    'work_hours' => $startedAt->diffInMinutes($finishedAt) / 60,
-                ]);
-
-                continue;
-            }
+            $log->save();
         }
     }
 }

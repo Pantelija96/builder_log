@@ -49,6 +49,7 @@ class GetOccupiedExcavatorsAction extends BaseAction
                 'worker',
                 'siteManager',
                 'excavatorLog',
+                'machine.excavator',
             ])
             ->get();
     }

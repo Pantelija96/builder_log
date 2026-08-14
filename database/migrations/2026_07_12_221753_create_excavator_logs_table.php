@@ -32,6 +32,8 @@ return new class extends Migration
             $table->timestamp('operator_started_at')->nullable();
             $table->timestamp('operator_finished_at')->nullable();
             $table->decimal('work_hours', 8, 2)->default(0);
+            $table->decimal('start_work_hours', 8, 2)->nullable()->default(null);
+            $table->decimal('finish_work_hours', 8, 2)->nullable()->default(null);
             $table->decimal('fuel_added', 10, 2)->default(0);
             $table->decimal('fuel_remaining', 10, 2)->nullable();
             $table->text('note_site_manager')->nullable();

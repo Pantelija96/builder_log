@@ -41,7 +41,7 @@ class TruckLog extends Model
             'operator_finished_at' => 'datetime',
             'start_mileage' => 'decimal:2',
             'end_mileage' => 'decimal:2',
-            'fuel_added' => 'decimal:2',
+            'fuel_added' => 'boolean',
             'fuel_remaining' => 'decimal:2',
         ];
     }

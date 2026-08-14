@@ -152,8 +152,7 @@ class UpdateTruckLogAction extends BaseAction
                     true
                 )
             ) {
-                $updates['fuel_added'] =
-                    $data->fuelAdded;
+                $updates['fuel_added'] = $data->fuelAdded;
             }
 
             if (

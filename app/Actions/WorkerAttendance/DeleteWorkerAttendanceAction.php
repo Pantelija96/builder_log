@@ -39,7 +39,13 @@ class DeleteWorkerAttendanceAction extends BaseAction
             $this->logging->activity(actor: $currentWorker, subject: $workerAttendance, event: LogEvent::WORKER_ATTENDANCE_DELETED,);
             $this->logging->audit(actor: $currentWorker, subject: $workerAttendance, event: LogEvent::WORKER_ATTENDANCE_DELETED, oldValues: $oldValues, reason: $reason,);
 
-            $workerAttendance->delete();
+            $workerAttendance->forceDelete();
+
+            Worker::query()
+                ->whereKey($workerAttendance->worker_id)
+                ->update([
+                    'is_available' => true,
+                ]);
         });
     }
 }

@@ -52,8 +52,7 @@ return new class extends Migration
             $table->decimal('end_mileage', 12, 2)
                 ->nullable();
 
-            $table->decimal('fuel_added', 10, 2)
-                ->default(0);
+            $table->boolean('fuel_added')->nullable()->default(null);
 
             $table->decimal('fuel_remaining', 10, 2)
                 ->nullable();

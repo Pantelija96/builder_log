@@ -16,6 +16,7 @@ class ExcavatorResource extends JsonResource
             'id' => $this->id,
             'machine_id' => $this->machine_id,
             'initial_work_hours' => $this->initial_work_hours,
+            'total_work_hours' => $this->total_work_hours,
             'machine' => MachineResource::make($this->whenLoaded('machine')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

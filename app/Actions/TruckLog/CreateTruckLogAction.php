@@ -120,7 +120,7 @@ class CreateTruckLogAction extends BaseAction
                 'start_mileage' => null,
                 'end_mileage' => null,
 
-                'fuel_added' => 0,
+                'fuel_added' => null,
                 'fuel_remaining' => null,
 
                 'note' => null,

@@ -30,6 +30,8 @@ class ExcavatorSeeder extends Seeder
 
                 'initial_work_hours' => $hours[$index],
 
+                'total_work_hours' => $hours[$index],
+
             ]);
         }
     }

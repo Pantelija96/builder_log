@@ -15,6 +15,7 @@ class Excavator extends Model
     protected $fillable = [
         'machine_id',
         'initial_work_hours',
+        'total_work_hours',
     ];
 
     protected function casts(): array

@@ -22,6 +22,8 @@ class ExcavatorLogResource extends JsonResource
             'operator_started_at' => $this->operator_started_at,
             'operator_finished_at' => $this->operator_finished_at,
             'work_hours' => $this->work_hours,
+            'start_work_hours' => $this->start_work_hours,
+            'finish_work_hours' => $this->finish_work_hours,
             'fuel_added' => $this->fuel_added,
             'fuel_remaining' => $this->fuel_remaining,
             'note_site_manager' => $this->note_site_manager,

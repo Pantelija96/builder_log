@@ -23,16 +23,13 @@ class MachineService
     ) {
     }
 
-    private function query(
-        Worker $currentWorker,
-    ) {
+    private function query(Worker $currentWorker,)
+    {
         return Machine::query()
-            ->where(
-                'company_id',
-                $currentWorker->company_id,
-            )
+            ->where('company_id', $currentWorker->company_id,)
             ->with([
                 'owner',
+                'excavator',
             ]);
     }
 
@@ -42,6 +39,7 @@ class MachineService
             ->with([
                 'company',
                 'owner',
+                'excavator',
             ]);
 
         $query = (new MachineFilter($data))

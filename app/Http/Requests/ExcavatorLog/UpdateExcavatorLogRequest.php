@@ -47,6 +47,20 @@ class UpdateExcavatorLogRequest extends FormRequest
                 'min:0',
             ],
 
+            'start_work_hours' => [
+                'sometimes',
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'finish_work_hours' => [
+                'sometimes',
+                'nullable',
+                'numeric',
+                'after_or_equal:start_work_hours',
+            ],
+
             'fuel_added' => [
                 'sometimes',
                 'nullable',

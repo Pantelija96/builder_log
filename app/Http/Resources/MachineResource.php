@@ -37,6 +37,10 @@ class MachineResource extends JsonResource
                 $this->owner instanceof Worker => new WorkerResource($this->owner),
                 default => null,
             },
+            'excavator' => $this->when(
+                $this->isExcavator() && $this->relationLoaded('excavator'),
+                fn () => ExcavatorResource::make($this->excavator),
+            ),
         ];
     }
 }

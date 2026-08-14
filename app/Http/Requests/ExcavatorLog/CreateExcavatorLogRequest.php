@@ -37,7 +37,7 @@ class CreateExcavatorLogRequest extends FormRequest
                 'nullable',
                 'date',
                 'required_with:site_manager_started_at',
-                'after_or_equal::site_manager_started_at',
+                'after_or_equal:site_manager_started_at',
             ],
 
             'note_site_manager' => [

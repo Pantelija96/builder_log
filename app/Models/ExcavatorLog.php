@@ -26,6 +26,9 @@ class ExcavatorLog extends Model
         'operator_finished_at',
 
         'work_hours',
+        'start_work_hours',
+        'finish_work_hours',
+
         'fuel_added',
         'fuel_remaining',
 

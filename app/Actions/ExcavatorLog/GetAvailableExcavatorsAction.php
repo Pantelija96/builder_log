@@ -11,9 +11,8 @@ use Illuminate\Database\Eloquent\Collection;
 
 class GetAvailableExcavatorsAction
 {
-    public function execute(
-        Worker $currentWorker,
-    ): Collection {
+    public function execute(Worker $currentWorker,): Collection
+    {
         $now = now();
 
         return Machine::query()

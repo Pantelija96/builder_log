@@ -25,6 +25,12 @@ class CreateExcavatorRequest extends FormRequest
                 'numeric',
                 'min:0',
             ],
+
+            'total_work_hours' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
         ];
     }
 }

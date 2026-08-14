@@ -64,6 +64,18 @@ class UpdateExcavatorLogAction extends BaseAction
                 $values['work_hours'] = $data->workHours;
             }
 
+            if (in_array('start_work_hours', $data->providedFields, true,))
+            {
+                $values['start_work_hours'] = $data->startWorkHours;
+            }
+
+            if (in_array('finish_work_hours', $data->providedFields, true,))
+            {
+                $values['finish_work_hours'] = $data->finishWorkHours;
+            }
+
+
+
             if (in_array('fuel_added', $data->providedFields, true,))
             {
                 $values['fuel_added'] = $data->fuelAdded;
