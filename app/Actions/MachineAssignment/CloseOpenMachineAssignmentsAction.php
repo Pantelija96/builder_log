@@ -2,42 +2,86 @@
 
 namespace App\Actions\MachineAssignment;
 
-use App\Models\DailyLog;
 use App\Models\MachineAssignment;
-use Carbon\Carbon;
+use Carbon\CarbonInterface;
 
 class CloseOpenMachineAssignmentsAction
 {
-    public function execute(
-        DailyLog $dailyLog,
-    ): void {
-
+    public function execute(CarbonInterface $date,): void
+    {
         $assignments = MachineAssignment::query()
-            ->where('daily_log_id', $dailyLog->id)
-            ->whereNull(['site_manager_finished_at', 'operator_finished_at'])
+            ->whereDate('date', $date)
+            ->with('excavatorLog')
             ->get();
 
-        $defaultWorkHours = (int) env('DEFAULT_MACHINE_WORK_HOURS', 9);
+        $defaultWorkHours = (float) env('DEFAULT_MACHINE_WORK_HOURS', 9);
 
-        $midnight = $dailyLog->date
-            ->copy()
-            ->addDay()
-            ->startOfDay();
+        $endOfDay = $date->copy()->endOfDay();
 
         foreach ($assignments as $assignment) {
+            $log = $assignment->excavatorLog;
 
-            $finishedAt = $assignment->started_at
-                ->copy()
-                ->addHours($defaultWorkHours);
-
-            if ($finishedAt->greaterThan($midnight)) {
-                $finishedAt = $midnight->copy();
+            if (! $log) {
+                continue;
             }
 
-            $assignment->update([
-                'site_manager_finished_at' => $finishedAt,
-                'operator_finished_at' => $finishedAt,
-            ]);
+            $siteManagerStartedAt = $log->site_manager_started_at;
+            $siteManagerFinishedAt = $log->site_manager_finished_at;
+
+            $operatorStartedAt = $log->operator_started_at;
+            $operatorFinishedAt = $log->operator_finished_at;
+
+            $siteManagerHasCompletePair = $siteManagerStartedAt !== null && $siteManagerFinishedAt !== null;
+            $operatorHasCompletePair = $operatorStartedAt !== null && $operatorFinishedAt !== null;
+
+            $sourceStartedAt = null;
+            $sourceFinishedAt = null;
+
+            if ($siteManagerHasCompletePair && $operatorHasCompletePair) {
+                if ($siteManagerFinishedAt->greaterThanOrEqual($operatorFinishedAt)
+                )
+                {
+                    $sourceStartedAt = $siteManagerStartedAt;
+                    $sourceFinishedAt = $siteManagerFinishedAt;
+                }
+                else {
+                    $sourceStartedAt = $operatorStartedAt;
+                    $sourceFinishedAt = $operatorFinishedAt;
+                }
+            }
+            elseif ($siteManagerHasCompletePair)
+            {
+                $sourceStartedAt = $siteManagerStartedAt;
+                $sourceFinishedAt = $siteManagerFinishedAt;
+            }
+            elseif ($operatorHasCompletePair)
+            {
+                $sourceStartedAt = $operatorStartedAt;
+                $sourceFinishedAt = $operatorFinishedAt;
+            }
+
+
+            $values = [];
+
+            if ($siteManagerFinishedAt === null)
+            {
+                $values['site_manager_finished_at'] = $endOfDay;
+            }
+
+            if ($operatorFinishedAt === null)
+            {
+                $values['operator_finished_at'] = $endOfDay;
+            }
+
+
+            if ($sourceStartedAt !== null && $sourceFinishedAt !== null)
+            {
+                $values['work_hours'] = $sourceStartedAt->diffInMinutes($sourceFinishedAt) / 60;
+            } else {
+                $values['work_hours'] = $defaultWorkHours;
+            }
+
+            $log->update($values);
         }
     }
 }

@@ -43,6 +43,7 @@ class Worker extends Authenticatable
             'role' => WorkerRole::class,
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_available' => 'boolean',
         ];
     }
 
