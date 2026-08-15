@@ -30,13 +30,11 @@ class UpdateExcavatorLogRequest extends FormRequest
             'operator_started_at' => [
                 'sometimes',
                 'nullable',
-                'date',
             ],
 
             'operator_finished_at' => [
                 'sometimes',
                 'nullable',
-                'date',
                 'after_or_equal:operator_started_at',
             ],
 
