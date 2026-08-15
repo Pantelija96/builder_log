@@ -83,6 +83,41 @@ class WorkerSeeder extends Seeder
                 'last_name' => 'Nikolić',
                 'username' => 'operator03',
             ],
+            [
+                'first_name' => 'Filip',
+                'last_name' => 'Marković',
+                'username' => 'operator04',
+            ],
+            [
+                'first_name' => 'Uroš',
+                'last_name' => 'Jovanović',
+                'username' => 'operator05',
+            ],
+            [
+                'first_name' => 'Vuk',
+                'last_name' => 'Petrović',
+                'username' => 'operator06',
+            ],
+            [
+                'first_name' => 'Nikola',
+                'last_name' => 'Savić',
+                'username' => 'operator07',
+            ],
+            [
+                'first_name' => 'Lazar',
+                'last_name' => 'Đorđević',
+                'username' => 'operator08',
+            ],
+            [
+                'first_name' => 'Marko',
+                'last_name' => 'Pavlović',
+                'username' => 'operator09',
+            ],
+            [
+                'first_name' => 'Ognjen',
+                'last_name' => 'Milošević',
+                'username' => 'operator10',
+            ],
         ];
 
         foreach ($operators as $index => $operator) {
@@ -124,6 +159,41 @@ class WorkerSeeder extends Seeder
                 'first_name' => 'Nenad',
                 'last_name' => 'Stojanović',
                 'username' => 'driver03',
+            ],
+            [
+                'first_name' => 'Miroslav',
+                'last_name' => 'Nikolić',
+                'username' => 'driver04',
+            ],
+            [
+                'first_name' => 'Dejan',
+                'last_name' => 'Petrović',
+                'username' => 'driver05',
+            ],
+            [
+                'first_name' => 'Saša',
+                'last_name' => 'Marković',
+                'username' => 'driver06',
+            ],
+            [
+                'first_name' => 'Branko',
+                'last_name' => 'Jovanović',
+                'username' => 'driver07',
+            ],
+            [
+                'first_name' => 'Vladimir',
+                'last_name' => 'Savić',
+                'username' => 'driver08',
+            ],
+            [
+                'first_name' => 'Bojan',
+                'last_name' => 'Milošević',
+                'username' => 'driver09',
+            ],
+            [
+                'first_name' => 'Zoran',
+                'last_name' => 'Đorđević',
+                'username' => 'driver10',
             ],
         ];
 
