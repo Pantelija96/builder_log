@@ -15,12 +15,22 @@ class TruckSeeder extends Seeder
             'BG-101-AA',
             'BG-102-AA',
             'BG-103-AA',
+            'BG-104-AA',
+            'BG-105-AA',
+            'BG-106-AA',
+            'BG-107-AA',
+            'BG-108-AA',
         ];
 
         $mileages = [
             125000,
             184000,
             268000,
+            143000,
+            217000,
+            305000,
+            167000,
+            241000,
         ];
 
         $machines = Machine::query()
@@ -29,15 +39,10 @@ class TruckSeeder extends Seeder
             ->get();
 
         foreach ($machines as $index => $machine) {
-
             Truck::create([
-
                 'machine_id' => $machine->id,
-
                 'license_plate' => $plates[$index],
-
                 'initial_mileage' => $mileages[$index],
-
             ]);
         }
     }

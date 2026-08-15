@@ -19,8 +19,11 @@ class CreateExcavatorLogAction extends BaseAction
     /**
      * Site Manager kreira ExcavatorLog.
      */
-    public function execute(DailyLog $dailyLog, CreateExcavatorLogData $data, Worker $currentWorker,): ExcavatorLog
-    {
+    public function execute(
+        DailyLog $dailyLog,
+        CreateExcavatorLogData $data,
+        Worker $currentWorker,
+    ): ExcavatorLog {
         return $this->transaction(function () use (
             $dailyLog,
             $data,
@@ -37,14 +40,55 @@ class CreateExcavatorLogAction extends BaseAction
                 companyId: $currentWorker->company_id,
             );
 
-            $this->ensureExcavatorIsAvailable(
-                machineId: $machine->id,
-                startedAt: $data->siteManagerStartedAt ?? now(),
-            );
-
             $worker = $this->findOperator(
                 workerId: $data->workerId,
                 companyId: $currentWorker->company_id,
+            );
+
+            /*
+             * Operator may have already taken this machine himself.
+             *
+             * In that case we don't create another assignment.
+             * We simply attach the existing assignment to the
+             * DailyLog and fill in Site Manager's data.
+             */
+            $existingAssignment = MachineAssignment::query()
+                ->where('company_id', $currentWorker->company_id)
+                ->where('machine_id', $machine->id)
+                ->where('worker_id', $worker->id)
+                ->whereDate('date', $dailyLog->date)
+                ->with('excavatorLog')
+                ->first();
+
+            if ($existingAssignment) {
+                $existingAssignment->update([
+                    'daily_log_id' => $dailyLog->id,
+                    'construction_site_id' => $dailyLog->construction_site_id,
+                    'site_manager_id' => $dailyLog->site_manager_id,
+                ]);
+
+                $existingAssignment->excavatorLog->update([
+                    'site_manager_started_at' => $data->siteManagerStartedAt,
+                    'site_manager_finished_at' => $data->siteManagerFinishedAt,
+                    'note_site_manager' => $data->noteSiteManager,
+                ]);
+
+                return $existingAssignment->excavatorLog->fresh([
+                    'machineAssignment',
+                    'worker',
+                    'creator',
+                ]);
+            }
+
+            /*
+             * No existing assignment for this operator + machine.
+             *
+             * Now we really need to check whether the excavator
+             * is available.
+             */
+            $this->ensureExcavatorIsAvailable(
+                machineId: $machine->id,
+                startedAt: $data->siteManagerStartedAt ?? now(),
             );
 
             $assignment = MachineAssignment::create([

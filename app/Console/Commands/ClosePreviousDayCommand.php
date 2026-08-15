@@ -24,7 +24,8 @@ class ClosePreviousDayCommand extends Command
 
     public function handle(): int
     {
-        $date = today()->subDay();
+//        $date = today()->subDay();
+        $date = today();
 
         /*
          * 1. Close open machine logs.

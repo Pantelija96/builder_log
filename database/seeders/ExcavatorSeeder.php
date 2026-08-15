@@ -11,27 +11,19 @@ class ExcavatorSeeder extends Seeder
 {
     public function run(): void
     {
-        $hours = [
-            850,
-            1450,
-            2330,
-        ];
-
         $machines = Machine::query()
             ->where('type', MachineType::EXCAVATOR)
             ->orderBy('id')
             ->get();
 
-        foreach ($machines as $index => $machine) {
+        foreach ($machines as $machine) {
+
+            $hours = fake()->numberBetween(500, 5000);
 
             Excavator::create([
-
                 'machine_id' => $machine->id,
-
-                'initial_work_hours' => $hours[$index],
-
-                'total_work_hours' => $hours[$index],
-
+                'initial_work_hours' => $hours,
+                'total_work_hours' => $hours,
             ]);
         }
     }
