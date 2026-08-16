@@ -15,12 +15,14 @@ class UpdateExcavatorLogRequest extends FormRequest
     {
         return [
             'site_manager_started_at' => [
+                'sometimes',
                 'nullable',
                 'date',
                 'required_with:site_manager_finished_at',
             ],
 
             'site_manager_finished_at' => [
+                'sometimes',
                 'nullable',
                 'date',
                 'required_with:site_manager_started_at',

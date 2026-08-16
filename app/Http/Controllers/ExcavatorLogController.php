@@ -17,6 +17,7 @@ use App\Models\ExcavatorLog;
 use App\Models\Worker;
 use App\Services\ExcavatorLogService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class ExcavatorLogController extends ApiController
 {
@@ -28,6 +29,10 @@ class ExcavatorLogController extends ApiController
     {
         /** @var Worker $worker */
         $worker = auth()->user();
+
+
+        Log::info('ExcavatorLog received', ['dailyLog' => $dailyLog->toArray(),]);
+        Log::info('UpdateExcavatorLogRequest received', ['Request' => $request->toArray(),]);
 
         $excavatorLog = $this->excavatorLogService->create(
             dailyLog: $dailyLog,
@@ -46,6 +51,8 @@ class ExcavatorLogController extends ApiController
         /** @var Worker $worker */
         $worker = auth()->user();
 
+        Log::info('storeForOperator received', ['Request' => $request->toArray(),]);
+
         $excavatorLog = $this->excavatorLogService->createForOperator(
             data: CreateExcavatorLogForOperatorData::fromRequest($request),
             currentWorker: $worker,
@@ -61,6 +68,9 @@ class ExcavatorLogController extends ApiController
     {
         /** @var Worker $worker */
         $worker = auth()->user();
+
+        Log::info('ExcavatorLog received', ['excavatorLog' => $excavatorLog->toArray(),]);
+        Log::info('UpdateExcavatorLogRequest received', ['Request' => $request->toArray(),]);
 
         $excavatorLog = $this->excavatorLogService->update(
             excavatorLog: $excavatorLog,
@@ -79,6 +89,7 @@ class ExcavatorLogController extends ApiController
     {
         /** @var Worker $worker */
         $worker = auth()->user();
+
 
         $this->excavatorLogService->delete(
             excavatorLog: $excavatorLog,

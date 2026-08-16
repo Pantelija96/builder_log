@@ -13,6 +13,7 @@ use App\DTO\ExcavatorLog\UpdateExcavatorLogData;
 use App\Models\DailyLog;
 use App\Models\ExcavatorLog;
 use App\Models\Worker;
+use Illuminate\Container\Attributes\Log;
 use Illuminate\Database\Eloquent\Collection;
 
 class ExcavatorLogService
@@ -83,10 +84,10 @@ class ExcavatorLogService
             currentWorker: $currentWorker,
         );
 
-        $this->ensureCanUpdate(
-            excavatorLog: $excavatorLog,
-            currentWorker: $currentWorker,
-        );
+//        $this->ensureCanUpdate(
+//            excavatorLog: $excavatorLog,
+//            currentWorker: $currentWorker,
+//        );
 
         $this->deleteExcavatorLogAction->execute(
             excavatorLog: $excavatorLog,
@@ -111,12 +112,12 @@ class ExcavatorLogService
             return;
         }
 
-        if ($currentWorker->isSiteManager() && $excavatorLog->machineAssignment->site_manager_id === $currentWorker->id)
+        if ($currentWorker->isSiteManager() && (int) $excavatorLog->machineAssignment->site_manager_id === (int) $currentWorker->id)
         {
             return;
         }
 
-        if ($currentWorker->isOperator() && $excavatorLog->worker_id === $currentWorker->id)
+        if ($currentWorker->isOperator() && (int) $excavatorLog->worker_id === (int) $currentWorker->id)
         {
             return;
         }

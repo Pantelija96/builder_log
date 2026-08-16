@@ -15,6 +15,7 @@ use App\Models\Note;
 use App\Models\Worker;
 use App\Services\NoteService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 
 class NoteController extends ApiController
 {
@@ -27,6 +28,8 @@ class NoteController extends ApiController
         DailyLog $dailyLog,
         GetNotesRequest $request,
     ): JsonResponse {
+
+//        Log::info('Worker received', ['Worker' => $currentWorker->toArray(),]);
 
         return $this->success(
             NoteResource::collection(

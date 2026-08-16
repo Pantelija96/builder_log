@@ -34,7 +34,7 @@ return new class extends Migration
             $table->decimal('work_hours', 8, 2)->default(0);
             $table->decimal('start_work_hours', 8, 2)->nullable()->default(null);
             $table->decimal('finish_work_hours', 8, 2)->nullable()->default(null);
-            $table->decimal('fuel_added', 10, 2)->default(0);
+            $table->boolean('fuel_added')->default(false);
             $table->decimal('fuel_remaining', 10, 2)->nullable();
             $table->text('note_site_manager')->nullable();
             $table->text('note_operator')->nullable();

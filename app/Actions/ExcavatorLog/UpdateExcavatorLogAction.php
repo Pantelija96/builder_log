@@ -8,6 +8,7 @@ use App\Enums\LogEvent;
 use App\Models\ExcavatorLog;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
+use Illuminate\Support\Facades\Log;
 
 class UpdateExcavatorLogAction extends BaseAction
 {
@@ -26,6 +27,11 @@ class UpdateExcavatorLogAction extends BaseAction
 
             $oldValues = $excavatorLog->getAttributes();
             $values = [];
+
+
+            Log::info('UpdateExcavatorLogAction received', ['ExcavatorLog' => $excavatorLog->toArray(),]);
+            Log::info('UpdateExcavatorLogData received', ['UpdateExcavatorLogData' => $data,]);
+            Log::info('Worker received', ['Worker' => $currentWorker->toArray(),]);
 
             /*
              * Site Manager vremena

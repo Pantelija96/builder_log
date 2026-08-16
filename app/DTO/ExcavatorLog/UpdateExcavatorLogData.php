@@ -38,8 +38,8 @@ readonly class UpdateExcavatorLogData
             operatorFinishedAt: $request->filled('operator_finished_at') ? Carbon::parse($request->input('operator_finished_at')) : null,
 
             workHours: $request->has('work_hours') ? $request->float('work_hours') : null,
-            startWorkHours: $request->has('start_work_hours') ? $request->float('start_work_hours') : null,
-            finishWorkHours: $request->has('finish_work_hours') ? $request->float('finish_work_hours') : null,
+            startWorkHours: $request->input('start_work_hours') !== null ? (float) $request->input('start_work_hours') : null,
+            finishWorkHours: $request->input('finish_work_hours') !== null ? (float) $request->input('finish_work_hours') : null,
 
             fuelAdded: $request->has('fuel_added') ? $request->float('fuel_added') : null,
             fuelRemaining: $request->has('fuel_remaining') ? $request->float('fuel_remaining') : null,
