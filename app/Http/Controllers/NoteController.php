@@ -24,17 +24,23 @@ class NoteController extends ApiController
     ) {
     }
 
-    public function index(
-        DailyLog $dailyLog,
-        GetNotesRequest $request,
-    ): JsonResponse {
-
-//        Log::info('Worker received', ['Worker' => $currentWorker->toArray(),]);
-
+    public function index(DailyLog $dailyLog, GetNotesRequest $request,): JsonResponse
+    {
         return $this->success(
             NoteResource::collection(
                 $this->noteService->get(
                     dailyLog: $dailyLog,
+                    data: GetNotesData::fromRequest($request),
+                )
+            )
+        );
+    }
+
+    public function getAll(GetNotesRequest $request): JsonResponse
+    {
+        return $this->success(
+            NoteResource::collection(
+                $this->noteService->getAll(
                     data: GetNotesData::fromRequest($request),
                 )
             )

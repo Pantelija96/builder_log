@@ -10,16 +10,13 @@ readonly class GetCashAdvancesData
 {
     public function __construct(
         public ListQueryData $list,
-
         public ?int $siteManagerId,
-
         public ?Carbon $dateFrom,
-
         public ?Carbon $dateTo,
-
         public ?float $minAmount,
-
         public ?float $maxAmount,
+        public ?Carbon $dateCreatedFrom,
+        public ?Carbon $dateCreatedTo,
     ) {
     }
 
@@ -47,6 +44,14 @@ readonly class GetCashAdvancesData
 
             maxAmount: $request->filled('max_amount')
                 ? $request->float('max_amount')
+                : null,
+
+            dateCreatedFrom: $request->filled('date_created_from')
+                ? Carbon::parse($request->date_created_from)
+                : null,
+
+            dateCreatedTo: $request->filled('date_created_to')
+                ? Carbon::parse($request->date_created_to)
                 : null,
         );
     }

@@ -3,10 +3,12 @@
 namespace App\QueryFilters;
 
 use App\DTO\Expense\GetExpensesData;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 
 class ExpenseFilter extends BaseFilter
 {
+    // Available filters: search, title, created_by, date_from, date_to, min_amount, max_amount, construction_site_id, site_manager_id, date_created_from, date_created_to
     protected array $sortable = [
         'id',
         'title',
@@ -46,12 +48,22 @@ class ExpenseFilter extends BaseFilter
 
             ->when(
                 $this->data->dateFrom,
-                fn (Builder $query, $date) => $query->whereDate('date', '>=', $date)
+                fn (Builder $query, Carbon $date) => $query->whereDate('date', '>=', $date)
             )
 
             ->when(
                 $this->data->dateTo,
-                fn (Builder $query, $date) => $query->whereDate('date', '<=', $date)
+                fn (Builder $query, Carbon $date) => $query->whereDate('date', '<=', $date)
+            )
+
+            ->when(
+                $this->data->dateCreatedFrom,
+                fn (Builder $query, Carbon $date) => $query->whereDate('created_at', '>=', $date)
+            )
+
+            ->when(
+                $this->data->dateCreatedTo,
+                fn (Builder $query, Carbon $date) => $query->whereDate('created_at', '<=', $date)
             )
 
             ->when(

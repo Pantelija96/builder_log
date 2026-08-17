@@ -10,24 +10,17 @@ readonly class GetTasksData
 {
     public function __construct(
         public ListQueryData $list,
-
         public ?string $search,
-
         public ?string $title,
-
         public ?int $siteManagerId,
-
         public ?int $constructionSiteId,
-
         public ?int $createdBy,
-
         public ?bool $completed,
-
         public ?bool $read,
-
         public ?Carbon $dueDateFrom,
-
         public ?Carbon $dueDateTo,
+        public ?Carbon $dateCreatedFrom,
+        public ?Carbon $dateCreatedTo,
     ) {
     }
 
@@ -65,6 +58,14 @@ readonly class GetTasksData
 
             dueDateTo: $request->filled('due_date_to')
                 ? Carbon::parse($request->due_date_to)
+                : null,
+
+            dateCreatedFrom: $request->filled('date_created_from')
+                ? Carbon::parse($request->date_created_from)
+                : null,
+
+            dateCreatedTo: $request->filled('date_created_to')
+                ? Carbon::parse($request->date_created_to)
                 : null,
         );
     }

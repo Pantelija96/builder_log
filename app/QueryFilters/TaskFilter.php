@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class TaskFilter extends BaseFilter
 {
+    //Available filters: search, title, site_manager_id, created_by, completed *(1|0), read *(1|0), due_date_from, due_date_to, date_created_from, date_created_to
+
     protected array $sortable = [
         'id',
         'title',
@@ -24,20 +26,15 @@ class TaskFilter extends BaseFilter
 
     public function apply(Builder $query): Builder
     {
-        return $query
-
+        $query
             ->when(
                 $this->data->search,
                 function (Builder $query, string $search) {
-
                     $query->where(function (Builder $query) use ($search) {
-
                         $query
                             ->where('title', 'like', "%{$search}%")
                             ->orWhere('description', 'like', "%{$search}%");
-
                     });
-
                 }
             )
 
@@ -68,26 +65,22 @@ class TaskFilter extends BaseFilter
             ->when(
                 ! is_null($this->data->completed),
                 function (Builder $query) {
-
                     if ($this->data->completed) {
                         $query->whereNotNull('completed_at');
                     } else {
                         $query->whereNull('completed_at');
                     }
-
                 }
             )
 
             ->when(
                 ! is_null($this->data->read),
                 function (Builder $query) {
-
                     if ($this->data->read) {
                         $query->whereNotNull('read_at');
                     } else {
                         $query->whereNull('read_at');
                     }
-
                 }
             )
 
@@ -101,11 +94,17 @@ class TaskFilter extends BaseFilter
                 $this->data->dueDateTo,
                 fn (Builder $query, Carbon $date)
                 => $query->whereDate('due_date', '<=', $date)
-            )
-
-            ->orderBy(
-                $this->resolveSort($this->data->list->sort),
-                $this->resolveDirection($this->data->list->direction),
             );
+
+        $query = $this->applyCreatedAtFilter(
+            query: $query,
+            from: $this->data->dateCreatedFrom,
+            to: $this->data->dateCreatedTo,
+        );
+
+        return $query->orderBy(
+            $this->resolveSort($this->data->list->sort),
+            $this->resolveDirection($this->data->list->direction),
+        );
     }
 }

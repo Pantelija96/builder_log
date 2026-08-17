@@ -119,6 +119,12 @@ Route::prefix('v1')->group(function () {
                 Route::delete('/{expense}', 'destroy');
             });
 
+        Route::controller(ExpenseController::class)
+            ->prefix('expenses')
+            ->group(function () {
+                Route::get('/', 'getAll');
+            });
+
         Route::controller(AttachmentController::class)->group(function () {
             Route::post('/daily-logs/{dailyLog}/attachments', 'uploadToDailyLog');
             Route::post('/expenses/{expense}/attachments', 'uploadToExpense');
@@ -159,6 +165,12 @@ Route::prefix('v1')->group(function () {
                 Route::post('/', 'store');
                 Route::patch('/{note}', 'update');
                 Route::delete('/{note}', 'destroy');
+            });
+
+        Route::controller(NoteController::class)
+            ->prefix('notes')
+            ->group(function () {
+                Route::get('/', 'getAll');
             });
 
         Route::controller(NotificationController::class)
@@ -253,6 +265,12 @@ Route::prefix('v1')->group(function () {
 
                 Route::patch('/{excavatorLog}', 'update');
                 Route::delete('/{excavatorLog}', 'destroy');
+            });
+
+        Route::controller(ConstructionSiteController::class)
+            ->prefix('construction-sites')
+            ->group(function () {
+                Route::get('/{constructionSite}/financial-summary', 'financialSummary');
             });
 
 

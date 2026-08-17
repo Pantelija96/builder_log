@@ -36,6 +36,36 @@ class NoteService
             ]);
     }
 
+    public function get(
+        DailyLog $dailyLog,
+        GetNotesData $data,
+    ): Collection {
+
+        return (new NoteFilter($data))
+            ->apply($this->query($dailyLog))
+            ->offset($data->list->offset)
+            ->limit($data->list->limit)
+            ->get();
+    }
+
+    public function getAll(GetNotesData $data,): Collection
+    {
+        $query = Note::query()
+            ->with([
+                'creator',
+                'siteManager',
+                'constructionSite',
+                'dailyLog',
+                'attachments',
+            ]);
+
+        return (new NoteFilter($data))
+            ->apply($query)
+            ->offset($data->list->offset)
+            ->limit($data->list->limit)
+            ->get();
+    }
+
     public function create(
         DailyLog $dailyLog,
         CreateNoteData $data,
@@ -49,17 +79,6 @@ class NoteService
         );
     }
 
-    public function get(
-        DailyLog $dailyLog,
-        GetNotesData $data,
-    ): Collection {
-
-        return (new NoteFilter($data))
-            ->apply($this->query($dailyLog))
-            ->offset($data->list->offset)
-            ->limit($data->list->limit)
-            ->get();
-    }
 
     public function findById(
         DailyLog $dailyLog,

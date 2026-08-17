@@ -59,6 +59,16 @@ class GetTasksRequest extends FormRequest
                 'after_or_equal:due_date_from',
             ],
 
+            'date_created_from' => [
+                'nullable',
+                'date',
+            ],
+
+            'date_created_to' => [
+                'nullable',
+                'date',
+            ],
+
             'sort' => [
                 'nullable',
                 Rule::in([

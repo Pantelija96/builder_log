@@ -112,7 +112,7 @@ class ExcavatorLogService
             return;
         }
 
-        if ($currentWorker->isSiteManager() && (int) $excavatorLog->machineAssignment->site_manager_id === (int) $currentWorker->id)
+        if ($currentWorker->isSiteManager())
         {
             return;
         }

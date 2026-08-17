@@ -3,10 +3,12 @@
 namespace App\QueryFilters;
 
 use App\DTO\CashAdvance\GetCashAdvancesData;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 
 class CashAdvanceFilter extends BaseFilter
 {
+    //Available filters: site_manager_id, date_from, date_to, min_amount, max_amount, date_created_from, date_created_to
     protected array $sortable = [
         'id',
         'amount',
@@ -47,13 +49,13 @@ class CashAdvanceFilter extends BaseFilter
 
             ->when(
                 $this->data->dateFrom,
-                fn (Builder $query, $date) =>
+                fn (Builder $query, Carbon $date) =>
                 $query->whereDate('date', '>=', $date)
             )
 
             ->when(
                 $this->data->dateTo,
-                fn (Builder $query, $date) =>
+                fn (Builder $query, Carbon $date) =>
                 $query->whereDate('date', '<=', $date)
             )
 
@@ -67,6 +69,18 @@ class CashAdvanceFilter extends BaseFilter
                 $this->data->maxAmount,
                 fn (Builder $query, float $amount) =>
                 $query->where('amount', '<=', $amount)
+            )
+
+            ->when(
+                $this->data->dateCreatedFrom,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate('created_at', '>=', $date)
+            )
+
+            ->when(
+                $this->data->dateCreatedTo,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate('created_at', '<=', $date)
             )
 
             ->orderBy(

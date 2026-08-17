@@ -22,7 +22,7 @@ readonly class ListQueryData
             sort: $request->validated('sort'),
             direction: $request->validated('direction', 'asc'),
             offset: (int) $request->validated('offset', 0),
-            limit: (int) $request->validated('limit', 20),
+            limit: (int) $request->validated('limit', 999),
         );
     }
 }

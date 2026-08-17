@@ -37,6 +37,16 @@ class GetNotesRequest extends FormRequest
                 Rule::exists('workers', 'id'),
             ],
 
+            'date_created_from' => [
+                'nullable',
+                'date',
+            ],
+
+            'date_created_to' => [
+                'nullable',
+                'date',
+            ],
+
             'sort' => [
                 'nullable',
                 'string',

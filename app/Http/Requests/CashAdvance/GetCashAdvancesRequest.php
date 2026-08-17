@@ -44,6 +44,16 @@ class GetCashAdvancesRequest extends FormRequest
                 'gte:min_amount',
             ],
 
+            'date_created_from' => [
+                'nullable',
+                'date',
+            ],
+
+            'date_created_to' => [
+                'nullable',
+                'date',
+            ],
+
             'sort' => [
                 'nullable',
                 'string',

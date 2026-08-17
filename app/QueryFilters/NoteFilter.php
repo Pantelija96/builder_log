@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class NoteFilter extends BaseFilter
 {
+    //Available filters: daily_log_id, construction_site_id, site_manager_id, date_from, date_to, notify_admin, created_by, search, sort, direction
     protected array $sortable = [
         'id',
         'date',
@@ -22,8 +23,7 @@ class NoteFilter extends BaseFilter
 
     public function apply(Builder $query): Builder
     {
-        return $query
-
+        $query
             ->when(
                 $this->data->dailyLogId,
                 fn (Builder $query, int $dailyLogId) =>
@@ -48,19 +48,23 @@ class NoteFilter extends BaseFilter
             ->when(
                 $this->data->list->search,
                 function (Builder $query, string $search) {
-
                     $query->where(
                         'note',
                         'like',
                         "%{$search}%"
                     );
-
                 }
-            )
-
-            ->orderBy(
-                $this->resolveSort($this->data->list->sort),
-                $this->resolveDirection($this->data->list->direction),
             );
+
+        $query = $this->applyCreatedAtFilter(
+            query: $query,
+            from: $this->data->dateCreatedFrom,
+            to: $this->data->dateCreatedTo,
+        );
+
+        return $query->orderBy(
+            $this->resolveSort($this->data->list->sort),
+            $this->resolveDirection($this->data->list->direction),
+        );
     }
 }
