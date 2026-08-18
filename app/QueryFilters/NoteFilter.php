@@ -31,6 +31,18 @@ class NoteFilter extends BaseFilter
             )
 
             ->when(
+                $this->data->constructionSiteId,
+                fn (Builder $query, int $constructionSiteId) =>
+                $query->where('construction_site_id', $constructionSiteId)
+            )
+
+            ->when(
+                $this->data->siteManagerId,
+                fn (Builder $query, int $siteManagerId) =>
+                $query->where('site_manager_id', $siteManagerId)
+            )
+
+            ->when(
                 $this->data->notifyAdmin !== null,
                 fn (Builder $query) =>
                 $query->where(

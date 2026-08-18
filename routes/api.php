@@ -141,6 +141,12 @@ Route::prefix('v1')->group(function () {
             });
 
         Route::controller(DeliveryNoteController::class)
+            ->prefix('delivery-notes')
+            ->group(function () {
+                Route::get('/', 'getAll');
+            });
+
+        Route::controller(DeliveryNoteController::class)
             ->prefix('daily-logs/{dailyLog}/delivery-notes')
             ->group(function () {
                 Route::get('/', 'index');

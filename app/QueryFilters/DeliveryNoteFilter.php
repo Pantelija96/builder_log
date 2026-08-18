@@ -3,6 +3,7 @@
 namespace App\QueryFilters;
 
 use App\DTO\DeliveryNote\GetDeliveryNotesData;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 
 class DeliveryNoteFilter extends BaseFilter
@@ -24,10 +25,31 @@ class DeliveryNoteFilter extends BaseFilter
     public function apply(Builder $query): Builder
     {
         return $query
-            ->when($this->data->dailyLogId,
-                fn (Builder $query, int $dailyLogId) => $query->where('daily_log_id', $dailyLogId))
-            ->when($this->data->supplierId,
-                fn (Builder $query, int $supplierId) => $query->where('supplier_id', $supplierId))
+
+            ->when(
+                $this->data->dailyLogId,
+                fn (Builder $query, int $dailyLogId) =>
+                $query->where('daily_log_id', $dailyLogId)
+            )
+
+            ->when(
+                $this->data->supplierId,
+                fn (Builder $query, int $supplierId) =>
+                $query->where('supplier_id', $supplierId)
+            )
+
+            ->when(
+                $this->data->dateFrom,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate('date', '>=', $date)
+            )
+
+            ->when(
+                $this->data->dateTo,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate('date', '<=', $date)
+            )
+
             ->when(
                 $this->data->list->search,
                 function (Builder $query, string $search) {
@@ -39,10 +61,13 @@ class DeliveryNoteFilter extends BaseFilter
                     });
                 }
             )
+
             ->when(
                 $this->data->name,
-                fn (Builder $query, string $name) => $query->where('name', 'like', "%{$name}%")
+                fn (Builder $query, string $name) =>
+                $query->where('name', 'like', "%{$name}%")
             )
+
             ->orderBy(
                 $this->resolveSort($this->data->list->sort),
                 $this->resolveDirection($this->data->list->direction),

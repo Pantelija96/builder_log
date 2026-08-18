@@ -9,6 +9,7 @@ use App\Http\Requests\DeliveryNote\CreateDeliveryNoteRequest;
 use App\Http\Requests\DeliveryNote\DeleteDeliveryNoteRequest;
 use App\Http\Requests\DeliveryNote\GetDeliveryNotesRequest;
 use App\Http\Requests\DeliveryNote\UpdateDeliveryNoteRequest;
+use App\Http\Resources\DeliveryNoteAdmin;
 use App\Http\Resources\DeliveryNoteResource;
 use App\Models\DailyLog;
 use App\Models\DeliveryNote;
@@ -22,6 +23,17 @@ class DeliveryNoteController extends ApiController
     public function __construct(
         private readonly DeliveryNoteService $service,
     ) {
+    }
+
+    public function getAll(GetDeliveryNotesRequest $request,): JsonResponse
+    {
+        return $this->success(
+            DeliveryNoteAdmin::collection(
+                $this->service->getAllAdmin(
+                    GetDeliveryNotesData::fromRequest($request),
+                )
+            )
+        );
     }
 
     public function index(DailyLog $dailyLog, GetDeliveryNotesRequest $request,): JsonResponse {

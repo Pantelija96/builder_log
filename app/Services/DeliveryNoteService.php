@@ -23,6 +23,29 @@ class DeliveryNoteService
     ) {
     }
 
+    private function queryAll()
+    {
+        return DeliveryNote::query()
+            ->with([
+                'supplier',
+                'creator',
+                'siteManager',
+                'constructionSite',
+                'dailyLog',
+                'attachments',
+            ]);
+    }
+
+    public function getAllAdmin(
+        GetDeliveryNotesData $data,
+    ): Collection {
+        return (new DeliveryNoteFilter($data))
+            ->apply($this->queryAll())
+            ->offset($data->list->offset)
+            ->limit($data->list->limit)
+            ->get();
+    }
+
     public function getAll(DailyLog $dailyLog, GetDeliveryNotesData $data,): Collection {
         $query = DeliveryNote::query()
             ->where('daily_log_id', $dailyLog->id)
