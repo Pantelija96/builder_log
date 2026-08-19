@@ -33,6 +33,12 @@ class DeliveryNoteFilter extends BaseFilter
             )
 
             ->when(
+                $this->data->siteManagerId,
+                fn (Builder $query, int $siteManagerId) =>
+                $query->where('site_manager_id', $siteManagerId)
+            )
+
+            ->when(
                 $this->data->supplierId,
                 fn (Builder $query, int $supplierId) =>
                 $query->where('supplier_id', $supplierId)

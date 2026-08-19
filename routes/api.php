@@ -20,6 +20,7 @@ use App\Http\Controllers\FinancialSummaryController;
 use App\Http\Controllers\MachineAssignmentController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SiteManagerController;
 use App\Http\Controllers\SubcontractorLogController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TruckLogController;
@@ -277,6 +278,23 @@ Route::prefix('v1')->group(function () {
             ->prefix('construction-sites')
             ->group(function () {
                 Route::get('/{constructionSite}/financial-summary', 'financialSummary');
+            });
+
+        Route::controller(SiteManagerController::class)
+            ->prefix('site-managers')
+            ->group(function () {
+                Route::get('/{siteManager}/overall', 'overall');
+                Route::get('/{siteManager}/assigned-sites', 'assignedSites');
+            });
+
+        Route::controller(WorkerController::class)
+            ->prefix('workers')
+            ->group(function () {
+                Route::get('/{worker}', 'show');
+                Route::post('/', 'store');
+                Route::patch('/{worker}', 'update');
+                Route::delete('/{worker}', 'destroy');
+                Route::get('/{worker}/work-history', 'workHistory');
             });
 
 

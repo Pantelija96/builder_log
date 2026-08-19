@@ -3,6 +3,7 @@
 namespace App\QueryFilters;
 
 use App\DTO\WorkerAttendance\GetWorkerAttendancesData;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 
 class WorkerAttendanceFilter extends BaseFilter
@@ -16,36 +17,65 @@ class WorkerAttendanceFilter extends BaseFilter
 
     protected string $defaultSort = 'started_at';
 
-    public function __construct(protected readonly GetWorkerAttendancesData $data,
+    public function __construct(
+        protected readonly GetWorkerAttendancesData $data,
     ) {
     }
 
-    public function apply(Builder $query,): Builder {
-
-        if ($this->data->workerId) {
-            $query->where(
-                'worker_id',
-                $this->data->workerId
-            );
-        }
-
-        if ($search = $this->data->list->search) {
-
-            $query->where(function ($query) use ($search) {
-
-                $query->whereHas(
-                    'worker',
-                    function ($query) use ($search) {
-
-                        $query
-                            ->where('first_name', 'like', "%{$search}%")
-                            ->orWhere('last_name', 'like', "%{$search}%");
-                    }
-                );
-            });
-        }
-
+    public function apply(Builder $query): Builder
+    {
         return $query
+
+            ->when(
+                $this->data->workerId,
+                fn (Builder $query, int $workerId) =>
+                $query->where('worker_id', $workerId)
+            )
+
+            ->when(
+                $this->data->list->search,
+                function (Builder $query, string $search) {
+
+                    $query->whereHas(
+                        'worker',
+                        function (Builder $query) use ($search) {
+
+                            $query
+                                ->where(
+                                    'first_name',
+                                    'like',
+                                    "%{$search}%"
+                                )
+                                ->orWhere(
+                                    'last_name',
+                                    'like',
+                                    "%{$search}%"
+                                );
+                        }
+                    );
+                }
+            )
+
+            ->when(
+                $this->data->dateCreatedFrom,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate(
+                    'created_at',
+                    '>=',
+                    $date
+                )
+            )
+
+            ->when(
+                $this->data->dateCreatedTo,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate(
+                    'created_at',
+                    '<=',
+                    $date
+                )
+            )
+
             ->orderBy(
                 $this->resolveSort(
                     $this->data->list->sort

@@ -39,6 +39,12 @@ class GetDeliveryNotesRequest extends FormRequest
                 'exists:daily_logs,id',
             ],
 
+            'site_manager_id' => [
+                'nullable',
+                'integer',
+                'exists:workers,id',
+            ],
+
             'date_from' => [
                 'nullable',
                 'date',

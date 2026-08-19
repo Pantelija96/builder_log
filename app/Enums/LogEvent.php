@@ -146,4 +146,13 @@ enum LogEvent: string
    */
     case EXCAVATOR_LOG_UPDATED = 'excavator.log.updated';
     case EXCAVATOR_LOG_DELETED = 'excavator.log.deleted';
+
+    /*
+   |--------------------------------------------------------------------------
+   | Worker
+   |--------------------------------------------------------------------------
+   */
+    case WORKER_UPDATED = 'worker.log.updated';
+    case WORKER_DELETED = 'worker.log.deleted';
+    case WORKER_CREATED = 'worker.log.created';
 }

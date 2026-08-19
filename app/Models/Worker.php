@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\WorkerRole;
+use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class Worker extends Authenticatable
     use Notifiable;
     use SoftDeletes;
     use HasApiTokens;
+    use Loggable;
 
     protected $fillable = [
         'company_id',
@@ -175,8 +177,7 @@ class Worker extends Authenticatable
 
     public function constructionSites(): BelongsToMany
     {
-        return $this->belongsToMany(ConstructionSite::class)
-            ->withTimestamps();
+        return $this->belongsToMany(ConstructionSite::class)->withTimestamps();
     }
 
     public function notifications(): HasMany
