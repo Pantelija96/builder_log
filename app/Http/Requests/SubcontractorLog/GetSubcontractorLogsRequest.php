@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\SubcontractorLog;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class GetSubcontractorLogsRequest extends FormRequest
 {
@@ -21,9 +21,27 @@ class GetSubcontractorLogsRequest extends FormRequest
                 'max:255',
             ],
 
+            'daily_log_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('daily_logs', 'id'),
+            ],
+
             'subcontractor_id' => [
                 'nullable',
-                'exists:subcontractors,id',
+                'integer',
+                Rule::exists('subcontractors', 'id'),
+            ],
+
+            'date_from' => [
+                'nullable',
+                'date',
+            ],
+
+            'date_to' => [
+                'nullable',
+                'date',
+                'after_or_equal:date_from',
             ],
 
             'sort' => [

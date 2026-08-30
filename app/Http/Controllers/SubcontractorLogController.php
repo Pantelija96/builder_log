@@ -25,15 +25,16 @@ class SubcontractorLogController extends ApiController
     }
 
     public function index(
-        DailyLog $dailyLog,
         GetSubcontractorLogsRequest $request,
     ): JsonResponse {
+        /** @var Worker $worker */
+        $worker = auth()->user();
 
         return $this->success(
             SubcontractorLogResource::collection(
                 $this->service->get(
-                    $dailyLog,
-                    GetSubcontractorLogsData::fromRequest($request)
+                    currentWorker: $worker,
+                    data: GetSubcontractorLogsData::fromRequest($request),
                 )
             )
         );

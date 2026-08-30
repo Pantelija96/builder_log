@@ -159,10 +159,15 @@ Route::prefix('v1')->group(function () {
         Route::controller(SubcontractorLogController::class)
             ->prefix('daily-logs/{dailyLog}/subcontractors')
             ->group(function () {
-                Route::get('/', 'index');
                 Route::post('/', 'store');
                 Route::patch('/{subcontractorLog}', 'update');
                 Route::delete('/{subcontractorLog}', 'destroy');
+            });
+
+        Route::controller(SubcontractorLogController::class)
+            ->prefix('subcontractor-logs')
+            ->group(function () {
+                Route::get('/', 'index');
             });
 
         Route::controller(NoteController::class)

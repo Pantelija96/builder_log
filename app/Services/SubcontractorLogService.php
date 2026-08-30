@@ -35,12 +35,23 @@ class SubcontractorLogService
             ]);
     }
 
-    public function get(DailyLog $dailyLog, GetSubcontractorLogsData $data,): Collection {
+    public function get(
+        Worker $currentWorker,
+        GetSubcontractorLogsData $data,
+    ): Collection {
+        $query = SubcontractorLog::query()
+            ->where(
+                'company_id',
+                $currentWorker->company_id,
+            )
+            ->with([
+                'subcontractor',
+                'creator',
+                'siteManager',
+            ]);
 
         return (new SubcontractorLogFilter($data))
-            ->apply(
-                $this->query($dailyLog)
-            )
+            ->apply($query)
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
