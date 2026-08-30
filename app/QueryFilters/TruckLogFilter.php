@@ -10,8 +10,10 @@ class TruckLogFilter extends BaseFilter
     protected array $sortable = [
         'id',
         'date',
-        'started_at',
-        'finished_at',
+        'site_manager_started_at',
+        'site_manager_finished_at',
+        'operator_started_at',
+        'operator_finished_at',
         'start_mileage',
         'end_mileage',
         'created_at',
@@ -29,26 +31,26 @@ class TruckLogFilter extends BaseFilter
         return $query
             ->when(
                 $this->data->machineId,
-                fn (Builder $query, int $machineId) => $query->where(
-                    'machine_id',
-                    $machineId,
-                )
+                fn (Builder $query, int $machineId) =>
+                $query->where('machine_id', $machineId)
             )
 
             ->when(
                 $this->data->workerId,
-                fn (Builder $query, int $workerId) => $query->where(
-                    'worker_id',
-                    $workerId,
-                )
+                fn (Builder $query, int $workerId) =>
+                $query->where('worker_id', $workerId)
             )
 
             ->when(
-                $this->data->date,
-                fn (Builder $query, string $date) => $query->whereDate(
-                    'date',
-                    $date,
-                )
+                $this->data->dateFrom,
+                fn (Builder $query, string $date) =>
+                $query->whereDate('date', '>=', $date)
+            )
+
+            ->when(
+                $this->data->dateTo,
+                fn (Builder $query, string $date) =>
+                $query->whereDate('date', '<=', $date)
             )
 
             ->orderBy(
