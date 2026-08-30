@@ -20,12 +20,7 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->cascadeOnDelete();
 
-            $table->string('license_plate', 30)
-                ->unique();
-
-            $table->decimal('initial_mileage', 12, 2)
-                ->default(0);
-
+            $table->decimal('initial_mileage', 12, 2)->default(0);
             $table->timestamps();
             $table->softDeletes();
         });

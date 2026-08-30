@@ -26,6 +26,7 @@ class Machine extends Model
         'owner_id',
         'status',
         'image_path',
+        'license_plate',
     ];
 
     protected function casts(): array

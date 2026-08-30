@@ -20,6 +20,7 @@ class MachineResource extends JsonResource
             'id' => $this->id,
             'company_id' => $this->company_id,
             'name' => $this->name,
+            'license_plate' => $this->license_plate,
             'type' => $this->type,
             'status' => $this->status,
             'owner_type' => $this->owner_type,
