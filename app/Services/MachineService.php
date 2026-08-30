@@ -8,7 +8,6 @@ use App\Actions\Machine\UpdateMachineAction;
 use App\DTO\Machine\CreateMachineData;
 use App\DTO\Machine\GetMachinesData;
 use App\DTO\Machine\UpdateMachineData;
-use App\Enums\MachineType;
 use App\Models\Machine;
 use App\Models\Worker;
 use App\QueryFilters\MachineFilter;
@@ -23,13 +22,14 @@ class MachineService
     ) {
     }
 
-    private function query(Worker $currentWorker,)
+    private function query(Worker $currentWorker)
     {
         return Machine::query()
-            ->where('company_id', $currentWorker->company_id,)
+            ->where('company_id', $currentWorker->company_id)
             ->with([
                 'owner',
                 'excavator',
+                'truck',
             ]);
     }
 
@@ -40,6 +40,7 @@ class MachineService
                 'company',
                 'owner',
                 'excavator',
+                'truck',
             ]);
 
         $query = (new MachineFilter($data))
@@ -55,7 +56,6 @@ class MachineService
         Worker $currentWorker,
         GetMachinesData $data,
     ): Collection {
-
         return (new MachineFilter($data))
             ->apply(
                 $this->query($currentWorker)
@@ -69,7 +69,6 @@ class MachineService
         Worker $currentWorker,
         int $id,
     ): ?Machine {
-
         return $this->query($currentWorker)
             ->whereKey($id)
             ->first();
@@ -79,7 +78,6 @@ class MachineService
         CreateMachineData $data,
         Worker $currentWorker,
     ): Machine {
-
         if (! $currentWorker->isAdmin()) {
             abort(403);
         }
@@ -94,9 +92,7 @@ class MachineService
         Machine $machine,
         UpdateMachineData $data,
         Worker $currentWorker,
-        ?string $reason = null,
     ): Machine {
-
         if (! $currentWorker->isAdmin()) {
             abort(403);
         }
@@ -109,7 +105,6 @@ class MachineService
         return $this->updateMachineAction->execute(
             machine: $machine,
             data: $data,
-            currentWorker: $currentWorker,
         );
     }
 
@@ -118,7 +113,6 @@ class MachineService
         Worker $currentWorker,
         string $reason,
     ): void {
-
         if (! $currentWorker->isAdmin()) {
             abort(403);
         }
@@ -139,10 +133,7 @@ class MachineService
         Machine $machine,
         Worker $currentWorker,
     ): void {
-
-        if (
-            $machine->company_id !== $currentWorker->company_id
-        ) {
+        if ($machine->company_id !== $currentWorker->company_id) {
             abort(404);
         }
     }

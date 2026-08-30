@@ -14,7 +14,6 @@ class Truck extends Model
 
     protected $fillable = [
         'machine_id',
-        'license_plate',
         'initial_mileage',
     ];
 

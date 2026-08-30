@@ -16,6 +16,9 @@ readonly class CreateMachineData
         public int $ownerId,
         public MachineStatus $status,
         public ?string $imagePath,
+        public ?string $licensePlate,
+        public ?float $initialWorkHours,
+        public ?float $initialMileage,
     ) {
     }
 
@@ -38,6 +41,9 @@ readonly class CreateMachineData
             MachineStatus::class,
         ) ?? MachineStatus::ACTIVE,
             imagePath: $request->validated('image_path'),
+            licensePlate: $request->validated('license_plate'),
+            initialWorkHours: $request->validated('initial_work_hours'),
+            initialMileage: $request->validated('initial_mileage'),
         );
     }
 }

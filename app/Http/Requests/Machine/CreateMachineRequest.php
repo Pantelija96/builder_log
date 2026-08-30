@@ -49,6 +49,27 @@ class CreateMachineRequest extends FormRequest
                 'string',
                 'max:500',
             ],
+
+            'license_plate' => [
+                'nullable',
+                'string',
+                'max:30',
+                'unique:machines,license_plate',
+            ],
+
+            'initial_work_hours' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'required_if:type,' . MachineType::EXCAVATOR->value,
+            ],
+
+            'initial_mileage' => [
+                'nullable',
+                'numeric',
+                'min:0',
+                'required_if:type,' . MachineType::TRUCK->value,
+            ],
         ];
     }
 }

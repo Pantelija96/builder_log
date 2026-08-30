@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\MachineStatus;
 use App\Enums\MachineType;
 use App\Enums\OwnerType;
+use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,6 +18,7 @@ class Machine extends Model
 {
     use HasFactory;
     use SoftDeletes;
+    use Loggable;
 
     protected $fillable = [
         'company_id',

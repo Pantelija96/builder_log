@@ -5,7 +5,7 @@ namespace App\Http\Resources;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class ExcavatorResource extends JsonResource
+class TruckResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -15,8 +15,7 @@ class ExcavatorResource extends JsonResource
         return [
             'id' => $this->id,
             'machine_id' => $this->machine_id,
-            'initial_work_hours' => $this->initial_work_hours,
-            'total_work_hours' => $this->total_work_hours,
+            'initial_mileage' => $this->initial_mileage,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

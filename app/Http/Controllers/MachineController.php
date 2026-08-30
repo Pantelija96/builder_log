@@ -19,10 +19,12 @@ class MachineController extends ApiController
 {
     public function __construct(
         private readonly MachineService $machineService,
-    ) {}
+    ) {
+    }
 
-    public function index(GetMachinesRequest $request,): JsonResponse
-    {
+    public function index(
+        GetMachinesRequest $request,
+    ): JsonResponse {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -36,8 +38,9 @@ class MachineController extends ApiController
         );
     }
 
-    public function show(Machine $machine,): JsonResponse
-    {
+    public function show(
+        Machine $machine,
+    ): JsonResponse {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -58,8 +61,9 @@ class MachineController extends ApiController
         );
     }
 
-    public function store(CreateMachineRequest $request,): JsonResponse
-    {
+    public function store(
+        CreateMachineRequest $request,
+    ): JsonResponse {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -74,8 +78,10 @@ class MachineController extends ApiController
         );
     }
 
-    public function update(Machine $machine, UpdateMachineRequest $request,): JsonResponse
-    {
+    public function update(
+        Machine $machine,
+        UpdateMachineRequest $request,
+    ): JsonResponse {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -83,7 +89,6 @@ class MachineController extends ApiController
             machine: $machine,
             data: UpdateMachineData::fromRequest($request),
             currentWorker: $worker,
-            reason: $request->string('reason')->toString(),
         );
 
         return $this->success(
@@ -92,8 +97,10 @@ class MachineController extends ApiController
         );
     }
 
-    public function destroy(Machine $machine, DeleteMachineRequest $request,): JsonResponse
-    {
+    public function destroy(
+        Machine $machine,
+        DeleteMachineRequest $request,
+    ): JsonResponse {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -107,5 +114,4 @@ class MachineController extends ApiController
             message: 'Machine deleted successfully.',
         );
     }
-
 }

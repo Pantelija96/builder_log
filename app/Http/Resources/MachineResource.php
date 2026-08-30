@@ -20,27 +20,43 @@ class MachineResource extends JsonResource
             'id' => $this->id,
             'company_id' => $this->company_id,
             'name' => $this->name,
-            'license_plate' => $this->license_plate,
             'type' => $this->type,
+            'license_plate' => $this->license_plate,
             'status' => $this->status,
             'owner_type' => $this->owner_type,
             'owner_id' => $this->owner_id,
             'image_path' => $this->image_path,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+
             'company' => new CompanyResource(
                 $this->whenLoaded('company')
             ),
+
             'owner' => match (true) {
-                $this->owner instanceof Company => new CompanyResource($this->owner),
-                $this->owner instanceof Supplier => new SupplierResource($this->owner),
-                $this->owner instanceof Subcontractor => new SubcontractorResource($this->owner),
-                $this->owner instanceof Worker => new WorkerResource($this->owner),
+                $this->owner instanceof Company =>
+                new CompanyResource($this->owner),
+
+                $this->owner instanceof Supplier =>
+                new SupplierResource($this->owner),
+
+                $this->owner instanceof Subcontractor =>
+                new SubcontractorResource($this->owner),
+
+                $this->owner instanceof Worker =>
+                new WorkerResource($this->owner),
+
                 default => null,
             },
+
             'excavator' => $this->when(
                 $this->isExcavator() && $this->relationLoaded('excavator'),
                 fn () => ExcavatorResource::make($this->excavator),
+            ),
+
+            'truck' => $this->when(
+                $this->isTruck() && $this->relationLoaded('truck'),
+                fn () => TruckResource::make($this->truck),
             ),
         ];
     }

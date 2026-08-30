@@ -3,7 +3,6 @@
 namespace App\DTO\Machine;
 
 use App\Enums\MachineStatus;
-use App\Enums\MachineType;
 use App\Enums\OwnerType;
 use App\Http\Requests\Machine\UpdateMachineRequest;
 
@@ -11,7 +10,6 @@ readonly class UpdateMachineData
 {
     public function __construct(
         public string $name,
-        public MachineType $type,
         public OwnerType $ownerType,
         public int $ownerId,
         public MachineStatus $status,
@@ -24,10 +22,6 @@ readonly class UpdateMachineData
     ): self {
         return new self(
             name: $request->validated('name'),
-            type: $request->enum(
-                'type',
-                MachineType::class,
-            ),
             ownerType: $request->enum(
                 'owner_type',
                 OwnerType::class,
