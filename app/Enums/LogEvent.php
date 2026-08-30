@@ -155,4 +155,13 @@ enum LogEvent: string
     case WORKER_UPDATED = 'worker.log.updated';
     case WORKER_DELETED = 'worker.log.deleted';
     case WORKER_CREATED = 'worker.log.created';
+
+    /*
+  |--------------------------------------------------------------------------
+  | Subcontractor
+  |--------------------------------------------------------------------------
+  */
+    case SUBCONTRACTOR_DELETED = 'subcontractor.deleted';
+    case SUBCONTRACTOR_CREATED = 'subcontractor.created';
+    case SUBCONTRACTOR_UPDATED = 'subcontractor.updated';
 }

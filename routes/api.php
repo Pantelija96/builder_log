@@ -297,6 +297,15 @@ Route::prefix('v1')->group(function () {
                 Route::get('/{worker}/work-history', 'workHistory');
             });
 
+        Route::controller(SubcontractorController::class)
+            ->prefix('subcontractors')
+            ->group(function () {
+                Route::post('/', 'store');
+                Route::get('/{subcontractor}', 'show');
+                Route::patch('/{subcontractor}', 'update');
+                Route::delete('/{subcontractor}', 'destroy');
+            });
+
 
     });
 });

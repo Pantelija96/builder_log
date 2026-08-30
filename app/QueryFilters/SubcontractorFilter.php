@@ -38,11 +38,33 @@ class SubcontractorFilter extends BaseFilter
             )
 
             ->when(
+                $this->data->name,
+                fn (Builder $query, string $name) =>
+                $query->where('name', 'like', "%{$name}%")
+            )
+
+            ->when(
+                $this->data->pib,
+                fn (Builder $query, string $pib) =>
+                $query->where('pib', 'like', "%{$pib}%")
+            )
+
+            ->when(
+                $this->data->email,
+                fn (Builder $query, string $email) =>
+                $query->where('email', 'like', "%{$email}%")
+            )
+
+            ->when(
+                $this->data->phone,
+                fn (Builder $query, string $phone) =>
+                $query->where('phone', 'like', "%{$phone}%")
+            )
+
+            ->when(
                 ! is_null($this->data->isActive),
-                fn (Builder $query) => $query->where(
-                    'is_active',
-                    $this->data->isActive
-                )
+                fn (Builder $query) =>
+                $query->where('is_active', $this->data->isActive)
             )
 
             ->orderBy(

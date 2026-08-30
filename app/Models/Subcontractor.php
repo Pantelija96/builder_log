@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,6 +14,7 @@ class Subcontractor extends Model
 {
     use HasFactory;
     use SoftDeletes;
+    use Loggable;
 
     protected $fillable = [
         'company_id',
