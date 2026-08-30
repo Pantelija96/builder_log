@@ -283,6 +283,7 @@ Route::prefix('v1')->group(function () {
             ->prefix('construction-sites')
             ->group(function () {
                 Route::get('/{constructionSite}/financial-summary', 'financialSummary');
+                Route::get('/{constructionSite}/statistics', [ConstructionSiteController::class, 'statistics']);
             });
 
         Route::controller(SiteManagerController::class)
