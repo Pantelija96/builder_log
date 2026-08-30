@@ -3,6 +3,7 @@
 namespace App\Actions\SiteManager;
 
 use App\DTO\SiteManager\GetSiteManagerOverallData;
+use App\Models\CashAdvance;
 use App\Models\Expense;
 use App\Models\WorkerAttendance;
 use Carbon\Carbon;
@@ -57,6 +58,20 @@ class GetSiteManagerOverallAction
             ->orderBy('date')
             ->get();
 
+        $cashAdvancesTotal = CashAdvance::query()
+            ->where('site_manager_id', $siteManagerId)
+            ->when(
+                $data->dateCreatedFrom,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate('date', '>=', $date)
+            )
+            ->when(
+                $data->dateCreatedTo,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate('date', '<=', $date)
+            )
+            ->sum('amount');
+
         /*
          * Skupljamo sve construction_site_id-jeve koji postoje
          * u bilo kom od dva izvora.
@@ -71,9 +86,11 @@ class GetSiteManagerOverallAction
         /*
          * Grupisanje po construction_site_id.
          */
-        return $siteIds->map(function (int $siteId) use ($expenses, $workerAttendances,)
+        return $siteIds->map(function (int $siteId) use ($expenses, $workerAttendances, $cashAdvancesTotal)
         {
             return [
+                'cash_advance_total' => $cashAdvancesTotal,
+
                 'construction_site_id' => $siteId,
 
                 'construction_site' => $expenses

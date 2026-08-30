@@ -42,6 +42,10 @@ class WorkerAttendanceResource extends JsonResource
                 $this->whenLoaded('creator')
             ),
 
+            'construction_site' => ConstructionSiteResource::make(
+                $this->whenLoaded('constructionSite')
+            ) ,
+
             'created_at' => $this->created_at,
 
             'updated_at' => $this->updated_at,

@@ -45,6 +45,12 @@ class GetDeliveryNotesRequest extends FormRequest
                 'exists:workers,id',
             ],
 
+            'construction_site_id' => [
+                'nullable',
+                'integer',
+                'exists:construction_sites,id',
+            ],
+
             'date_from' => [
                 'nullable',
                 'date',

@@ -62,6 +62,7 @@ class GetWorkerWorkHistoryAction
             ->with([
                 'worker',
                 'creator',
+                'constructionSite'
             ])
             ->orderBy('date')
             ->get();

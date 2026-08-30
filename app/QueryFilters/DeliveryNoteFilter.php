@@ -45,6 +45,12 @@ class DeliveryNoteFilter extends BaseFilter
             )
 
             ->when(
+                $this->data->constructionSiteId,
+                fn (Builder $query, int $constructionSiteId) =>
+                $query->where('construction_site_id', $constructionSiteId)
+            )
+
+            ->when(
                 $this->data->dateFrom,
                 fn (Builder $query, Carbon $date) =>
                 $query->whereDate('date', '>=', $date)
