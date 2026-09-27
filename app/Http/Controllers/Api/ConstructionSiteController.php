@@ -16,6 +16,7 @@ use App\Models\Worker;
 use App\Services\ConstructionSiteFinancialSummaryService;
 use App\Services\ConstructionSiteService;
 use App\Services\ConstructionSiteStatisticsService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 
 class ConstructionSiteController extends ApiController
@@ -59,24 +60,19 @@ class ConstructionSiteController extends ApiController
         ]);
     }
 
-    public function statistics(
-        ConstructionSite $constructionSite,
-        GetConstructionSiteStatisticsRequest $request,
-    ): JsonResponse {
+    public function statistics(ConstructionSite $constructionSite, GetConstructionSiteStatisticsRequest $request,): JsonResponse {
         /** @var Worker $worker */
         $worker = auth()->user();
 
-        if (
-            $worker->company_id !== $constructionSite->company_id
-        ) {
+        if ($worker->company_id !== $constructionSite->company_id) {
             abort(404);
         }
 
         return $this->success(
             $this->statisticsService->get(
                 constructionSite: $constructionSite,
-                dateFrom: $request->date('date_from')->toDateString(),
-                dateTo: $request->date('date_to')->toDateString(),
+                dateFrom: Carbon::parse($request->validated('date_from')),
+                dateTo: Carbon::parse($request->validated('date_to')),
             )
         );
     }
