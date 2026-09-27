@@ -19,7 +19,7 @@ class DeliveryNoteAdmin extends JsonResource
 
             'name' => $this->name,
             'description' => $this->description,
-            'date' => $this->date,
+            'date' => $this->date?->toDateString(),
 
             'company_id' => $this->company_id,
             'daily_log_id' => $this->daily_log_id,

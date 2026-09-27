@@ -11,43 +11,27 @@ class WorkerAttendanceResource extends JsonResource
     {
         return [
             'id' => $this->id,
-
             'company_id' => $this->company_id,
-
             'daily_log_id' => $this->daily_log_id,
-
             'construction_site_id' => $this->construction_site_id,
-
             'site_manager_id' => $this->site_manager_id,
-
             'worker_id' => $this->worker_id,
-
-            'date' => $this->date,
-
+            'date' => $this->date?->toDateString(),
             'started_at' => $this->started_at,
-
             'finished_at' => $this->finished_at,
-
             'worked_time' => $this->worked_time,
-
             'advance_payment' => $this->advance_payment,
-
             'created_by' => $this->created_by,
-
             'worker' => WorkerResource::make(
                 $this->whenLoaded('worker')
             ),
-
             'creator' => WorkerResource::make(
                 $this->whenLoaded('creator')
             ),
-
             'construction_site' => ConstructionSiteResource::make(
                 $this->whenLoaded('constructionSite')
             ) ,
-
             'created_at' => $this->created_at,
-
             'updated_at' => $this->updated_at,
         ];
     }

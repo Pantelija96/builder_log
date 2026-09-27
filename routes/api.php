@@ -110,6 +110,12 @@ Route::prefix('v1')->group(function () {
                 Route::delete('/{workerAttendance}', 'destroy');
             });
 
+        Route::controller(WorkerAttendanceController::class)
+            ->prefix('worker-attendances')
+            ->group(function () {
+                Route::get('/', 'getAll');
+            });
+
         Route::controller(ExpenseController::class)
             ->prefix('daily-logs/{dailyLog}/expenses')
             ->group(function () {

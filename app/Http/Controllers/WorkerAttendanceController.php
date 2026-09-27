@@ -71,4 +71,18 @@ class WorkerAttendanceController extends ApiController
             message: 'Worker attendance deleted successfully.'
         );
     }
+
+    public function getAll(GetWorkerAttendancesRequest $request,): JsonResponse {
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        return $this->success(
+            WorkerAttendanceResource::collection(
+                $this->workerAttendanceService->getAll(
+                    $worker,
+                    GetWorkerAttendancesData::fromRequest($request),
+                )
+            )
+        );
+    }
 }

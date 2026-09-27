@@ -33,6 +33,24 @@ class WorkerAttendanceFilter extends BaseFilter
             )
 
             ->when(
+                $this->data->constructionSiteId,
+                fn (Builder $query, int $constructionSiteId) =>
+                $query->where(
+                    'construction_site_id',
+                    $constructionSiteId
+                )
+            )
+
+            ->when(
+                $this->data->date,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate(
+                    'date',
+                    $date->toDateString()
+                )
+            )
+
+            ->when(
                 $this->data->list->search,
                 function (Builder $query, string $search) {
 

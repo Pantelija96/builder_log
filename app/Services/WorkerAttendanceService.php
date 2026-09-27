@@ -26,6 +26,18 @@ class WorkerAttendanceService
             ]);
     }
 
+    private function globalQuery(Worker $currentWorker)
+    {
+        return WorkerAttendance::query()
+            ->where('company_id', $currentWorker->company_id)
+            ->with([
+                'worker',
+                'creator',
+                'constructionSite',
+                'siteManager',
+            ]);
+    }
+
     public function __construct(
         private readonly CreateWorkerAttendanceAction $createWorkerAttendanceAction,
         private readonly UpdateWorkerAttendanceAction $updateWorkerAttendanceAction,
@@ -44,6 +56,14 @@ class WorkerAttendanceService
     public function get(DailyLog $dailyLog, GetWorkerAttendancesData $data,): Collection {
         return (new WorkerAttendanceFilter($data))
             ->apply($this->query($dailyLog))
+            ->offset($data->list->offset)
+            ->limit($data->list->limit)
+            ->get();
+    }
+
+    public function getAll(Worker $currentWorker, GetWorkerAttendancesData $data,): Collection {
+        return (new WorkerAttendanceFilter($data))
+            ->apply($this->globalQuery($currentWorker))
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
