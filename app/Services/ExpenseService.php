@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Actions\Expense\CreateAdminExpenseAction;
 use App\Actions\Expense\CreateExpenseAction;
 use App\Actions\Expense\DeleteExpenseAction;
 use App\Actions\Expense\UpdateExpenseAction;
+use App\DTO\Expense\CreateAdminExpenseData;
 use App\DTO\Expense\CreateExpenseData;
 use App\DTO\Expense\GetExpensesData;
 use App\DTO\Expense\UpdateExpenseData;
@@ -41,6 +43,7 @@ class ExpenseService
 
     public function __construct(
         private readonly CreateExpenseAction $createExpenseAction,
+        private readonly CreateAdminExpenseAction $createAdminExpenseAction,
         private readonly UpdateExpenseAction $updateExpenseAction,
         private readonly DeleteExpenseAction $deleteExpenseAction,
     ) {
@@ -49,6 +52,13 @@ class ExpenseService
     public function create(DailyLog $dailyLog, CreateExpenseData $data, Worker $currentWorker,): Expense {
         return $this->createExpenseAction->execute(
             $dailyLog,
+            $data,
+            $currentWorker,
+        );
+    }
+
+    public function createByAdmin(CreateAdminExpenseData $data, Worker $currentWorker,): Expense {
+        return $this->createAdminExpenseAction->execute(
             $data,
             $currentWorker,
         );

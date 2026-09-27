@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\DTO\Expense\CreateAdminExpenseData;
 use App\DTO\Expense\CreateExpenseData;
 use App\DTO\Expense\GetExpensesData;
 use App\DTO\Expense\UpdateExpenseData;
+use App\Http\Requests\Expense\CreateAdminExpenseRequest;
 use App\Http\Requests\Expense\CreateExpenseRequest;
 use App\Http\Requests\Expense\DeleteExpenseRequest;
 use App\Http\Requests\Expense\GetExpensesRequest;
@@ -139,5 +141,26 @@ class ExpenseController extends ApiController
                 $cashAdvances,
             ),
         ]);
+    }
+
+    public function storeByAdmin(CreateAdminExpenseRequest $request,): JsonResponse {
+        /** @var Worker $worker */
+        $worker = auth()->user();
+
+        $expense = $this->expenseService->createByAdmin(
+            CreateAdminExpenseData::fromRequest($request),
+            $worker,
+        );
+
+        return $this->success(
+            ExpenseResource::make(
+                $expense->load([
+                    'creator',
+                    'constructionSite',
+                    'attachments',
+                ])
+            ),
+            'Expense created successfully.'
+        );
     }
 }

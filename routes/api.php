@@ -130,6 +130,7 @@ Route::prefix('v1')->group(function () {
             ->prefix('expenses')
             ->group(function () {
                 Route::get('/', 'getAll');
+                Route::post('/', 'storeByAdmin');
             });
 
         Route::controller(AttachmentController::class)->group(function () {

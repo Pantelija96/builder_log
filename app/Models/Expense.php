@@ -68,7 +68,7 @@ class Expense extends Model implements HasAttachments
         );
     }
 
-    public function attachmentDailyLogId(): int
+    public function attachmentDailyLogId(): ?int
     {
         return $this->daily_log_id;
     }
@@ -80,6 +80,6 @@ class Expense extends Model implements HasAttachments
 
     public function attachmentDate(): \Carbon\CarbonInterface
     {
-        return $this->dailyLog->date;
+        return $this->date;
     }
 }

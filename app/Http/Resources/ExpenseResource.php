@@ -16,7 +16,7 @@ class ExpenseResource extends JsonResource
             'title' => $this->title,
             'description' => $this->description,
             'amount' => $this->amount,
-            'date' => $this->date,
+            'date' => $this->date?->toDateString(),
 
             'company_id' => $this->company_id,
             'daily_log_id' => $this->daily_log_id,

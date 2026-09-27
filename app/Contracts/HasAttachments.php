@@ -9,7 +9,7 @@ interface HasAttachments
 {
     public function attachments(): MorphMany;
 
-    public function attachmentDailyLogId(): int;
+    public function attachmentDailyLogId(): ?int;
 
     public function attachmentCompanyId(): int;
 
