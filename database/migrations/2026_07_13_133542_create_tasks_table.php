@@ -19,12 +19,34 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
-            $table->foreignId('site_manager_id')
+            /*
+             * Specific worker target.
+             *
+             * Can be a site manager, operator or driver.
+             */
+            $table->foreignId('worker_id')
                 ->nullable()
                 ->constrained('workers')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
+            /*
+             * Role target.
+             *
+             * Used when task is assigned to all workers
+             * with a specific role:
+             * site_manager, operator or driver.
+             */
+            $table->string('target_role', 50)
+                ->nullable()
+                ->index();
+
+            /*
+             * Construction site target.
+             *
+             * Used for site-manager tasks assigned
+             * through a construction site.
+             */
             $table->foreignId('construction_site_id')
                 ->nullable()
                 ->constrained()
@@ -32,7 +54,9 @@ return new class extends Migration
                 ->restrictOnDelete();
 
             $table->string('title', 255)->index();
-            $table->text('description')->nullable();
+
+            $table->text('description')
+                ->nullable();
 
             $table->string('priority', 50)
                 ->nullable()
@@ -54,12 +78,23 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
+            $table->foreignId('completed_by')
+                ->nullable()
+                ->constrained('workers')
+                ->cascadeOnUpdate()
+                ->restrictOnDelete();
+
             $table->timestamps();
             $table->softDeletes();
 
             $table->index(
-                ['site_manager_id', 'completed_at'],
-                'tasks_manager_completed_index'
+                ['worker_id', 'completed_at'],
+                'tasks_worker_completed_index'
+            );
+
+            $table->index(
+                ['target_role', 'completed_at'],
+                'tasks_role_completed_index'
             );
 
             $table->index(

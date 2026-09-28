@@ -2,58 +2,45 @@
 
 namespace App\Actions\Task;
 
-//use App\Actions\Attachment\UploadAttachmentsAction;
 use App\Actions\BaseAction;
 use App\DTO\Task\CreateTaskData;
 use App\Enums\LogEvent;
-use App\Enums\WorkerRole;
 use App\Models\Task;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
 use App\Services\NotificationService;
+use App\Enums\WorkerRole;
+use App\Exceptions\BusinessException;
 
 class CreateTaskAction extends BaseAction
 {
     public function __construct(
         private readonly LoggingService $logging,
         private readonly NotificationService $notifications,
-//        private readonly UploadAttachmentsAction $uploadAttachmentsAction,
-    )
-    {}
+    ) {
+    }
 
     public function execute(
         CreateTaskData $data,
         Worker $currentWorker,
-    ): Task
-    {
+    ): Task {
+        $this->ensureValidTargetWorker(
+            workerId: $data->workerId,
+            currentWorker: $currentWorker,
+        );
 
         return $this->transaction(function () use ($data, $currentWorker) {
 
             $task = Task::create([
                 'company_id' => $currentWorker->company_id,
-
-                'site_manager_id' => $data->siteManagerId,
-
+                'worker_id' => $data->workerId,
+                'target_role' => $data->targetRole,
                 'construction_site_id' => $data->constructionSiteId,
-
                 'title' => $data->title,
-
                 'description' => $data->description,
-
                 'due_date' => $data->dueDate,
-
                 'created_by' => $currentWorker->id,
             ])->refresh();
-
-//            if (!empty($data->attachments)) {
-//
-//                $this->uploadAttachmentsAction->execute(
-//                    attachable: $task,
-//                    files: $data->attachments,
-//                    worker: $currentWorker,
-//                );
-//
-//            }
 
             $this->notifyAssignedWorkers($task);
 
@@ -67,63 +54,73 @@ class CreateTaskAction extends BaseAction
         });
     }
 
-    private function notifyAssignedWorkers(
-        Task $task,
-    ): void {
-
-        /*
-         |----------------------------------------
-         | Site manager
-         |----------------------------------------
-         */
-
-        if ($task->site_manager_id !== null) {
-
+    private function notifyAssignedWorkers(Task $task): void
+    {
+        // One specific worker
+        if ($task->worker_id !== null) {
             $this->notifications->taskAssigned(
-                worker: $task->siteManager,
+                worker: $task->worker,
                 task: $task,
             );
 
             return;
         }
 
-        /*
-         |----------------------------------------
-         | Construction site
-         |----------------------------------------
-         */
-
+        // Construction site -> site managers assigned to that site
         if ($task->construction_site_id !== null) {
-
             foreach ($task->constructionSite->siteManagers as $manager) {
-
                 $this->notifications->taskAssigned(
                     worker: $manager,
                     task: $task,
                 );
-
             }
 
             return;
         }
 
-        /*
-         |----------------------------------------
-         | Global
-         |----------------------------------------
-         */
+        // All workers with selected role
+        if ($task->target_role !== null) {
+            Worker::query()
+                ->where('company_id', $task->company_id)
+                ->where('role', $task->target_role)
+                ->where('is_active', true)
+                ->each(function (Worker $worker) use ($task) {
+                    $this->notifications->taskAssigned(
+                        worker: $worker,
+                        task: $task,
+                    );
+                });
+        }
+    }
 
-        Worker::query()
-            ->where('company_id', $task->company_id)
-            ->where('role', WorkerRole::SITE_MANAGER)
+    private function ensureValidTargetWorker(
+        ?int $workerId,
+        Worker $currentWorker,
+    ): void {
+        if ($workerId === null) {
+            return;
+        }
+
+        $worker = Worker::query()
+            ->whereKey($workerId)
+            ->where('company_id', $currentWorker->company_id)
             ->where('is_active', true)
-            ->each(function (Worker $worker) use ($task) {
+            ->first();
 
-                $this->notifications->taskAssigned(
-                    worker: $worker,
-                    task: $task,
-                );
+        if ($worker === null) {
+            throw new BusinessException(
+                'Selected worker does not exist or is inactive.'
+            );
+        }
 
-            });
+        if (! in_array($worker->role, [
+            WorkerRole::SITE_MANAGER,
+            WorkerRole::OPERATOR,
+            WorkerRole::DRIVER,
+        ], true)) {
+            throw new BusinessException(
+                'Tasks can only be assigned to site managers, operators, or drivers.'
+            );
+        }
     }
 }

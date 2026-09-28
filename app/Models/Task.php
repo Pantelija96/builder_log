@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\WorkerRole;
 use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
@@ -17,7 +17,8 @@ class Task extends Model
 
     protected $fillable = [
         'company_id',
-        'site_manager_id',
+        'worker_id',
+        'target_role',
         'construction_site_id',
         'title',
         'description',
@@ -26,12 +27,13 @@ class Task extends Model
         'read_at',
         'completed_at',
         'created_by',
-        'completed_by'
+        'completed_by',
     ];
 
     protected function casts(): array
     {
         return [
+            'target_role' => WorkerRole::class,
             'due_date' => 'date',
             'read_at' => 'datetime',
             'completed_at' => 'datetime',
@@ -43,11 +45,11 @@ class Task extends Model
         return $this->belongsTo(Company::class);
     }
 
-    public function siteManager(): BelongsTo
+    public function worker(): BelongsTo
     {
         return $this->belongsTo(
             Worker::class,
-            'site_manager_id'
+            'worker_id'
         );
     }
 
@@ -64,6 +66,14 @@ class Task extends Model
         );
     }
 
+    public function completedBy(): BelongsTo
+    {
+        return $this->belongsTo(
+            Worker::class,
+            'completed_by'
+        );
+    }
+
     public function isRead(): bool
     {
         return $this->read_at !== null;
@@ -72,14 +82,6 @@ class Task extends Model
     public function isCompleted(): bool
     {
         return $this->completed_at !== null;
-    }
-
-    public function completedBy(): BelongsTo
-    {
-        return $this->belongsTo(
-            Worker::class,
-            'completed_by'
-        );
     }
 
     public function markAsRead(): void

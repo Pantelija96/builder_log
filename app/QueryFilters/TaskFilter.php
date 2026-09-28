@@ -5,6 +5,7 @@ namespace App\QueryFilters;
 use App\DTO\Task\GetTasksData;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use App\Enums\WorkerRole;
 
 class TaskFilter extends BaseFilter
 {
@@ -45,9 +46,15 @@ class TaskFilter extends BaseFilter
             )
 
             ->when(
-                $this->data->siteManagerId,
-                fn (Builder $query, int $siteManagerId)
-                => $query->where('site_manager_id', $siteManagerId)
+                $this->data->workerId,
+                fn (Builder $query, int $workerId)
+                => $query->where('worker_id', $workerId)
+            )
+
+            ->when(
+                $this->data->targetRole,
+                fn (Builder $query, WorkerRole $targetRole)
+                => $query->where('target_role', $targetRole)
             )
 
             ->when(

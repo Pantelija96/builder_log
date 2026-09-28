@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Task;
 
+use App\Enums\WorkerRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,9 +24,18 @@ class GetTasksRequest extends FormRequest
                 'max:255',
             ],
 
-            'site_manager_id' => [
+            'worker_id' => [
                 'nullable',
                 Rule::exists('workers', 'id'),
+            ],
+
+            'target_role' => [
+                'nullable',
+                Rule::in([
+                    WorkerRole::SITE_MANAGER->value,
+                    WorkerRole::OPERATOR->value,
+                    WorkerRole::DRIVER->value,
+                ]),
             ],
 
             'construction_site_id' => [

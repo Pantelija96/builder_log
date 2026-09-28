@@ -31,43 +31,42 @@ class TaskService
         return Task::query()
             ->with([
                 'creator',
-                'siteManager',
+                'worker',
                 'constructionSite',
                 'completedBy',
 //                'attachments',
             ]);
     }
-    private function myTasksQuery(Worker $worker,)
+    private function myTasksQuery(Worker $worker)
     {
         return Task::query()
-
             ->with([
                 'creator',
-                'siteManager',
+                'worker',
                 'constructionSite',
                 'completedBy',
-//                'attachments',
             ])
-
+            ->where('company_id', $worker->company_id)
             ->where(function ($query) use ($worker) {
 
-                $query
+                // Directly assigned to this worker
+                $query->where('worker_id', $worker->id);
 
-                    ->where('site_manager_id', $worker->id)
+                // Assigned to everyone with this worker's role
+                $query->orWhere(function ($query) use ($worker) {
+                    $query
+                        ->whereNull('worker_id')
+                        ->whereNull('construction_site_id')
+                        ->where('target_role', $worker->role);
+                });
 
-                    ->orWhereHas(
+                // Construction-site tasks only apply to site managers
+                if ($worker->isSiteManager()) {
+                    $query->orWhereHas(
                         'constructionSite.siteManagers',
                         fn ($q) => $q->whereKey($worker->id)
-                    )
-
-                    ->orWhere(function ($query) {
-
-                        $query
-                            ->whereNull('site_manager_id')
-                            ->whereNull('construction_site_id');
-
-                    });
-
+                    );
+                }
             });
     }
 

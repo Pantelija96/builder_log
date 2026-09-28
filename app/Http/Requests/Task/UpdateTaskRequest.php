@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Task;
 
+use App\Enums\WorkerRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,7 +11,6 @@ class UpdateTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-
             'title' => [
                 'required',
                 'string',
@@ -27,9 +27,18 @@ class UpdateTaskRequest extends FormRequest
                 'date',
             ],
 
-            'site_manager_id' => [
+            'worker_id' => [
                 'nullable',
                 Rule::exists('workers', 'id'),
+            ],
+
+            'target_role' => [
+                'nullable',
+                Rule::in([
+                    WorkerRole::SITE_MANAGER->value,
+                    WorkerRole::OPERATOR->value,
+                    WorkerRole::DRIVER->value,
+                ]),
             ],
 
             'construction_site_id' => [
@@ -48,19 +57,20 @@ class UpdateTaskRequest extends FormRequest
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            $targets = collect([
+                $this->input('worker_id'),
+                $this->input('target_role'),
+                $this->input('construction_site_id'),
+            ])->filter(
+                fn ($value) => $value !== null && $value !== ''
+            );
 
-            if (
-                $this->filled('site_manager_id') &&
-                $this->filled('construction_site_id')
-            ) {
-
+            if ($targets->count() !== 1) {
                 $validator->errors()->add(
-                    'site_manager_id',
-                    'Task can be assigned either to a site manager or to a construction site.'
+                    'target',
+                    'Task must be assigned to exactly one worker, role, or construction site.'
                 );
-
             }
-
         });
     }
 }

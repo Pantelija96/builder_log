@@ -47,10 +47,10 @@ class TaskController extends ApiController
             TaskResource::make(
                 $task->load([
                     'creator',
-                    'siteManager',
+                    'worker',
                     'constructionSite',
                     'completedBy',
-//                    'attachments',
+                    //'attachments',
                 ])
             ),
             'Task created successfully.',
