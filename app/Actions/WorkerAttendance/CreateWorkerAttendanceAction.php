@@ -29,6 +29,9 @@ class CreateWorkerAttendanceAction extends BaseAction
         $this->ensureWorkerNotAlreadyAdded($dailyLog, $data->workerId,);
 
         return $this->transaction(function () use ($dailyLog, $data, $currentWorker,) {
+            $worker = Worker::query()
+                ->whereKey($data->workerId)
+                ->firstOrFail();
 
             $attendance = WorkerAttendance::create([
                 'company_id' => $dailyLog->company_id,
@@ -40,13 +43,18 @@ class CreateWorkerAttendanceAction extends BaseAction
                 'started_at' => $data->startedAt,
                 'finished_at' => $data->finishedAt,
                 'advance_payment' => $data->advancePayment,
+                'hourly_rate' => $data->hourlyRate ?? $worker->hourly_rate,
                 'created_by' => $currentWorker->id,
             ])->refresh();
 
-            Worker::query()->whereKey($data->workerId)
-                ->update([
-                    'is_available' => false,
-                ]);
+//            Worker::query()->whereKey($data->workerId)
+//                ->update([
+//                    'is_available' => false,
+//                ]);
+
+            $worker->update([
+                'is_available' => false,
+            ]);
 
             $this->logging->activity(
                 actor: $currentWorker,

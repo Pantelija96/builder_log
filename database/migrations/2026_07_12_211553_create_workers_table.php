@@ -15,26 +15,19 @@ return new class extends Migration
         Schema::create('workers', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('company_id')
-                ->constrained()
-                ->cascadeOnUpdate()
-                ->restrictOnDelete();
+            $table->foreignId('company_id')->constrained()->cascadeOnUpdate()->restrictOnDelete();
 
             $table->string('first_name', 100);
             $table->string('last_name', 100);
             $table->string('phone', 30)->nullable();
 
-            $table->string('role', 50)
-                ->default(WorkerRole::WORKER->value)
-                ->index();
+            $table->string('role', 50)->default(WorkerRole::WORKER->value)->index();
 
-            $table->string('username', 100)->unique();
-            $table->string('password');
+            $table->string('username', 100)->unique()->nullable();
+            $table->string('password')->nullable();
             $table->string('email')->nullable();
 
-            $table->boolean('is_active')
-                ->default(true)
-                ->index();
+            $table->boolean('is_active')->default(true)->index();
 
             $table->timestamps();
             $table->softDeletes();

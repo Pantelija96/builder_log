@@ -18,6 +18,7 @@ class WorkerResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'role' => $this->role,
+            'hourly_rate' => $this->hourly_rate,
             'is_active' => $this->is_active,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

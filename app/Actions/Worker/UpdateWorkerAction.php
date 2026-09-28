@@ -50,6 +50,10 @@ class UpdateWorkerAction extends BaseAction
                 $values['role'] = $data->role;
             }
 
+            if (in_array('hourly_rate', $data->providedFields, true)) {
+                $values['hourly_rate'] = $data->hourlyRate;
+            }
+
             if (in_array('username', $data->providedFields, true))
             {
                 $values['username'] = $data->username;

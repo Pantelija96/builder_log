@@ -44,6 +44,13 @@ class UpdateWorkerRequest extends FormRequest
                 Rule::enum(WorkerRole::class),
             ],
 
+            'hourly_rate' => [
+                'sometimes',
+                'nullable',
+                'numeric',
+                'gte:0',
+            ],
+
             'username' => [
                 'sometimes',
                 'string',

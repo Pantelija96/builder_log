@@ -26,6 +26,7 @@ class WorkerAttendance extends Model
         'finished_at',
         'advance_payment',
         'created_by',
+        'hourly_rate',
     ];
 
     protected function casts(): array
@@ -35,6 +36,7 @@ class WorkerAttendance extends Model
             'started_at' => 'datetime',
             'finished_at' => 'datetime',
             'advance_payment' => 'decimal:2',
+            'hourly_rate' => 'decimal:2',
         ];
     }
 

@@ -33,6 +33,7 @@ class Worker extends Authenticatable
         'email',
         'is_active',
         'is_available',
+        'hourly_rate',
     ];
 
     protected $hidden = [
@@ -44,6 +45,7 @@ class Worker extends Authenticatable
         return [
             'role' => WorkerRole::class,
             'password' => 'hashed',
+            'hourly_rate' => 'decimal:2',
             'is_active' => 'boolean',
             'is_available' => 'boolean',
         ];

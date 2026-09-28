@@ -25,6 +25,7 @@ class CreateWorkerAction extends BaseAction
                 'password' => $data->password,
                 'email' => $data->email,
                 'is_active' => $data->isActive,
+                'hourly_rate' => $data->hourlyRate,
             ]);
 
             return $worker->fresh([

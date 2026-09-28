@@ -12,19 +12,16 @@ readonly class CreateWorkerAttendanceData
         public Carbon $startedAt,
         public ?Carbon $finishedAt,
         public float $advancePayment,
-    ) {
-    }
+        public ?float $hourlyRate,
+    ) {}
 
-    public static function fromRequest(
-        CreateWorkerAttendanceRequest $request,
-    ): self {
+    public static function fromRequest(CreateWorkerAttendanceRequest $request,): self {
         return new self(
             workerId: $request->integer('worker_id'),
             startedAt: Carbon::parse($request->input('started_at')),
-            finishedAt: $request->filled('finished_at')
-                ? Carbon::parse($request->input('finished_at'))
-                : null,
+            finishedAt: $request->filled('finished_at') ? Carbon::parse($request->input('finished_at')) : null,
             advancePayment: $request->float('advance_payment', 0),
+            hourlyRate: $request->filled('hourly_rate') ? $request->float('hourly_rate') : null,
         );
     }
 }

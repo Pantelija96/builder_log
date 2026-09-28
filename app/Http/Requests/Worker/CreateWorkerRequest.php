@@ -39,6 +39,12 @@ class CreateWorkerRequest extends FormRequest
                 Rule::enum(WorkerRole::class),
             ],
 
+            'hourly_rate' => [
+                'nullable',
+                'numeric',
+                'gte:0',
+            ],
+
             'username' => [
                 'required',
                 'string',

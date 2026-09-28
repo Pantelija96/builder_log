@@ -31,6 +31,12 @@ class CreateWorkerAttendanceRequest extends FormRequest
                 'numeric',
                 'min:0',
             ],
+
+            'hourly_rate' => [
+                'nullable',
+                'numeric',
+                'gte:0',
+            ],
         ];
     }
 }

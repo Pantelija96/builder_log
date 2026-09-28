@@ -16,6 +16,7 @@ readonly class CreateWorkerData
         public string $password,
         public ?string $email,
         public bool $isActive,
+        public ?float $hourlyRate,
     ) {}
 
     public static function fromRequest(
@@ -30,6 +31,7 @@ readonly class CreateWorkerData
             password: $request->string('password')->toString(),
             email: $request->filled('email') ? $request->string('email')->toString() : null,
             isActive: $request->boolean('is_active', true),
+            hourlyRate: $request->filled('hourly_rate') ? $request->float('hourly_rate') : null,
         );
     }
 }
