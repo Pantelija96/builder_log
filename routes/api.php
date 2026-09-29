@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\ConstructionSiteController;
 //use App\Http\Controllers\Api\MachineGetController;
+use App\Http\Controllers\WorkerPaymentController;
 use \App\Http\Controllers\MachineController;
 use App\Http\Controllers\Api\SubcontractorController;
 use App\Http\Controllers\Api\SupplierController;
@@ -318,6 +319,16 @@ Route::prefix('v1')->group(function () {
                 Route::patch('/{subcontractor}', 'update');
                 Route::delete('/{subcontractor}', 'destroy');
             });
+
+        Route::controller(WorkerPaymentController::class)
+            ->prefix('worker-payments')
+            ->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::get('/{workerPayment}', 'show');
+            });
+
+
 
 
     });

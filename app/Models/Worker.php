@@ -191,4 +191,9 @@ class Worker extends Authenticatable
     {
         return $this->hasMany(Expense::class, 'site_manager_id');
     }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(WorkerPayment::class);
+    }
 }
