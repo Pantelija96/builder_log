@@ -26,6 +26,7 @@ use App\Http\Controllers\SubcontractorLogController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TruckLogController;
 use App\Http\Controllers\WorkerAttendanceController;
+use App\Http\Controllers\WorkerSalaryController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 
@@ -328,8 +329,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/{workerPayment}', 'show');
             });
 
-
-
+        Route::get('/workers/{worker}/salary', [WorkerSalaryController::class, 'show']);
 
     });
 });
