@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Actions\WorkerPayment\CreateWorkerPaymentAction;
+use App\Actions\WorkerPayment\PayWorkerOutstandingAction;
 use App\DTO\WorkerPayment\CreateWorkerPaymentData;
 use App\DTO\WorkerPayment\GetWorkerPaymentsData;
 use App\Models\Worker;
@@ -14,13 +15,11 @@ class WorkerPaymentService
 {
     public function __construct(
         private readonly CreateWorkerPaymentAction $createAction,
+        private readonly PayWorkerOutstandingAction $payWorkerOutstandingAction,
     ) {
     }
 
-    public function get(
-        GetWorkerPaymentsData $data,
-        Worker $currentWorker,
-    ): Collection {
+    public function get(GetWorkerPaymentsData $data, Worker $currentWorker,): Collection {
         $query = WorkerPayment::query()
             ->where('company_id', $currentWorker->company_id)
             ->with([
@@ -38,20 +37,14 @@ class WorkerPaymentService
             ->get();
     }
 
-    public function create(
-        CreateWorkerPaymentData $data,
-        Worker $currentWorker,
-    ): WorkerPayment {
+    public function create(CreateWorkerPaymentData $data, Worker $currentWorker,): WorkerPayment {
         return $this->createAction->execute(
             data: $data,
             currentWorker: $currentWorker,
         );
     }
 
-    public function findById(
-        int $id,
-        Worker $currentWorker,
-    ): WorkerPayment {
+    public function findById(int $id, Worker $currentWorker,): WorkerPayment {
         return WorkerPayment::query()
             ->whereKey($id)
             ->where('company_id', $currentWorker->company_id)
@@ -60,5 +53,12 @@ class WorkerPaymentService
                 'creator',
             ])
             ->firstOrFail();
+    }
+
+    public function payOutstanding(Worker $worker, Worker $currentWorker,): WorkerPayment {
+        return $this->payWorkerOutstandingAction->execute(
+            worker: $worker,
+            currentWorker: $currentWorker,
+        );
     }
 }

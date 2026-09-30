@@ -20,6 +20,7 @@ class WorkerSalaryResource extends JsonResource
             'has_missing_hourly_rates' => $this->resource['has_missing_hourly_rates'],
             'missing_hourly_rate_attendances' => $this->resource['missing_hourly_rate_attendances'],
             'attendances' => WorkerAttendanceResource::collection($this->resource['attendances']),
+            'can_pay' => $this->resource['can_pay'],
         ];
     }
 }

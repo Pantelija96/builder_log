@@ -10,6 +10,7 @@ use App\Http\Requests\WorkerPayment\GetWorkerPaymentsRequest;
 use App\Http\Resources\WorkerPaymentResource;
 use App\Models\Worker;
 use App\Services\WorkerPaymentService;
+use Illuminate\Support\Facades\Request;
 
 class WorkerPaymentController extends ApiController
 {
@@ -49,10 +50,7 @@ class WorkerPaymentController extends ApiController
         return WorkerPaymentResource::make($payment);
     }
 
-    public function show(
-        int $workerPayment,
-        GetWorkerPaymentsRequest $request,
-    ) {
+    public function show(int $workerPayment, GetWorkerPaymentsRequest $request,) {
         /** @var Worker $currentWorker */
         $currentWorker = $request->user();
 
@@ -62,5 +60,22 @@ class WorkerPaymentController extends ApiController
                 currentWorker: $currentWorker,
             )
         );
+    }
+
+    public function payOutstanding(Worker $worker, Request $request,) {
+        /** @var Worker $currentWorker */
+        $currentWorker = $request->user();
+
+        $payment = $this->service->payOutstanding(
+            worker: $worker,
+            currentWorker: $currentWorker,
+        );
+
+        $payment->load([
+            'worker',
+            'creator',
+        ]);
+
+        return WorkerPaymentResource::make($payment);
     }
 }

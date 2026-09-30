@@ -31,6 +31,18 @@ class WorkerSeeder extends Seeder
             'is_active' => true,
         ]);
 
+        Worker::create([
+            'company_id' => $company->id,
+            'first_name' => 'Admin2',
+            'last_name' => 'BuilderLog2',
+            'phone' => '+38160112222',
+            'role' => WorkerRole::ADMIN,
+            'username' => 'admin2',
+            'password' => 'password',
+            'email' => 'admin2@builderlog.local',
+            'is_active' => true,
+        ]);
+
         /*
         |--------------------------------------------------------------------------
         | Site Managers

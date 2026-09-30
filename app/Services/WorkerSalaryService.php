@@ -97,18 +97,43 @@ class WorkerSalaryService
 
         $outstanding = $earned - $advances - $payments;
 
+        $calculatedOutstanding = max(0, round($outstanding, 2));
+
+        $hasMissingHourlyRates = $missingHourlyRateAttendances > 0;
+
+        $canPay = ! $hasMissingHourlyRates && $calculatedOutstanding > 0;
+
         return [
             'worker_id' => $worker->id,
             'earned' => round($earned, 2),
             'advances' => round($advances, 2),
             'payments' => round($payments, 2),
-            'outstanding' => max(0, round($outstanding, 2)),
+            'outstanding' => $calculatedOutstanding,
             'has_estimated_hours' => $estimatedAttendances > 0,
             'estimated_attendances' => $estimatedAttendances,
-            'has_missing_hourly_rates' => $missingHourlyRateAttendances > 0,
+            'has_missing_hourly_rates' => $hasMissingHourlyRates,
             'missing_hourly_rate_attendances' => $missingHourlyRateAttendances,
+            'can_pay' => $canPay,
             'attendances' => $attendances,
         ];
+    }
+
+    public function getOutstanding(Worker $worker, Worker $currentWorker,): float {
+        $balance = $this->getBalance(
+            worker: $worker,
+            currentWorker: $currentWorker,
+        );
+
+        return (float) $balance['outstanding'];
+    }
+
+    public function hasMissingHourlyRates(Worker $worker, Worker $currentWorker,): bool {
+        $balance = $this->getBalance(
+            worker: $worker,
+            currentWorker: $currentWorker,
+        );
+
+        return $balance['has_missing_hourly_rates'];
     }
 
     private function ensureSameCompany(Worker $worker, Worker $currentWorker,): void {

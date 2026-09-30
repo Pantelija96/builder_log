@@ -327,6 +327,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/', 'index');
                 Route::post('/', 'store');
                 Route::get('/{workerPayment}', 'show');
+                Route::get('/{worker}/pay-outstanding', 'payOutstanding');
             });
 
         Route::get('/workers/{worker}/salary', [WorkerSalaryController::class, 'show']);

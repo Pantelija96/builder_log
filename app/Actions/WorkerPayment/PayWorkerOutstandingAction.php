@@ -3,25 +3,28 @@
 namespace App\Actions\WorkerPayment;
 
 use App\Actions\BaseAction;
-use App\DTO\WorkerPayment\CreateWorkerPaymentData;
 use App\Exceptions\BusinessException;
 use App\Models\Worker;
 use App\Models\WorkerPayment;
 use App\Services\WorkerSalaryService;
 
-class CreateWorkerPaymentAction extends BaseAction
+class PayWorkerOutstandingAction extends BaseAction
 {
     public function __construct(
         private readonly WorkerSalaryService $workerSalaryService,
     ) {
     }
 
-    public function execute(CreateWorkerPaymentData $data, Worker $currentWorker,): WorkerPayment {
-        return $this->transaction(function () use ($data, $currentWorker,) {
+    public function execute(Worker $worker, Worker $currentWorker,): WorkerPayment {
+        return $this->transaction(function () use ($worker, $currentWorker,) {
             $worker = Worker::query()
-                ->where('company_id', $currentWorker->company_id)
+                ->whereKey($worker->id)
+                ->where(
+                    'company_id',
+                    $currentWorker->company_id
+                )
                 ->lockForUpdate()
-                ->find($data->workerId);
+                ->first();
 
             if (! $worker) {
                 throw new BusinessException(
@@ -29,11 +32,14 @@ class CreateWorkerPaymentAction extends BaseAction
                 );
             }
 
-            $balance = $this->workerSalaryService->getBalance(worker: $worker, currentWorker: $currentWorker,);
+            $balance = $this->workerSalaryService->getBalance(
+                worker: $worker,
+                currentWorker: $currentWorker,
+            );
 
             if ($balance['has_missing_hourly_rates']) {
                 throw new BusinessException(
-                    'Payment cannot be created because one or more worker attendances are missing an hourly rate.'
+                    'Worker cannot be fully paid because one or more attendances are missing an hourly rate.'
                 );
             }
 
@@ -45,18 +51,12 @@ class CreateWorkerPaymentAction extends BaseAction
                 );
             }
 
-            if ($data->amount > $outstanding) {
-                throw new BusinessException(
-                    'Payment amount cannot exceed outstanding salary.'
-                );
-            }
-
             return WorkerPayment::create([
                 'company_id' => $currentWorker->company_id,
                 'worker_id' => $worker->id,
-                'amount' => $data->amount,
-                'date' => $data->date,
-                'note' => $data->note,
+                'amount' => $outstanding,
+                'date' => now()->toDateString(),
+                'note' => 'Full outstanding salary payment',
                 'created_by' => $currentWorker->id,
             ]);
         });
