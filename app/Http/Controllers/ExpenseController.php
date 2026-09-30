@@ -163,4 +163,32 @@ class ExpenseController extends ApiController
             'Expense created successfully.'
         );
     }
+
+    public function getAdminExpenses(GetExpensesRequest $request,): JsonResponse {
+        /** @var Worker $worker */
+        $worker = $request->user();
+
+        abort_unless(
+            $worker->isAdmin(),
+            403,
+            'Only administrators can view admin expenses.'
+        );
+
+        $result = $this->expenseService->getAdminExpenses(
+            GetExpensesData::fromRequest($request),
+            $worker,
+        );
+
+        return $this->success([
+            'expenses' => ExpenseResource::collection(
+                $result['expenses']
+            ),
+            'total' => number_format(
+                $result['total'],
+                2,
+                '.',
+                ''
+            ),
+        ]);
+    }
 }

@@ -135,6 +135,10 @@ Route::prefix('v1')->group(function () {
                 Route::post('/', 'storeByAdmin');
             });
 
+        Route::prefix('admin')->group(function () {
+            Route::get('/expenses', [ExpenseController::class, 'getAdminExpenses',]);
+        });
+
         Route::controller(AttachmentController::class)->group(function () {
             Route::post('/daily-logs/{dailyLog}/attachments', 'uploadToDailyLog');
             Route::post('/expenses/{expense}/attachments', 'uploadToExpense');

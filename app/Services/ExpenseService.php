@@ -140,4 +140,26 @@ class ExpenseService
             ->limit($data->list->limit)
             ->get();
     }
+
+    public function getAdminExpenses(GetExpensesData $data, Worker $currentWorker,): array {
+        $query = $this->queryAll()
+            ->where('company_id', $currentWorker->company_id)
+            ->whereHas('creator', function ($query) {
+                $query->where('role', \App\Enums\WorkerRole::ADMIN);
+            });
+
+        $query = (new ExpenseFilter($data))->apply($query);
+
+        $total = (clone $query)->sum('amount');
+
+        $expenses = $query
+            ->offset($data->list->offset)
+            ->limit($data->list->limit)
+            ->get();
+
+        return [
+            'expenses' => $expenses,
+            'total' => round((float) $total, 2),
+        ];
+    }
 }
