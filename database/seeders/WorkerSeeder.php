@@ -15,7 +15,7 @@ class WorkerSeeder extends Seeder
 
         /*
         |--------------------------------------------------------------------------
-        | Admin
+        | Admins
         |--------------------------------------------------------------------------
         */
 
@@ -29,6 +29,8 @@ class WorkerSeeder extends Seeder
             'password' => 'password',
             'email' => 'admin@builderlog.local',
             'is_active' => true,
+            'is_available' => true,
+            'hourly_rate' => null,
         ]);
 
         Worker::create([
@@ -41,6 +43,8 @@ class WorkerSeeder extends Seeder
             'password' => 'password',
             'email' => 'admin2@builderlog.local',
             'is_active' => true,
+            'is_available' => true,
+            'hourly_rate' => null,
         ]);
 
         /*
@@ -59,6 +63,8 @@ class WorkerSeeder extends Seeder
             'password' => 'password',
             'email' => 'marko@builderlog.local',
             'is_active' => true,
+            'is_available' => true,
+            'hourly_rate' => null,
         ]);
 
         Worker::create([
@@ -71,82 +77,52 @@ class WorkerSeeder extends Seeder
             'password' => 'password',
             'email' => 'nikola@builderlog.local',
             'is_active' => true,
+            'is_available' => true,
+            'hourly_rate' => null,
         ]);
 
         /*
-         |--------------------------------------------------------------------------
-         | Operators
-         |--------------------------------------------------------------------------
-         */
+        |--------------------------------------------------------------------------
+        | Operators
+        |--------------------------------------------------------------------------
+        */
 
         $operators = [
-            [
-                'first_name' => 'Milan',
-                'last_name' => 'Ilić',
-                'username' => 'operator01',
-            ],
-            [
-                'first_name' => 'Dejan',
-                'last_name' => 'Stanković',
-                'username' => 'operator02',
-            ],
-            [
-                'first_name' => 'Aleksandar',
-                'last_name' => 'Nikolić',
-                'username' => 'operator03',
-            ],
-            [
-                'first_name' => 'Filip',
-                'last_name' => 'Marković',
-                'username' => 'operator04',
-            ],
-            [
-                'first_name' => 'Uroš',
-                'last_name' => 'Jovanović',
-                'username' => 'operator05',
-            ],
-            [
-                'first_name' => 'Vuk',
-                'last_name' => 'Petrović',
-                'username' => 'operator06',
-            ],
-            [
-                'first_name' => 'Nikola',
-                'last_name' => 'Savić',
-                'username' => 'operator07',
-            ],
-            [
-                'first_name' => 'Lazar',
-                'last_name' => 'Đorđević',
-                'username' => 'operator08',
-            ],
-            [
-                'first_name' => 'Marko',
-                'last_name' => 'Pavlović',
-                'username' => 'operator09',
-            ],
-            [
-                'first_name' => 'Ognjen',
-                'last_name' => 'Milošević',
-                'username' => 'operator10',
-            ],
+            ['Milan', 'Ilić', 'operator01', 900],
+            ['Dejan', 'Stanković', 'operator02', 900],
+            ['Aleksandar', 'Nikolić', 'operator03', 950],
+            ['Filip', 'Marković', 'operator04', 850],
+            ['Uroš', 'Jovanović', 'operator05', 900],
+            ['Vuk', 'Petrović', 'operator06', 1000],
+            ['Nikola', 'Savić', 'operator07', 850],
+            ['Lazar', 'Đorđević', 'operator08', 950],
+            ['Marko', 'Pavlović', 'operator09', 900],
+            ['Ognjen', 'Milošević', 'operator10', 1000],
         ];
 
-        foreach ($operators as $index => $operator) {
-
+        foreach (
+            $operators as $index => [
+            $firstName,
+            $lastName,
+            $username,
+            $hourlyRate
+        ]
+        ) {
             Worker::create([
                 'company_id' => $company->id,
-                'first_name' => $operator['first_name'],
-                'last_name' => $operator['last_name'],
+                'first_name' => $firstName,
+                'last_name' => $lastName,
                 'phone' => sprintf(
                     '+38160222%04d',
                     $index + 1
                 ),
                 'role' => WorkerRole::OPERATOR,
-                'username' => $operator['username'],
+                'username' => $username,
                 'password' => 'password',
                 'email' => null,
                 'is_active' => true,
+                'is_available' => true,
+                'hourly_rate' => $hourlyRate,
             ]);
         }
 
@@ -157,73 +133,41 @@ class WorkerSeeder extends Seeder
         */
 
         $drivers = [
-            [
-                'first_name' => 'Vladan',
-                'last_name' => 'Jovanović',
-                'username' => 'driver01',
-            ],
-            [
-                'first_name' => 'Mladen',
-                'last_name' => 'Simić',
-                'username' => 'driver02',
-            ],
-            [
-                'first_name' => 'Nenad',
-                'last_name' => 'Stojanović',
-                'username' => 'driver03',
-            ],
-            [
-                'first_name' => 'Miroslav',
-                'last_name' => 'Nikolić',
-                'username' => 'driver04',
-            ],
-            [
-                'first_name' => 'Dejan',
-                'last_name' => 'Petrović',
-                'username' => 'driver05',
-            ],
-            [
-                'first_name' => 'Saša',
-                'last_name' => 'Marković',
-                'username' => 'driver06',
-            ],
-            [
-                'first_name' => 'Branko',
-                'last_name' => 'Jovanović',
-                'username' => 'driver07',
-            ],
-            [
-                'first_name' => 'Vladimir',
-                'last_name' => 'Savić',
-                'username' => 'driver08',
-            ],
-            [
-                'first_name' => 'Bojan',
-                'last_name' => 'Milošević',
-                'username' => 'driver09',
-            ],
-            [
-                'first_name' => 'Zoran',
-                'last_name' => 'Đorđević',
-                'username' => 'driver10',
-            ],
+            ['Vladan', 'Jovanović', 'driver01', 750],
+            ['Mladen', 'Simić', 'driver02', 750],
+            ['Nenad', 'Stojanović', 'driver03', 800],
+            ['Miroslav', 'Nikolić', 'driver04', 750],
+            ['Dejan', 'Petrović', 'driver05', 800],
+            ['Saša', 'Marković', 'driver06', 850],
+            ['Branko', 'Jovanović', 'driver07', 750],
+            ['Vladimir', 'Savić', 'driver08', 800],
+            ['Bojan', 'Milošević', 'driver09', 850],
+            ['Zoran', 'Đorđević', 'driver10', 800],
         ];
 
-        foreach ($drivers as $index => $driver) {
-
+        foreach (
+            $drivers as $index => [
+            $firstName,
+            $lastName,
+            $username,
+            $hourlyRate
+        ]
+        ) {
             Worker::create([
                 'company_id' => $company->id,
-                'first_name' => $driver['first_name'],
-                'last_name' => $driver['last_name'],
+                'first_name' => $firstName,
+                'last_name' => $lastName,
                 'phone' => sprintf(
                     '+38160255%04d',
                     $index + 1
                 ),
                 'role' => WorkerRole::DRIVER,
-                'username' => $driver['username'],
+                'username' => $username,
                 'password' => 'password',
                 'email' => null,
                 'is_active' => true,
+                'is_available' => true,
+                'hourly_rate' => $hourlyRate,
             ]);
         }
 
@@ -234,25 +178,30 @@ class WorkerSeeder extends Seeder
         */
 
         $workers = [
-            ['Petar', 'Marković'],
-            ['Stefan', 'Đorđević'],
-            ['Nemanja', 'Pavlović'],
-            ['Luka', 'Milošević'],
-            ['Miloš', 'Savić'],
-            ['Ivan', 'Ristić'],
-            ['Dušan', 'Lukić'],
-            ['Bojan', 'Kostić'],
-            ['Vladimir', 'Mladenović'],
-            ['Zoran', 'Todorović'],
-            ['Dragan', 'Popović'],
-            ['Goran', 'Živković'],
-            ['Nenad', 'Janković'],
-            ['Slobodan', 'Mitrović'],
-            ['Branislav', 'Radović'],
+            ['Petar', 'Marković', 600],
+            ['Stefan', 'Đorđević', 650],
+            ['Nemanja', 'Pavlović', 600],
+            ['Luka', 'Milošević', 700],
+            ['Miloš', 'Savić', 650],
+            ['Ivan', 'Ristić', 600],
+            ['Dušan', 'Lukić', 700],
+            ['Bojan', 'Kostić', 650],
+            ['Vladimir', 'Mladenović', 600],
+            ['Zoran', 'Todorović', 750],
+            ['Dragan', 'Popović', 650],
+            ['Goran', 'Živković', 700],
+            ['Nenad', 'Janković', 600],
+            ['Slobodan', 'Mitrović', 650],
+            ['Branislav', 'Radović', 700],
         ];
 
-        foreach ($workers as $index => [$firstName, $lastName]) {
-
+        foreach (
+            $workers as $index => [
+            $firstName,
+            $lastName,
+            $hourlyRate
+        ]
+        ) {
             $number = $index + 1;
 
             Worker::create([
@@ -271,6 +220,8 @@ class WorkerSeeder extends Seeder
                 'password' => 'password',
                 'email' => null,
                 'is_active' => true,
+                'is_available' => true,
+                'hourly_rate' => $hourlyRate,
             ]);
         }
     }
