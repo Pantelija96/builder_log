@@ -15,6 +15,8 @@ readonly class GetWorkerAttendancesData
         public ?Carbon $date,
         public ?Carbon $dateCreatedFrom,
         public ?Carbon $dateCreatedTo,
+        public ?Carbon $dateFrom,
+        public ?Carbon $dateTo,
     ) {}
 
     public static function fromRequest(
@@ -27,6 +29,8 @@ readonly class GetWorkerAttendancesData
             date: $request->filled('date') ? $request->date('date') : null,
             dateCreatedFrom: $request->filled('date_created_from') ? $request->date('date_created_from') : null,
             dateCreatedTo: $request->filled('date_created_to') ? $request->date('date_created_to') : null,
+            dateFrom: $request->filled('date_from') ? $request->date('date_from') : null,
+            dateTo: $request->filled('date_to') ? $request->date('date_to') : null,
         );
     }
 }

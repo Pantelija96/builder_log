@@ -94,6 +94,26 @@ class WorkerAttendanceFilter extends BaseFilter
                 )
             )
 
+            ->when(
+                $this->data->dateFrom,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate(
+                    'date',
+                    '>=',
+                    $date->toDateString()
+                )
+            )
+
+            ->when(
+                $this->data->dateTo,
+                fn (Builder $query, Carbon $date) =>
+                $query->whereDate(
+                    'date',
+                    '<=',
+                    $date->toDateString()
+                )
+            )
+
             ->orderBy(
                 $this->resolveSort(
                     $this->data->list->sort

@@ -137,6 +137,7 @@ Route::prefix('v1')->group(function () {
 
         Route::prefix('admin')->group(function () {
             Route::get('/expenses', [ExpenseController::class, 'getAdminExpenses',]);
+            Route::get('/worker-salaries', [WorkerSalaryController::class, 'index',]);
         });
 
         Route::controller(AttachmentController::class)->group(function () {
