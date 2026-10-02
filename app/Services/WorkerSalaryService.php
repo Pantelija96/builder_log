@@ -149,11 +149,9 @@ class WorkerSalaryService
             'Only administrators can view worker salaries.'
         );
 
-        $periodQuery = WorkerAttendance::query()
-            ->where('company_id', $currentWorker->company_id);
+        $periodQuery = WorkerAttendance::query()->where('company_id', $currentWorker->company_id);
 
-        $periodQuery = (new WorkerAttendanceFilter($data))
-            ->apply($periodQuery);
+        $periodQuery = (new WorkerAttendanceFilter($data))->apply($periodQuery);
 
         $periodAttendances = $periodQuery
             ->with([
@@ -163,10 +161,10 @@ class WorkerSalaryService
             ])
             ->get();
 
-        $workerIds = WorkerAttendance::query()
-            ->where('company_id', $currentWorker->company_id)
-            ->distinct()
-            ->pluck('worker_id');
+        $workerIds = $periodAttendances
+            ->pluck('worker_id')
+            ->unique()
+            ->values();
 
         $workers = Worker::query()
             ->where('company_id', $currentWorker->company_id)
