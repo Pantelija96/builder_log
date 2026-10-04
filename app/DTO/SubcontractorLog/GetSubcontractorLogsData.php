@@ -23,12 +23,8 @@ readonly class GetSubcontractorLogsData
             list: ListQueryData::fromRequest($request),
             dailyLogId: $request->integer('daily_log_id') ?: null,
             subcontractorId: $request->integer('subcontractor_id') ?: null,
-            dateFrom: $request->filled('date_from')
-                ? $request->date('date_from')->toDateString()
-                : null,
-            dateTo: $request->filled('date_to')
-                ? $request->date('date_to')->toDateString()
-                : null,
+            dateFrom: $request->filled('date_from') ? $request->date('date_from')->toDateString() : null,
+            dateTo: $request->filled('date_to') ? $request->date('date_to')->toDateString() : null,
         );
     }
 }
