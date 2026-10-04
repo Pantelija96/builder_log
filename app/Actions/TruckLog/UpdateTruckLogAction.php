@@ -9,175 +9,88 @@ use App\Exceptions\BusinessException;
 use App\Models\TruckLog;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
+use Illuminate\Support\Facades\Log;
 
 class UpdateTruckLogAction extends BaseAction
 {
     public function __construct(
         private readonly LoggingService $logging,
-    ) {
-    }
+    ) {}
 
-    public function execute(
-        TruckLog $truckLog,
-        UpdateTruckLogData $data,
-        Worker $currentWorker,
-        ?string $reason = null,
-    ): TruckLog {
-
-        return $this->transaction(function () use (
-            $truckLog,
-            $data,
-            $currentWorker,
-            $reason,
-        ) {
-
+    public function execute(TruckLog $truckLog, UpdateTruckLogData $data, Worker $currentWorker, ?string $reason = null,): TruckLog {
+        return $this->transaction(function () use ($truckLog, $data, $currentWorker, $reason,) {
             $oldValues = $truckLog->getAttributes();
-            $siteManagerFinishedAt = $data->siteManagerFinishedAt;
+            $values = [];
 
-            if (
-                in_array(
-                    'operator_finished_at',
-                    $data->providedFields,
-                    true
-                )
-                && $data->operatorFinishedAt !== null
-                && $truckLog->site_manager_finished_at === null
-                && ! in_array(
-                    'site_manager_finished_at',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $siteManagerFinishedAt = $data->operatorFinishedAt;
-            }
+            Log::info('UpdateTruckLogAction received', [
+                'TruckLog' => $truckLog->toArray(),
+            ]);
 
-            $finalStartMileage = in_array(
-                'start_mileage',
-                $data->providedFields,
-                true
-            )
-                ? $data->startMileage
-                : $truckLog->start_mileage;
+            Log::info('UpdateTruckLogData received', [
+                'UpdateTruckLogData' => $data,
+            ]);
 
-            $finalEndMileage = in_array(
-                'end_mileage',
-                $data->providedFields,
-                true
-            )
-                ? $data->endMileage
-                : $truckLog->end_mileage;
+            Log::info('Worker received', [
+                'Worker' => $currentWorker->toArray(),
+            ]);
 
-            if (
-                $finalStartMileage !== null
-                && $finalEndMileage !== null
-                && $finalEndMileage < $finalStartMileage
-            ) {
-                throw new BusinessException(
-                    __('End mileage must be greater than or equal to start mileage.')
-                );
-            }
-
-            $updates = [];
-
-            if (
-                in_array(
-                    'site_manager_started_at',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $updates['site_manager_started_at'] =
+            if (in_array('site_manager_started_at', $data->providedFields, true,)) {
+                $values['site_manager_started_at'] =
                     $data->siteManagerStartedAt;
             }
 
-            if (
-                in_array(
-                    'site_manager_finished_at',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $updates['site_manager_finished_at'] =
-                    $siteManagerFinishedAt;
+            if (in_array('site_manager_finished_at', $data->providedFields, true,)) {
+                $values['site_manager_finished_at'] =
+                    $data->siteManagerFinishedAt;
             }
 
-            if (
-                in_array(
-                    'operator_started_at',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $updates['operator_started_at'] =
+            if (in_array('operator_started_at', $data->providedFields, true,)) {
+                $values['operator_started_at'] =
                     $data->operatorStartedAt;
             }
 
-            if (
-                in_array(
-                    'operator_finished_at',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $updates['operator_finished_at'] =
+            if (in_array('operator_finished_at', $data->providedFields, true,)) {
+                $values['operator_finished_at'] =
                     $data->operatorFinishedAt;
             }
 
-            if (
-                in_array(
-                    'start_mileage',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $updates['start_mileage'] =
-                    $data->startMileage;
+            if (in_array('start_mileage', $data->providedFields, true,)) {
+                $values['start_mileage'] = $data->startMileage;
             }
 
-            if (
-                in_array(
-                    'end_mileage',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $updates['end_mileage'] =
-                    $data->endMileage;
+            if (in_array('end_mileage', $data->providedFields, true,)) {
+                $values['end_mileage'] = $data->endMileage;
             }
 
-            if (
-                in_array(
-                    'fuel_added',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $updates['fuel_added'] = $data->fuelAdded;
+            if (in_array('fuel_added', $data->providedFields, true,)) {
+                $values['fuel_added'] = $data->fuelAdded;
             }
 
-            if (
-                in_array(
-                    'fuel_remaining',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $updates['fuel_remaining'] =
-                    $data->fuelRemaining;
+            if (in_array('fuel_remaining', $data->providedFields, true,)) {
+                $values['fuel_remaining'] = $data->fuelRemaining;
             }
 
-            if (
-                in_array(
-                    'note',
-                    $data->providedFields,
-                    true
-                )
-            ) {
-                $updates['note'] =
-                    $data->note;
+            if (in_array('note_site_manager', $data->providedFields, true,)) {
+                $values['note_site_manager'] =
+                    $data->noteSiteManager;
             }
 
-            $truckLog->update($updates);
+            if (in_array('note_operator', $data->providedFields, true,)) {
+                $values['note_operator'] =
+                    $data->noteOperator;
+            }
+
+            $startMileage = array_key_exists('start_mileage', $values,) ? $values['start_mileage'] : $truckLog->start_mileage;
+
+            $endMileage = array_key_exists('end_mileage', $values,) ? $values['end_mileage'] : $truckLog->end_mileage;
+
+            if ($startMileage !== null && $endMileage !== null && (float) $endMileage < (float) $startMileage) {
+                throw new BusinessException(
+                    'End mileage cannot be less than start mileage.'
+                );
+            }
+
+            $truckLog->update($values);
 
             $this->logging->activity(
                 actor: $currentWorker,
@@ -195,7 +108,7 @@ class UpdateTruckLogAction extends BaseAction
             );
 
             return $truckLog->fresh([
-                'machine',
+                'machineAssignment',
                 'worker',
                 'creator',
             ]);

@@ -29,6 +29,7 @@ class MachineAssignmentService
                 'worker',
                 'creator',
                 'excavatorLog',
+                'truckLog',
             ]);
 
         return (new MachineAssignmentFilter($data))

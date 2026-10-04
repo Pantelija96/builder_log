@@ -60,11 +60,6 @@ class Machine extends Model
         return $this->hasOne(Truck::class);
     }
 
-    public function truckLogs(): HasMany
-    {
-        return $this->hasMany(TruckLog::class);
-    }
-
     public function machineAssignments(): HasMany
     {
         return $this->hasMany(MachineAssignment::class);

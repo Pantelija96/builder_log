@@ -2,18 +2,18 @@
 
 namespace App\Services;
 
-use App\Actions\Truck\GetAvailableTrucksAction;
+use App\Actions\TruckLog\GetAvailableTrucksAction;
 use App\Actions\TruckLog\CreateTruckLogAction;
 use App\Actions\TruckLog\DeleteTruckLogAction;
+use App\Actions\TruckLog\GetOccupiedTrucksAction;
 use App\Actions\TruckLog\UpdateTruckLogAction;
 use App\DTO\TruckLog\CreateTruckLogData;
-use App\DTO\TruckLog\GetTruckLogsData;
+use App\DTO\TruckLog\CreateTruckLogForDriverData;
 use App\DTO\TruckLog\UpdateTruckLogData;
+use App\Models\DailyLog;
 use App\Models\TruckLog;
 use App\Models\Worker;
-use App\QueryFilters\TruckLogFilter;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection;
+use Illuminate\Database\Eloquent\Collection;
 
 class TruckLogService
 {
@@ -22,143 +22,122 @@ class TruckLogService
         private readonly UpdateTruckLogAction $updateTruckLogAction,
         private readonly DeleteTruckLogAction $deleteTruckLogAction,
         private readonly GetAvailableTrucksAction $getAvailableTrucksAction,
+        private readonly GetOccupiedTrucksAction $getOccupiedTrucksAction,
     ) {
     }
 
-    public function get(Worker $currentWorker, GetTruckLogsData $data,): Collection
-    {
-        $query = TruckLog::query()
-            ->where(
-                'company_id',
-                $currentWorker->company_id,
-            )
-            ->with([
-                'machine',
-                'worker',
-                'creator',
-            ]);
-
-        $this->applyWorkerScope(query: $query, currentWorker: $currentWorker,);
-
-        return (new TruckLogFilter($data))
-            ->apply($query)
-            ->offset($data->list->offset)
-            ->limit($data->list->limit)
-            ->get();
+    public function create(
+        DailyLog $dailyLog,
+        CreateTruckLogData $data,
+        Worker $currentWorker,
+    ): TruckLog {
+        return $this->createTruckLogAction->execute(
+            dailyLog: $dailyLog,
+            data: $data,
+            currentWorker: $currentWorker,
+        );
     }
 
-    public function findById(Worker $currentWorker, int $id,): ?TruckLog
-    {
-        $query = TruckLog::query()
-            ->where(
-                'company_id',
-                $currentWorker->company_id,
-            )
-            ->with([
-                'machine',
-                'worker',
-                'creator',
-            ]);
-
-        $this->applyWorkerScope(query: $query, currentWorker: $currentWorker,);
-
-        return $query
-            ->whereKey($id)
-            ->first();
-    }
-
-    public function create(CreateTruckLogData $data, Worker $currentWorker,): TruckLog
-    {
-        /*
-         * Operator creates a session for himself.
-         */
-        if ($currentWorker->isDriver()) {
-            return $this->createTruckLogAction->execute(data: $data, currentWorker: $currentWorker, workerId: $currentWorker->id,);
-        }
-
-        /*
-         * Admin / Site Manager create a session
-         */
-        if ($currentWorker->isAdmin() || $currentWorker->isSiteManager())
-        {
-            if (! $data->workerId) {
-                abort(422, 'Worker is required.');
-            }
-            return $this->createTruckLogAction->execute(data: $data, currentWorker: $currentWorker, workerId: $data->workerId,);
-        }
-
-        abort(403);
-    }
-
-    public function update(TruckLog $truckLog, UpdateTruckLogData $data, Worker $currentWorker, ?string $reason = null,): TruckLog
-    {
-        $this->ensureCompanyAccess(truckLog: $truckLog, currentWorker: $currentWorker,);
-        $this->ensureCanUpdate(truckLog: $truckLog, currentWorker: $currentWorker,);
-        return $this->updateTruckLogAction->execute(truckLog: $truckLog, data: $data, currentWorker: $currentWorker, reason: $reason,);
-    }
-
-    public function delete(TruckLog $truckLog, Worker $currentWorker, string $reason,): void
-    {
-        $this->ensureCompanyAccess(truckLog: $truckLog, currentWorker: $currentWorker,);
-        $this->ensureCanUpdate(truckLog: $truckLog, currentWorker: $currentWorker,);
-        $this->deleteTruckLogAction->execute(truckLog: $truckLog, currentWorker: $currentWorker, reason: $reason,);
+    public function createForDriver(
+        CreateTruckLogForDriverData $data,
+        Worker $currentWorker,
+    ): TruckLog {
+        return $this->createTruckLogAction->executeForDriver(
+            data: $data,
+            currentWorker: $currentWorker,
+        );
     }
 
     public function getAvailable(
         Worker $currentWorker,
     ): Collection {
-
         return $this->getAvailableTrucksAction->execute(
             currentWorker: $currentWorker,
         );
     }
 
-    private function applyWorkerScope(Builder $query, Worker $currentWorker,): void
-    {
+    public function getOccupied(
+        Worker $currentWorker,
+    ): Collection {
+        return $this->getOccupiedTrucksAction->execute(
+            currentWorker: $currentWorker,
+        );
+    }
+
+    public function update(
+        TruckLog $truckLog,
+        UpdateTruckLogData $data,
+        Worker $currentWorker,
+        ?string $reason = null,
+    ): TruckLog {
+        $this->ensureCompanyAccess(
+            truckLog: $truckLog,
+            currentWorker: $currentWorker,
+        );
+
+        $this->ensureCanUpdate(
+            truckLog: $truckLog,
+            currentWorker: $currentWorker,
+        );
+
+        return $this->updateTruckLogAction->execute(
+            truckLog: $truckLog,
+            data: $data,
+            currentWorker: $currentWorker,
+            reason: $reason,
+        );
+    }
+
+    public function delete(
+        TruckLog $truckLog,
+        Worker $currentWorker,
+        string $reason,
+    ): void {
+        $this->ensureCompanyAccess(
+            truckLog: $truckLog,
+            currentWorker: $currentWorker,
+        );
+
+        $this->deleteTruckLogAction->execute(
+            truckLog: $truckLog,
+            currentWorker: $currentWorker,
+            reason: $reason,
+        );
+    }
+
+    private function ensureCompanyAccess(
+        TruckLog $truckLog,
+        Worker $currentWorker,
+    ): void {
+        $truckLog->loadMissing('machineAssignment');
+
+        if (
+            $truckLog->machineAssignment->company_id
+            !== $currentWorker->company_id
+        ) {
+            abort(404);
+        }
+    }
+
+    private function ensureCanUpdate(
+        TruckLog $truckLog,
+        Worker $currentWorker,
+    ): void {
         if ($currentWorker->isAdmin()) {
             return;
         }
 
-        if ($currentWorker->isDriver()) {
-            $query->where(
-                'worker_id',
-                $currentWorker->id,
-            );
-
-            return;
-        }
-    }
-
-    private function ensureCanUpdate(TruckLog $truckLog, Worker $currentWorker,): void
-    {
-        if ($currentWorker->isAdmin())
-        {
+        if ($currentWorker->isSiteManager()) {
             return;
         }
 
-        if ($currentWorker->isDriver()) {
-
-            if ($truckLog->worker_id !== $currentWorker->id)
-            {
-                abort(403);
-            }
-
-            return;
-        }
-
-        if ($currentWorker->isSiteManager())
-        {
+        if (
+            $currentWorker->isDriver()
+            && (int) $truckLog->worker_id === (int) $currentWorker->id
+        ) {
             return;
         }
 
         abort(403);
-    }
-
-    private function ensureCompanyAccess(TruckLog $truckLog, Worker $currentWorker,): void
-    {
-        if ($truckLog->company_id !== $currentWorker->company_id)
-        {
-            abort(404);
-        }
     }
 }

@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
-use App\Traits\Loggable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\Loggable;
 
 class TruckLog extends Model
 {
@@ -15,55 +15,67 @@ class TruckLog extends Model
     use Loggable;
 
     protected $fillable = [
-        'machine_id',
+        'machine_assignment_id',
         'worker_id',
         'created_by',
-        'date',
+
         'site_manager_started_at',
         'site_manager_finished_at',
+
         'operator_started_at',
         'operator_finished_at',
+
         'start_mileage',
         'end_mileage',
+
         'fuel_added',
         'fuel_remaining',
-        'company_id',
-        'note',
+
+        'note_site_manager',
+        'note_operator',
     ];
 
     protected function casts(): array
     {
         return [
-            'date' => 'date',
             'site_manager_started_at' => 'datetime',
             'site_manager_finished_at' => 'datetime',
+
             'operator_started_at' => 'datetime',
             'operator_finished_at' => 'datetime',
+
             'start_mileage' => 'decimal:2',
             'end_mileage' => 'decimal:2',
-            'fuel_added' => 'boolean',
+
+            'fuel_added' => 'decimal:2',
             'fuel_remaining' => 'decimal:2',
         ];
     }
 
-    public function machine(): BelongsTo
+    public function machineAssignment(): BelongsTo
     {
-        return $this->belongsTo(Machine::class);
+        return $this->belongsTo(MachineAssignment::class);
     }
 
     public function worker(): BelongsTo
     {
-        return $this->belongsTo(
-            Worker::class,
-            'worker_id',
-        );
+        return $this->belongsTo(Worker::class);
     }
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(
-            Worker::class,
-            'created_by',
-        );
+        return $this->belongsTo(Worker::class, 'created_by');
+    }
+
+    public function logContext(): array
+    {
+        $assignment = $this->machineAssignment;
+
+        return [
+            'company_id' => $assignment->company_id,
+            'daily_log_id' => $assignment->daily_log_id,
+            'construction_site_id' => $assignment->construction_site_id,
+            'date' => $assignment->date,
+        ];
     }
 }

@@ -272,10 +272,12 @@ Route::prefix('v1')->group(function () {
         Route::controller(TruckLogController::class)
             ->prefix('truck-logs')
             ->group(function () {
-                Route::get('/', 'index');
                 Route::get('/available', 'available');
-                Route::get('/{truckLog}', 'show');
-                Route::post('/', 'store');
+                Route::get('/occupied', 'occupied');
+
+                Route::post('/daily-logs/{dailyLog}', 'store');
+                Route::post('/driver', 'storeForDriver');
+
                 Route::patch('/{truckLog}', 'update');
                 Route::delete('/{truckLog}', 'destroy');
             });

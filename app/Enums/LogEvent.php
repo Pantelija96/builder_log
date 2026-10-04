@@ -137,6 +137,7 @@ enum LogEvent: string
    |--------------------------------------------------------------------------
    */
     case TRUCK_LOG_UPDATED = 'truck.log.updated';
+    case TRUCK_LOG_CREATED = 'truck.log.created';
     case TRUCK_LOG_DELETED = 'truck.log.deleted';
 
     /*

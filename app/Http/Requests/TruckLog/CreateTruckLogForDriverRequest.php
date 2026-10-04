@@ -4,7 +4,7 @@ namespace App\Http\Requests\TruckLog;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class CreateTruckLogRequest extends FormRequest
+class CreateTruckLogForDriverRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -20,23 +20,24 @@ class CreateTruckLogRequest extends FormRequest
                 'exists:machines,id',
             ],
 
-            'worker_id' => [
+            'construction_site_id' => [
                 'required',
                 'integer',
-                'exists:workers,id',
+                'exists:construction_sites,id',
             ],
 
-            'site_manager_started_at' => [
+            'operator_started_at' => [
                 'nullable',
                 'date',
             ],
 
-            'site_manager_finished_at' => [
+            'operator_finished_at' => [
                 'nullable',
                 'date',
+                'after_or_equal:operator_started_at',
             ],
 
-            'note_site_manager' => [
+            'note_operator' => [
                 'nullable',
                 'string',
             ],
