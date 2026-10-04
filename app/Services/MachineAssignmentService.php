@@ -18,18 +18,25 @@ class MachineAssignmentService
     /**
      * Get assignments for selected:
      */
-    public function get(Worker $currentWorker, GetMachineAssignmentsData $data,): Collection
-    {
+    public function get(Worker $currentWorker, GetMachineAssignmentsData $data,): Collection {
         $query = MachineAssignment::query()
-            ->where('company_id', $currentWorker->company_id,)
+            ->where(
+                'company_id',
+                $currentWorker->company_id,
+            )
             ->with([
                 'machine',
+                'machine.owner',
+                'machine.excavator',
+                'machine.truck',
+
                 'constructionSite',
                 'siteManager',
                 'worker',
                 'creator',
-                'excavatorLog',
-                'truckLog',
+
+                'excavatorLogWithTrashed',
+                'truckLogWithTrashed',
             ]);
 
         return (new MachineAssignmentFilter($data))

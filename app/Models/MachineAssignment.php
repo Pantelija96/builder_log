@@ -86,4 +86,14 @@ class MachineAssignment extends Model
     {
         return $this->hasOne(TruckLog::class);
     }
+
+    public function excavatorLogWithTrashed(): HasOne
+    {
+        return $this->hasOne(ExcavatorLog::class)->withTrashed();
+    }
+
+    public function truckLogWithTrashed(): HasOne
+    {
+        return $this->hasOne(TruckLog::class)->withTrashed();
+    }
 }
