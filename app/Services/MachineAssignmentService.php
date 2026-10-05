@@ -46,10 +46,10 @@ class MachineAssignmentService
             ->get();
     }
 
-    public function getCurrentMachine(Worker $currentWorker,): ?MachineAssignment
-    {
+    public function getCurrentMachine(Worker $currentWorker, ?int $workerId = null,): ?MachineAssignment {
         return $this->getCurrentMachineAssignmentAction->execute(
             currentWorker: $currentWorker,
+            workerId: $workerId,
         );
     }
 }

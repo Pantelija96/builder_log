@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\DTO\MachineAssignment\GetMachineAssignmentsData;
+use App\Http\Requests\MachineAssignment\GetCurrentMachineAssignmentRequest;
 use App\Http\Requests\MachineAssignment\GetMachineAssignmentsRequest;
 use App\Http\Resources\MachineAssignmentResource;
 use App\Models\Worker;
@@ -30,18 +31,22 @@ class MachineAssignmentController extends ApiController
         );
     }
 
-    public function current(): JsonResponse
-    {
+    public function current(GetCurrentMachineAssignmentRequest $request,): JsonResponse {
         /** @var Worker $worker */
         $worker = auth()->user();
 
         $assignment = $this->machineAssignmentService->getCurrentMachine(
             currentWorker: $worker,
+            workerId: $request->filled('worker_id')
+                ? $request->integer('worker_id')
+                : null,
         );
 
         return $this->success(
-            $assignment ? MachineAssignmentResource::make($assignment) : null,
-            'No machine assigned to this operator'
+            $assignment
+                ? MachineAssignmentResource::make($assignment)
+                : null,
+            $assignment ? 'Current machine retrieved successfully.' : 'No machine currently assigned to this worker.'
         );
     }
 }

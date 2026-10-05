@@ -256,7 +256,7 @@ Route::prefix('v1')->group(function () {
             ->prefix('machine-assignments')
             ->group(function () {
                 Route::get('/', 'index');
-                Route::get('/current-excavator', 'current');
+                Route::get('/current', 'current');
             });
 
         Route::controller(MachineController::class)
