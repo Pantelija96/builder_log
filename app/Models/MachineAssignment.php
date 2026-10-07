@@ -96,4 +96,9 @@ class MachineAssignment extends Model
     {
         return $this->hasOne(TruckLog::class)->withTrashed();
     }
+
+    public function workerAttendance(): HasOne
+    {
+        return $this->hasOne(WorkerAttendance::class);
+    }
 }

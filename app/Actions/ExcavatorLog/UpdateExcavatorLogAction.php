@@ -3,8 +3,10 @@
 namespace App\Actions\ExcavatorLog;
 
 use App\Actions\BaseAction;
+use App\Actions\WorkerAttendance\SyncMachineWorkerAttendanceAction;
 use App\DTO\ExcavatorLog\UpdateExcavatorLogData;
 use App\Enums\LogEvent;
+use App\Exceptions\BusinessException;
 use App\Models\ExcavatorLog;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
@@ -14,6 +16,7 @@ class UpdateExcavatorLogAction extends BaseAction
 {
     public function __construct(
         private readonly LoggingService $logging,
+        private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
     ) {}
 
     public function execute(ExcavatorLog $excavatorLog, UpdateExcavatorLogData $data, Worker $currentWorker, ?string $reason = null,): ExcavatorLog
@@ -125,6 +128,23 @@ class UpdateExcavatorLogAction extends BaseAction
                 oldValues: $oldValues,
                 newValues: $excavatorLog->fresh()->getAttributes(),
                 reason: $reason,
+            );
+
+            $excavatorLog->load('machineAssignment.worker');
+
+            $assignment = $excavatorLog->machineAssignment;
+
+            if (! $assignment) {
+                throw new BusinessException(
+                    'Excavator log does not have a machine assignment.'
+                );
+            }
+
+            $this->syncMachineWorkerAttendanceAction->execute(
+                assignment: $assignment,
+                startedAt: $excavatorLog->site_manager_started_at,
+                finishedAt: $excavatorLog->site_manager_finished_at,
+                advancePayment: in_array('advance_payment', $data->providedFields, true,) ? $data->advancePayment : null,
             );
 
             return $excavatorLog->fresh([

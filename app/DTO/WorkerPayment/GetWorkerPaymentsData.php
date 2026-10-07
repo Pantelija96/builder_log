@@ -21,16 +21,9 @@ readonly class GetWorkerPaymentsData
     ): self {
         return new self(
             list: ListQueryData::fromRequest($request),
-
             workerId: $request->integer('worker_id') ?: null,
-
-            dateFrom: $request->filled('date_from')
-                ? Carbon::parse($request->input('date_from'))
-                : null,
-
-            dateTo: $request->filled('date_to')
-                ? Carbon::parse($request->input('date_to'))
-                : null,
+            dateFrom: $request->filled('date_from') ? Carbon::parse($request->input('date_from')) : null,
+            dateTo: $request->filled('date_to') ? Carbon::parse($request->input('date_to')) : null,
         );
     }
 }

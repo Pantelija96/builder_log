@@ -13,6 +13,7 @@ readonly class CreateExcavatorLogData
         public ?Carbon $siteManagerStartedAt,
         public ?Carbon $siteManagerFinishedAt,
         public ?string $noteSiteManager,
+        public float $advancePayment,
     ) {
     }
 
@@ -24,6 +25,7 @@ readonly class CreateExcavatorLogData
             siteManagerStartedAt: $request->validated('site_manager_started_at') ? Carbon::parse($request->validated('site_manager_started_at')) : null,
             siteManagerFinishedAt: $request->validated('site_manager_finished_at') ? Carbon::parse($request->validated('site_manager_finished_at')) : null,
             noteSiteManager: $request->validated('note_site_manager'),
+            advancePayment: $request->float('advance_payment', 0),
         );
     }
 }

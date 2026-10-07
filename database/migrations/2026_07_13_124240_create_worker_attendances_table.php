@@ -24,6 +24,12 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
+            $table->foreignId('machine_assignment_id')
+                ->nullable()
+                ->constrained('machine_assignments')
+                ->cascadeOnUpdate()
+                ->restrictOnDelete();
+
             $table->foreignId('construction_site_id')
                 ->constrained()
                 ->cascadeOnUpdate()
@@ -56,8 +62,8 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->unique(
-                ['daily_log_id', 'worker_id'],
-                'worker_attendances_daily_log_worker_unique'
+                'machine_assignment_id',
+                'worker_attendances_machine_assignment_unique'
             );
         });
     }

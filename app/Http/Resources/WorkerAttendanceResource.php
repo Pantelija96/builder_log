@@ -58,6 +58,17 @@ class WorkerAttendanceResource extends JsonResource
             'construction_site' => ConstructionSiteResource::make($this->whenLoaded('constructionSite')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'machine_assignment_id' => $this->machine_assignment_id,
+            'machine' => $this->whenLoaded(
+                'machineAssignment',
+                function () {
+                    if (! $this->machineAssignment) {
+                        return null;
+                    }
+
+                    return MachineResource::make($this->machineAssignment->machine);
+                }
+            ),
         ];
     }
 }

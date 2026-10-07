@@ -3,6 +3,7 @@
 namespace App\Actions\TruckLog;
 
 use App\Actions\BaseAction;
+use App\Actions\WorkerAttendance\SyncMachineWorkerAttendanceAction;
 use App\DTO\TruckLog\CreateTruckLogData;
 use App\DTO\TruckLog\CreateTruckLogForDriverData;
 use App\Enums\MachineType;
@@ -17,6 +18,9 @@ use Illuminate\Database\Eloquent\Builder;
 
 class CreateTruckLogAction extends BaseAction
 {
+    public function __construct(
+        private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
+    ) {}
     public function execute(DailyLog $dailyLog, CreateTruckLogData $data, Worker $currentWorker,): TruckLog {
         return $this->transaction(function () use ($dailyLog, $data, $currentWorker) {
             $this->ensureDailyLogAccess(
@@ -71,6 +75,13 @@ class CreateTruckLogAction extends BaseAction
                     'note_site_manager' => $data->noteSiteManager,
                 ]);
 
+                $this->syncMachineWorkerAttendanceAction->execute(
+                    assignment: $existingAssignment->fresh('worker'),
+                    startedAt: $data->siteManagerStartedAt,
+                    finishedAt: $data->siteManagerFinishedAt,
+                    advancePayment: $data->advancePayment,
+                );
+
                 return $truckLog->fresh([
                     'machineAssignment',
                     'worker',
@@ -121,6 +132,13 @@ class CreateTruckLogAction extends BaseAction
                 'note_site_manager' => $data->noteSiteManager,
                 'note_operator' => null,
             ]);
+
+            $this->syncMachineWorkerAttendanceAction->execute(
+                assignment: $machineAssignment->fresh('worker'),
+                startedAt: $data->siteManagerStartedAt,
+                finishedAt: $data->siteManagerFinishedAt,
+                advancePayment: $data->advancePayment,
+            );
 
             return $truckLog->fresh([
                 'machineAssignment',

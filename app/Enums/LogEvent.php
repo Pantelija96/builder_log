@@ -165,4 +165,11 @@ enum LogEvent: string
     case SUBCONTRACTOR_DELETED = 'subcontractor.deleted';
     case SUBCONTRACTOR_CREATED = 'subcontractor.created';
     case SUBCONTRACTOR_UPDATED = 'subcontractor.updated';
+    /*
+    |--------------------------------------------------------------------------
+    | Construction Site
+    |--------------------------------------------------------------------------
+    */
+
+    case CONSTRUCTION_SITE_DELETED = 'construction_site.deleted';
 }

@@ -36,6 +36,12 @@ class CreateTruckLogRequest extends FormRequest
                 'date',
             ],
 
+            'advance_payment' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
             'note_site_manager' => [
                 'nullable',
                 'string',

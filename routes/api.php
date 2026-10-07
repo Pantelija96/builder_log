@@ -99,6 +99,7 @@ Route::prefix('v1')->group(function () {
                 Route::get('/', 'index');
                 Route::post('/', 'store');
                 Route::patch('/{constructionSite}', 'update');
+                Route::delete('/{constructionSite}', 'destroy');
                 Route::get('/{constructionSite}/financial-summary', 'financialSummary');
                 Route::get('/{constructionSite}/statistics', 'statistics');
             });

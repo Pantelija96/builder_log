@@ -3,6 +3,7 @@
 namespace App\Actions\TruckLog;
 
 use App\Actions\BaseAction;
+use App\Actions\WorkerAttendance\SyncMachineWorkerAttendanceAction;
 use App\DTO\TruckLog\UpdateTruckLogData;
 use App\Enums\LogEvent;
 use App\Exceptions\BusinessException;
@@ -15,6 +16,7 @@ class UpdateTruckLogAction extends BaseAction
 {
     public function __construct(
         private readonly LoggingService $logging,
+        private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
     ) {}
 
     public function execute(TruckLog $truckLog, UpdateTruckLogData $data, Worker $currentWorker, ?string $reason = null,): TruckLog {
@@ -91,6 +93,23 @@ class UpdateTruckLogAction extends BaseAction
             }
 
             $truckLog->update($values);
+
+            $truckLog->load('machineAssignment.worker');
+
+            $assignment = $truckLog->machineAssignment;
+
+            if (! $assignment) {
+                throw new BusinessException(
+                    'Truck log does not have a machine assignment.'
+                );
+            }
+
+            $this->syncMachineWorkerAttendanceAction->execute(
+                assignment: $assignment,
+                startedAt: $truckLog->site_manager_started_at,
+                finishedAt: $truckLog->site_manager_finished_at,
+                advancePayment: in_array('advance_payment', $data->providedFields, true,) ? $data->advancePayment : null,
+            );
 
             $this->logging->activity(
                 actor: $currentWorker,

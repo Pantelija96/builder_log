@@ -23,6 +23,7 @@ class WorkerAttendanceService
             ->with([
                 'worker',
                 'creator',
+                'machineAssignment.machine',
             ]);
     }
 
@@ -35,6 +36,7 @@ class WorkerAttendanceService
                 'creator',
                 'constructionSite',
                 'siteManager',
+                'machineAssignment.machine',
             ]);
     }
 

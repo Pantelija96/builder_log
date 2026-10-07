@@ -28,6 +28,7 @@ class ExcavatorLogResource extends JsonResource
             'fuel_remaining' => $this->fuel_remaining,
             'note_site_manager' => $this->note_site_manager,
             'note_operator' => $this->note_operator,
+            'advance_payment' => $this->advance_payment,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'machine_assignment' => MachineAssignmentResource::make($this->whenLoaded('machineAssignment')),

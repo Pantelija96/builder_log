@@ -67,6 +67,12 @@ class UpdateTruckLogRequest extends FormRequest
                 'min:0',
             ],
 
+            'advance_payment' => [
+                'sometimes',
+                'numeric',
+                'min:0',
+            ],
+
             'note_site_manager' => [
                 'sometimes',
                 'nullable',

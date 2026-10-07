@@ -22,9 +22,7 @@ readonly class CreateWorkerPaymentData
             workerId: $request->integer('worker_id'),
             amount: $request->float('amount'),
             date: Carbon::parse($request->input('date')),
-            note: $request->filled('note')
-                ? $request->string('note')->toString()
-                : null,
+            note: $request->filled('note') ? $request->string('note')->toString() : null,
         );
     }
 }

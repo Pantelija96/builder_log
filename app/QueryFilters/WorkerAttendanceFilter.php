@@ -33,6 +33,17 @@ class WorkerAttendanceFilter extends BaseFilter
             )
 
             ->when(
+                $this->data->role,
+                function (Builder $query, string $role) {
+                    $query->whereHas(
+                        'worker',
+                        fn (Builder $workerQuery) =>
+                        $workerQuery->where('role', $role)
+                    );
+                }
+            )
+
+            ->when(
                 $this->data->constructionSiteId,
                 fn (Builder $query, int $constructionSiteId) =>
                 $query->where(

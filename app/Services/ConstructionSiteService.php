@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Actions\ConstructionSite\CreateConstructionSiteAction;
+use App\Actions\ConstructionSite\DeleteConstructionSiteAction;
 use App\Actions\ConstructionSite\UpdateConstructionSiteAction;
 use App\DTO\ConstructionSite\CreateConstructionSiteData;
 use App\DTO\ConstructionSite\UpdateConstructionSiteData;
@@ -17,6 +18,7 @@ class ConstructionSiteService
     public function __construct(
         private readonly CreateConstructionSiteAction $createAction,
         private readonly UpdateConstructionSiteAction $updateAction,
+        private readonly DeleteConstructionSiteAction $deleteAction,
     ) {
     }
 
@@ -24,9 +26,12 @@ class ConstructionSiteService
         $query = ConstructionSite::query();
 
         if ($worker->isSiteManager()) {
-            $query->whereHas('siteManagers', function ($q) use ($worker) {
-                $q->whereKey($worker->id);
-            });
+            $query->whereHas(
+                'siteManagers',
+                function ($q) use ($worker) {
+                    $q->whereKey($worker->id);
+                }
+            );
         }
 
         $query->with([
@@ -35,7 +40,8 @@ class ConstructionSiteService
             'siteManagers',
         ]);
 
-        $query = (new ConstructionSiteFilter($data))->apply($query);
+        $query = (new ConstructionSiteFilter($data))
+            ->apply($query);
 
         $constructionSites = $query
             ->offset($data->list->offset)
@@ -43,7 +49,9 @@ class ConstructionSiteService
             ->get();
 
         $constructionSites->each(
-            function (ConstructionSite $constructionSite) use ($worker) {
+            function (
+                ConstructionSite $constructionSite,
+            ) use ($worker) {
                 $dailyLog = $constructionSite->todayDailyLog;
 
                 $constructionSite->can_select =
@@ -67,6 +75,14 @@ class ConstructionSiteService
             constructionSite: $constructionSite,
             data: $data,
             currentWorker: $currentWorker,
+        );
+    }
+
+    public function delete(ConstructionSite $constructionSite, Worker $currentWorker, string $reason,): void {
+        $this->deleteAction->execute(
+            constructionSite: $constructionSite,
+            currentWorker: $currentWorker,
+            reason: $reason,
         );
     }
 }

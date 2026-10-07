@@ -27,6 +27,7 @@ class WorkerAttendance extends Model
         'advance_payment',
         'created_by',
         'hourly_rate',
+        'machine_assignment_id',
     ];
 
     protected function casts(): array
@@ -70,10 +71,12 @@ class WorkerAttendance extends Model
 
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(
-            Worker::class,
-            'created_by'
-        );
+        return $this->belongsTo(Worker::class, 'created_by');
+    }
+
+    public function machineAssignment(): BelongsTo
+    {
+        return $this->belongsTo(MachineAssignment::class);
     }
 
     public function getWorkedTimeAttribute(): ?string

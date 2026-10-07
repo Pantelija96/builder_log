@@ -53,6 +53,12 @@ class GetWorkerAttendancesRequest extends FormRequest
                 'after_or_equal:date_from',
             ],
 
+            'role' => [
+                'nullable',
+                'string',
+                'in:worker,operator,driver',
+            ],
+
             'sort' => [
                 'nullable',
                 'string',

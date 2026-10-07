@@ -40,6 +40,12 @@ class CreateExcavatorLogRequest extends FormRequest
                 'after_or_equal:site_manager_started_at',
             ],
 
+            'advance_payment' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
             'note_site_manager' => [
                 'nullable',
                 'string',

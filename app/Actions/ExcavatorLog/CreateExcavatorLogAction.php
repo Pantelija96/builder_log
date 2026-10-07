@@ -3,6 +3,7 @@
 namespace App\Actions\ExcavatorLog;
 
 use App\Actions\BaseAction;
+use App\Actions\WorkerAttendance\SyncMachineWorkerAttendanceAction;
 use App\DTO\ExcavatorLog\CreateExcavatorLogData;
 use App\DTO\ExcavatorLog\CreateExcavatorLogForOperatorData;
 use App\Enums\MachineType;
@@ -16,20 +17,12 @@ use Illuminate\Database\Eloquent\Builder;
 
 class CreateExcavatorLogAction extends BaseAction
 {
-    /**
-     * Site Manager kreira ExcavatorLog.
-     */
-    public function execute(
-        DailyLog $dailyLog,
-        CreateExcavatorLogData $data,
-        Worker $currentWorker,
-    ): ExcavatorLog {
-        return $this->transaction(function () use (
-            $dailyLog,
-            $data,
-            $currentWorker,
-        ) {
+    public function __construct(
+        private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
+    ) {}
 
+    public function execute(DailyLog $dailyLog, CreateExcavatorLogData $data, Worker $currentWorker,): ExcavatorLog {
+        return $this->transaction(function () use ($dailyLog, $data, $currentWorker,) {
             $this->ensureDailyLogAccess(
                 dailyLog: $dailyLog,
                 currentWorker: $currentWorker,
@@ -56,7 +49,13 @@ class CreateExcavatorLogAction extends BaseAction
                 ->where('company_id', $currentWorker->company_id)
                 ->where('machine_id', $machine->id)
                 ->where('worker_id', $worker->id)
+                ->where('construction_site_id', $dailyLog->construction_site_id)
                 ->whereDate('date', $dailyLog->date)
+                ->whereHas('excavatorLog', function ($query) use ($worker) {
+                    $query
+                        ->whereNull('site_manager_started_at')
+                        ->where('created_by', $worker->id);
+                })
                 ->with('excavatorLog')
                 ->first();
 
@@ -72,6 +71,13 @@ class CreateExcavatorLogAction extends BaseAction
                     'site_manager_finished_at' => $data->siteManagerFinishedAt,
                     'note_site_manager' => $data->noteSiteManager,
                 ]);
+
+                $this->syncMachineWorkerAttendanceAction->execute(
+                    assignment: $existingAssignment->fresh('worker'),
+                    startedAt: $data->siteManagerStartedAt,
+                    finishedAt: $data->siteManagerFinishedAt,
+                    advancePayment: $data->advancePayment,
+                );
 
                 return $existingAssignment->excavatorLog->fresh([
                     'machineAssignment',
@@ -118,6 +124,13 @@ class CreateExcavatorLogAction extends BaseAction
                 'note_site_manager' => $data->noteSiteManager,
                 'note_operator' => null,
             ]);
+
+            $this->syncMachineWorkerAttendanceAction->execute(
+                assignment: $assignment->fresh('worker'),
+                startedAt: $data->siteManagerStartedAt,
+                finishedAt: $data->siteManagerFinishedAt,
+                advancePayment: $data->advancePayment,
+            );
 
             return $excavatorLog->fresh([
                 'machineAssignment',

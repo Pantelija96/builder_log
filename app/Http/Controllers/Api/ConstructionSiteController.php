@@ -8,6 +8,7 @@ use App\DTO\ConstructionSite\UpdateConstructionSiteData;
 use App\DTO\Requests\GetConstructionSitesData;
 use App\Http\Controllers\ApiController;
 use App\Http\Requests\ConstructionSite\CreateConstructionSiteRequest;
+use App\Http\Requests\ConstructionSite\DeleteConstructionSiteRequest;
 use App\Http\Requests\ConstructionSite\GetConstructionSiteFinancialSummaryRequest;
 use App\Http\Requests\ConstructionSite\GetConstructionSiteStatisticsRequest;
 use App\Http\Requests\ConstructionSite\UpdateConstructionSiteRequest;
@@ -109,6 +110,21 @@ class ConstructionSiteController extends ApiController
         return $this->success(
             ConstructionSiteResource::make($constructionSite),
             'Construction site updated successfully.'
+        );
+    }
+
+    public function destroy(ConstructionSite $constructionSite, DeleteConstructionSiteRequest $request,): JsonResponse {
+        /** @var Worker $worker */
+        $worker = $request->user();
+
+        $this->constructionSiteService->delete(
+            constructionSite: $constructionSite,
+            currentWorker: $worker,
+            reason: $request->string('reason')->toString(),
+        );
+
+        return $this->success(
+            message: 'Construction site deleted successfully.'
         );
     }
 }

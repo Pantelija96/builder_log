@@ -11,6 +11,7 @@ readonly class GetWorkerAttendancesData
     public function __construct(
         public ListQueryData $list,
         public ?int $workerId,
+        public ?string $role,
         public ?int $constructionSiteId,
         public ?Carbon $date,
         public ?Carbon $dateCreatedFrom,
@@ -25,6 +26,7 @@ readonly class GetWorkerAttendancesData
         return new self(
             list: ListQueryData::fromRequest($request),
             workerId: $request->integer('worker_id') ?: null,
+            role: $request->filled('role') ? $request->string('role')->toString() : null,
             constructionSiteId: $request->integer('construction_site_id') ?: null,
             date: $request->filled('date') ? $request->date('date') : null,
             dateCreatedFrom: $request->filled('date_created_from') ? $request->date('date_created_from') : null,

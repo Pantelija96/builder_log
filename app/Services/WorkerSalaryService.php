@@ -28,6 +28,7 @@ class WorkerSalaryService
                 'worker',
                 'creator',
                 'constructionSite',
+                'machineAssignment.machine',
             ])
             ->orderBy('date')
             ->orderBy('started_at')
@@ -158,6 +159,7 @@ class WorkerSalaryService
                 'worker',
                 'creator',
                 'constructionSite',
+                'machineAssignment.machine',
             ])
             ->get();
 

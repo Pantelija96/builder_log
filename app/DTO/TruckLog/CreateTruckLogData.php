@@ -13,6 +13,7 @@ readonly class CreateTruckLogData
         public ?Carbon $siteManagerStartedAt,
         public ?Carbon $siteManagerFinishedAt,
         public ?string $noteSiteManager,
+        public float $advancePayment,
     ) {
     }
 
@@ -24,6 +25,7 @@ readonly class CreateTruckLogData
             siteManagerStartedAt: $request->filled('site_manager_started_at') ? Carbon::parse($request->input('site_manager_started_at')) : null,
             siteManagerFinishedAt: $request->filled('site_manager_finished_at') ? Carbon::parse($request->input('site_manager_finished_at')) : null,
             noteSiteManager: $request->input('note_site_manager'),
+            advancePayment: $request->float('advance_payment', 0),
         );
     }
 }
