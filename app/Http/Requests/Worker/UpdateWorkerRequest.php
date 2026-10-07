@@ -76,6 +76,17 @@ class UpdateWorkerRequest extends FormRequest
                 'boolean',
             ],
 
+            'construction_site_ids' => [
+                'sometimes',
+                'array',
+            ],
+
+            'construction_site_ids.*' => [
+                'integer',
+                'distinct',
+                Rule::exists('construction_sites', 'id'),
+            ],
+
             'reason' => [
                 'sometimes',
                 'nullable',

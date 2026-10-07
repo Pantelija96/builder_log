@@ -17,11 +17,10 @@ readonly class CreateWorkerData
         public ?string $email,
         public bool $isActive,
         public ?float $hourlyRate,
+        public array $constructionSiteIds,
     ) {}
 
-    public static function fromRequest(
-        CreateWorkerRequest $request,
-    ): self {
+    public static function fromRequest(CreateWorkerRequest $request,): self {
         return new self(
             firstName: $request->string('first_name')->toString(),
             lastName: $request->string('last_name')->toString(),
@@ -32,6 +31,7 @@ readonly class CreateWorkerData
             email: $request->filled('email') ? $request->string('email')->toString() : null,
             isActive: $request->boolean('is_active', true),
             hourlyRate: $request->filled('hourly_rate') ? $request->float('hourly_rate') : null,
+            constructionSiteIds: $request->validated('construction_site_ids', []),
         );
     }
 }

@@ -25,7 +25,10 @@ class WorkerService
 
     private function query()
     {
-        return Worker::query()->with('company');
+        return Worker::query()->with([
+            'company',
+            'constructionSites',
+        ]);
     }
 
     public function getAll(GetWorkersData $data): Collection

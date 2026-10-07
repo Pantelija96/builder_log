@@ -18,6 +18,7 @@ readonly class UpdateWorkerData
         public ?bool $isActive,
         public array $providedFields,
         public ?float $hourlyRate,
+        public array $constructionSiteIds,
     ) {}
 
     public static function fromRequest(UpdateWorkerRequest $request,): self
@@ -33,6 +34,7 @@ readonly class UpdateWorkerData
             isActive: $request->has('is_active') ? $request->boolean('is_active') : null,
             providedFields: $request->keys(),
             hourlyRate: $request->has('hourly_rate') ? ($request->input('hourly_rate') !== null ? $request->float('hourly_rate') : null) : null,
+            constructionSiteIds: $request->input('construction_site_ids', []),
         );
     }
 }

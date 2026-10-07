@@ -68,6 +68,17 @@ class CreateWorkerRequest extends FormRequest
                 'sometimes',
                 'boolean',
             ],
+
+            'construction_site_ids' => [
+                'nullable',
+                'array',
+            ],
+
+            'construction_site_ids.*' => [
+                'integer',
+                'distinct',
+                Rule::exists('construction_sites', 'id'),
+            ],
         ];
     }
 }

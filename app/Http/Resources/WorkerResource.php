@@ -24,7 +24,7 @@ class WorkerResource extends JsonResource
             'updated_at' => $this->updated_at,
             'is_available' => $this->is_available,
             'company' => new CompanyResource($this->whenLoaded('company')),
-
+            'construction_sites' => ConstructionSiteResource::collection($this->whenLoaded('constructionSites')),
         ];
     }
 }
