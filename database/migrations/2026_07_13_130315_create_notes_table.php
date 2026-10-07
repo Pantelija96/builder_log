@@ -18,30 +18,22 @@ return new class extends Migration
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('daily_log_id')
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('construction_site_id')
                 ->constrained()
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->foreignId('site_manager_id')
                 ->constrained('workers')
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
-
             $table->text('note');
-
-            $table->boolean('notify_admin')
-                ->default(false)
-                ->index();
-
+            $table->unsignedInteger('worker_count')->default(0);
+            $table->boolean('notify_admin')->default(false)->index();
             $table->date('date')->index();
-
             $table->foreignId('created_by')
                 ->constrained('workers')
                 ->cascadeOnUpdate()

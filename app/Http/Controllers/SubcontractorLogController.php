@@ -58,6 +58,7 @@ class SubcontractorLogController extends ApiController
                     'subcontractor',
                     'creator',
                     'siteManager',
+                    'constructionSite',
                 ])
             ),
             'Subcontractor added successfully.'
@@ -79,7 +80,17 @@ class SubcontractorLogController extends ApiController
             reason: $request->string('reason')->toString(),
         );
 
-        return $this->success(SubcontractorLogResource::make($subcontractorLog), 'Subcontractor updated successfully.');
+        return $this->success(
+            SubcontractorLogResource::make(
+                $subcontractorLog->load([
+                    'subcontractor',
+                    'creator',
+                    'siteManager',
+                    'constructionSite',
+                ])
+            ),
+            'Subcontractor updated successfully.'
+        );
     }
 
     public function destroy(

@@ -8,6 +8,7 @@ readonly class UpdateNoteData
 {
     public function __construct(
         public string $note,
+        public int $workerCount,
         public bool $notifyAdmin,
         public array $attachments,
         public array $deleteAttachments,
@@ -18,6 +19,7 @@ readonly class UpdateNoteData
     {
         return new self(
             note: $request->string('note')->toString(),
+            workerCount: $request->integer('worker_count'),
             notifyAdmin: $request->boolean('notify_admin'),
             attachments: $request->file('attachments', []),
             deleteAttachments: $request->input('delete_attachments', [],),

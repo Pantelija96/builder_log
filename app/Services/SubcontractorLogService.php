@@ -31,7 +31,8 @@ class SubcontractorLogService
                 'subcontractor',
                 'creator',
                 'siteManager',
-                'dailyLog'
+                'dailyLog',
+                'constructionSite',
             ]);
     }
 
@@ -48,6 +49,7 @@ class SubcontractorLogService
                 'subcontractor',
                 'creator',
                 'siteManager',
+                'constructionSite',
             ]);
 
         return (new SubcontractorLogFilter($data))

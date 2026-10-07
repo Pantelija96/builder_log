@@ -24,13 +24,7 @@ class UpdateNoteAction extends BaseAction
     ) {
     }
 
-    public function execute(
-        DailyLog $dailyLog,
-        Note $note,
-        UpdateNoteData $data,
-        Worker $currentWorker,
-        ?string $reason,
-    ): Note {
+    public function execute(DailyLog $dailyLog, Note $note, UpdateNoteData $data, Worker $currentWorker, ?string $reason,): Note {
 
         $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
@@ -46,6 +40,7 @@ class UpdateNoteAction extends BaseAction
 
             $note->update([
                 'note' => $data->note,
+                'worker_count' => $data->workerCount,
                 'notify_admin' => $data->notifyAdmin,
             ]);
 

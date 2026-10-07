@@ -44,6 +44,13 @@ class UpdateMachineRequest extends FormRequest
                 'max:500',
             ],
 
+            'license_plate' => [
+                'nullable',
+                'string',
+                'max:30',
+                Rule::unique('machines', 'license_plate')->ignore($this->route('machine')),
+            ],
+
             'reason' => [
                 'sometimes',
                 'nullable',

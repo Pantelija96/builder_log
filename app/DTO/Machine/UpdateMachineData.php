@@ -14,6 +14,7 @@ readonly class UpdateMachineData
         public int $ownerId,
         public MachineStatus $status,
         public ?string $imagePath,
+        public ?string $licensePlate,
     ) {
     }
 
@@ -32,6 +33,7 @@ readonly class UpdateMachineData
                 MachineStatus::class,
             ),
             imagePath: $request->validated('image_path'),
+            licensePlate: $request->validated('license_plate'),
         );
     }
 }

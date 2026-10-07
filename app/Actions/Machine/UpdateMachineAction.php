@@ -23,6 +23,7 @@ class UpdateMachineAction extends BaseAction
                 'owner_id' => $data->ownerId,
                 'status' => $data->status,
                 'image_path' => $data->imagePath,
+                'license_plate' => $data->licensePlate,
             ]);
 
             return $machine->fresh([

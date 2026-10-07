@@ -37,9 +37,7 @@ class MachineAssignmentController extends ApiController
 
         $assignment = $this->machineAssignmentService->getCurrentMachine(
             currentWorker: $worker,
-            workerId: $request->filled('worker_id')
-                ? $request->integer('worker_id')
-                : null,
+            workerId: $request->filled('worker_id') ? $request->integer('worker_id') : null,
         );
 
         return $this->success(

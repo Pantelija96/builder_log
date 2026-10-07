@@ -99,26 +99,33 @@ class GetWorkerWorkHistoryAction
             ->get();
     }
 
-    private function getTruckLogs(Worker $worker, GetWorkerWorkHistoryData $data,): Collection
-    {
+    private function getTruckLogs(Worker $worker, GetWorkerWorkHistoryData $data,): Collection {
         return TruckLog::query()
             ->where('worker_id', $worker->id)
-            ->when(
-                $data->dateFrom,
-                fn ($query, $date) =>
-                $query->whereDate('date', '>=', $date)
-            )
-            ->when(
-                $data->dateTo,
-                fn ($query, $date) =>
-                $query->whereDate('date', '<=', $date)
+            ->whereHas(
+                'machineAssignment',
+                function ($query) use ($data) {
+                    $query
+                        ->when(
+                            $data->dateFrom,
+                            fn ($query, $date) =>
+                            $query->whereDate('date', '>=', $date)
+                        )
+                        ->when(
+                            $data->dateTo,
+                            fn ($query, $date) =>
+                            $query->whereDate('date', '<=', $date)
+                        );
+                }
             )
             ->with([
-                'machine',
+                'machineAssignment.machine',
+                'machineAssignment.constructionSite',
+                'machineAssignment.siteManager',
                 'worker',
                 'creator',
             ])
-            ->orderBy('date')
+            ->orderByDesc('id')
             ->get();
     }
 }

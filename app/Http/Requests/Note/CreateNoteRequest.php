@@ -20,6 +20,12 @@ class CreateNoteRequest extends FormRequest
                 'max:5000',
             ],
 
+            'worker_count' => [
+                'required',
+                'integer',
+                'min:0',
+            ],
+
             'notify_admin' => [
                 'required',
                 'boolean',

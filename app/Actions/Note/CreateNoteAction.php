@@ -24,21 +24,11 @@ class CreateNoteAction extends BaseAction
     ) {
     }
 
-    public function execute(
-        DailyLog $dailyLog,
-        CreateNoteData $data,
-        Worker $currentWorker,
-    ): Note {
-
+    public function execute(DailyLog $dailyLog, CreateNoteData $data, Worker $currentWorker,): Note {
         $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
 
-        return $this->transaction(function () use (
-            $dailyLog,
-            $data,
-            $currentWorker
-        ) {
-
+        return $this->transaction(function () use ($dailyLog, $data, $currentWorker) {
             $note = Note::create([
                 'company_id' => $dailyLog->company_id,
                 'daily_log_id' => $dailyLog->id,
@@ -46,6 +36,7 @@ class CreateNoteAction extends BaseAction
                 'site_manager_id' => $dailyLog->site_manager_id,
 
                 'note' => $data->note,
+                'worker_count' => $data->workerCount,
                 'notify_admin' => $data->notifyAdmin,
 
                 'date' => $dailyLog->date,

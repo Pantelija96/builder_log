@@ -23,6 +23,7 @@ class Note extends Model implements HasAttachments
         'construction_site_id',
         'site_manager_id',
         'note',
+        'worker_count',
         'notify_admin',
         'date',
         'created_by',
@@ -31,6 +32,7 @@ class Note extends Model implements HasAttachments
     protected function casts(): array
     {
         return [
+            'worker_count' => 'integer',
             'notify_admin' => 'boolean',
             'date' => 'date',
         ];
