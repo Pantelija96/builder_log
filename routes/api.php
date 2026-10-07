@@ -88,10 +88,20 @@ Route::prefix('v1')->group(function () {
 
         Route::get('/workers', [WorkerController::class, 'index']);
         Route::get('/companies', [CompanyController::class, 'index']);
-        Route::get('/construction-sites', [ConstructionSiteController::class, 'index']);
+//        Route::get('/construction-sites', [ConstructionSiteController::class, 'index']);
         Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/subcontractors', [SubcontractorController::class, 'index']);
         Route::get('/expenses', [ExpenseController::class, 'getAll']);
+
+        Route::controller(ConstructionSiteController::class)
+            ->prefix('construction-sites')
+            ->group(function () {
+                Route::get('/', 'index');
+                Route::post('/', 'store');
+                Route::patch('/{constructionSite}', 'update');
+                Route::get('/{constructionSite}/financial-summary', 'financialSummary');
+                Route::get('/{constructionSite}/statistics', 'statistics');
+            });
 
         Route::controller(DailyLogController::class)
             ->prefix('daily-logs')
@@ -295,12 +305,12 @@ Route::prefix('v1')->group(function () {
                 Route::delete('/{excavatorLog}', 'destroy');
             });
 
-        Route::controller(ConstructionSiteController::class)
-            ->prefix('construction-sites')
-            ->group(function () {
-                Route::get('/{constructionSite}/financial-summary', 'financialSummary');
-                Route::get('/{constructionSite}/statistics', [ConstructionSiteController::class, 'statistics']);
-            });
+//        Route::controller(ConstructionSiteController::class)
+//            ->prefix('construction-sites')
+//            ->group(function () {
+//                Route::get('/{constructionSite}/financial-summary', 'financialSummary');
+//                Route::get('/{constructionSite}/statistics', [ConstructionSiteController::class, 'statistics']);
+//            });
 
         Route::controller(SiteManagerController::class)
             ->prefix('site-managers')

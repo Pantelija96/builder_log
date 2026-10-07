@@ -2,6 +2,10 @@
 
 namespace App\Services;
 
+use App\Actions\ConstructionSite\CreateConstructionSiteAction;
+use App\Actions\ConstructionSite\UpdateConstructionSiteAction;
+use App\DTO\ConstructionSite\CreateConstructionSiteData;
+use App\DTO\ConstructionSite\UpdateConstructionSiteData;
 use App\DTO\Requests\GetConstructionSitesData;
 use App\Models\ConstructionSite;
 use App\Models\Worker;
@@ -10,8 +14,13 @@ use Illuminate\Database\Eloquent\Collection;
 
 class ConstructionSiteService
 {
-    public function getAll(Worker $worker, GetConstructionSitesData $data): Collection
-    {
+    public function __construct(
+        private readonly CreateConstructionSiteAction $createAction,
+        private readonly UpdateConstructionSiteAction $updateAction,
+    ) {
+    }
+
+    public function getAll(Worker $worker, GetConstructionSitesData $data,): Collection {
         $query = ConstructionSite::query();
 
         if ($worker->isSiteManager()) {
@@ -20,7 +29,11 @@ class ConstructionSiteService
             });
         }
 
-        $query->with(['company', 'todayDailyLog']);
+        $query->with([
+            'company',
+            'todayDailyLog',
+            'siteManagers',
+        ]);
 
         $query = (new ConstructionSiteFilter($data))->apply($query);
 
@@ -29,11 +42,31 @@ class ConstructionSiteService
             ->limit($data->list->limit)
             ->get();
 
-        $constructionSites->each(function (ConstructionSite $constructionSite) use ($worker) {
-            $dailyLog = $constructionSite->todayDailyLog;
-            $constructionSite->can_select = $dailyLog === null || $dailyLog->site_manager_id === $worker->id;
-        });
+        $constructionSites->each(
+            function (ConstructionSite $constructionSite) use ($worker) {
+                $dailyLog = $constructionSite->todayDailyLog;
+
+                $constructionSite->can_select =
+                    $dailyLog === null
+                    || $dailyLog->site_manager_id === $worker->id;
+            }
+        );
 
         return $constructionSites;
+    }
+
+    public function create(CreateConstructionSiteData $data, Worker $currentWorker,): ConstructionSite {
+        return $this->createAction->execute(
+            data: $data,
+            currentWorker: $currentWorker,
+        );
+    }
+
+    public function update(ConstructionSite $constructionSite, UpdateConstructionSiteData $data, Worker $currentWorker,): ConstructionSite {
+        return $this->updateAction->execute(
+            constructionSite: $constructionSite,
+            data: $data,
+            currentWorker: $currentWorker,
+        );
     }
 }

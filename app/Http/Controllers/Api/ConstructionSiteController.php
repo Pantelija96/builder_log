@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\DTO\ConstructionSite\CreateConstructionSiteData;
 use App\DTO\ConstructionSite\GetConstructionSiteFinancialSummaryData;
+use App\DTO\ConstructionSite\UpdateConstructionSiteData;
 use App\DTO\Requests\GetConstructionSitesData;
 use App\Http\Controllers\ApiController;
+use App\Http\Requests\ConstructionSite\CreateConstructionSiteRequest;
 use App\Http\Requests\ConstructionSite\GetConstructionSiteFinancialSummaryRequest;
 use App\Http\Requests\ConstructionSite\GetConstructionSiteStatisticsRequest;
+use App\Http\Requests\ConstructionSite\UpdateConstructionSiteRequest;
 use App\Http\Requests\Get\GetConstructionSitesRequest;
 use App\Http\Resources\ConstructionSiteResource;
 use App\Http\Resources\ExpenseResource;
@@ -74,6 +78,37 @@ class ConstructionSiteController extends ApiController
                 dateFrom: Carbon::parse($request->validated('date_from')),
                 dateTo: Carbon::parse($request->validated('date_to')),
             )
+        );
+    }
+
+    public function store(CreateConstructionSiteRequest $request,): JsonResponse {
+        /** @var Worker $worker */
+        $worker = $request->user();
+
+        $constructionSite = $this->constructionSiteService->create(
+            data: CreateConstructionSiteData::fromRequest($request),
+            currentWorker: $worker,
+        );
+
+        return $this->success(
+            ConstructionSiteResource::make($constructionSite),
+            'Construction site created successfully.'
+        );
+    }
+
+    public function update(ConstructionSite $constructionSite, UpdateConstructionSiteRequest $request,): JsonResponse {
+        /** @var Worker $worker */
+        $worker = $request->user();
+
+        $constructionSite = $this->constructionSiteService->update(
+            constructionSite: $constructionSite,
+            data: UpdateConstructionSiteData::fromRequest($request),
+            currentWorker: $worker,
+        );
+
+        return $this->success(
+            ConstructionSiteResource::make($constructionSite),
+            'Construction site updated successfully.'
         );
     }
 }
