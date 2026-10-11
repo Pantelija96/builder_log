@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\ConstructionSiteController;
 //use App\Http\Controllers\Api\MachineGetController;
+use App\Http\Controllers\ConstructionFinancialSummaryController;
 use App\Http\Controllers\WorkerPaymentController;
 use \App\Http\Controllers\MachineController;
 use App\Http\Controllers\Api\SubcontractorController;
@@ -126,6 +127,7 @@ Route::prefix('v1')->group(function () {
         Route::controller(WorkerAttendanceController::class)
             ->prefix('worker-attendances')
             ->group(function () {
+                Route::get('/absent', 'absent');
                 Route::get('/', 'getAll');
             });
 
@@ -149,6 +151,7 @@ Route::prefix('v1')->group(function () {
         Route::prefix('admin')->group(function () {
             Route::get('/expenses', [ExpenseController::class, 'getAdminExpenses',]);
             Route::get('/worker-salaries', [WorkerSalaryController::class, 'index',]);
+            Route::get('/construction-financial-summary', [ConstructionFinancialSummaryController::class, 'index']);
         });
 
         Route::controller(AttachmentController::class)->group(function () {

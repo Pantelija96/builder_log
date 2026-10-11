@@ -7,9 +7,11 @@ use App\DTO\WorkerAttendance\GetWorkerAttendancesData;
 use App\DTO\WorkerAttendance\UpdateWorkerAttendanceData;
 use App\Http\Requests\WorkerAttendance\CreateWorkerAttendanceRequest;
 use App\Http\Requests\WorkerAttendance\DeleteWorkerAttendanceRequest;
+use App\Http\Requests\WorkerAttendance\GetAbsentWorkersRequest;
 use App\Http\Requests\WorkerAttendance\GetWorkerAttendancesRequest;
 use App\Http\Requests\WorkerAttendance\UpdateWorkerAttendanceRequest;
 use App\Http\Resources\WorkerAttendanceResource;
+use App\Http\Resources\WorkerResource;
 use App\Models\DailyLog;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
@@ -83,6 +85,39 @@ class WorkerAttendanceController extends ApiController
                     GetWorkerAttendancesData::fromRequest($request),
                 )
             )
+        );
+    }
+
+    public function absent(GetAbsentWorkersRequest $request,): JsonResponse {
+        /** @var Worker $worker */
+        $worker = $request->user();
+
+        $result = $this->workerAttendanceService->getAbsentWorkers(
+            currentWorker: $worker,
+
+            date: $request->filled('date')
+                ? $request->date('date')->toDateString()
+                : null,
+
+            dateFrom: $request->filled('date_from')
+                ? $request->date('date_from')->toDateString()
+                : null,
+
+            dateTo: $request->filled('date_to')
+                ? $request->date('date_to')->toDateString()
+                : null,
+        );
+
+        return $this->success(
+            collect($result)->map(
+                fn (array $item) => [
+                    'date' => $item['date'],
+
+                    'absent_workers' => WorkerResource::collection(
+                        $item['absent_workers']
+                    ),
+                ]
+            )->values()
         );
     }
 }

@@ -262,7 +262,7 @@ class WorkerSalaryService
         ];
     }
 
-    private function calculateAttendances(
+    public function calculateAttendances(
         iterable $attendances,
     ): array {
         $earned = 0.0;
