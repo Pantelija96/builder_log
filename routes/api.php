@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\ConstructionSiteController;
 //use App\Http\Controllers\Api\MachineGetController;
 use App\Http\Controllers\ConstructionFinancialSummaryController;
+use App\Http\Controllers\PushNotificationController;
 use App\Http\Controllers\WorkerPaymentController;
 use \App\Http\Controllers\MachineController;
 use App\Http\Controllers\Api\SubcontractorController;
@@ -352,6 +353,15 @@ Route::prefix('v1')->group(function () {
             });
 
         Route::get('/workers/{worker}/salary', [WorkerSalaryController::class, 'show']);
+
+        Route::controller(PushNotificationController::class)
+            ->prefix('push')
+            ->group(function () {
+                Route::post('/register', 'register');
+                Route::post('/unregister', 'unregister');
+
+                Route::post('/test', 'testSiteManagers');
+            });
 
     });
 });

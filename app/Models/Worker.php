@@ -196,4 +196,14 @@ class Worker extends Authenticatable
     {
         return $this->hasMany(WorkerPayment::class);
     }
+
+    public function devices(): HasMany
+    {
+        return $this->hasMany(WorkerDevice::class);
+    }
+
+    public function activeDevices(): HasMany
+    {
+        return $this->hasMany(WorkerDevice::class)->where('is_active', true);
+    }
 }
