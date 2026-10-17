@@ -17,11 +17,11 @@ class MarkTaskAsReadAction extends BaseAction
     public function execute(Task $task, Worker $worker,): Task
     {
         return $this->transaction(function () use ($task, $worker) {
-            $task->markAsRead();
             $this->notificationService->markTaskNotificationAsRead(
                 worker: $worker,
                 task: $task,
             );
+            $task->markAsRead();
             return $task->refresh();
         });
     }

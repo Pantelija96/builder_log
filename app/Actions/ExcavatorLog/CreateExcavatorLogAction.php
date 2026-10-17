@@ -6,8 +6,8 @@ use App\Actions\BaseAction;
 use App\Actions\WorkerAttendance\SyncMachineWorkerAttendanceAction;
 use App\DTO\ExcavatorLog\CreateExcavatorLogData;
 use App\DTO\ExcavatorLog\CreateExcavatorLogForOperatorData;
-use App\Enums\MachineType;
 use App\Exceptions\BusinessException;
+use App\Models\ConstructionSite;
 use App\Models\DailyLog;
 use App\Models\ExcavatorLog;
 use App\Models\Machine;
@@ -21,8 +21,16 @@ class CreateExcavatorLogAction extends BaseAction
         private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
     ) {}
 
-    public function execute(DailyLog $dailyLog, CreateExcavatorLogData $data, Worker $currentWorker,): ExcavatorLog {
-        return $this->transaction(function () use ($dailyLog, $data, $currentWorker,) {
+    public function execute(
+        DailyLog $dailyLog,
+        CreateExcavatorLogData $data,
+        Worker $currentWorker,
+    ): ExcavatorLog {
+        return $this->transaction(function () use (
+            $dailyLog,
+            $data,
+            $currentWorker,
+        ) {
             $this->ensureDailyLogAccess(
                 dailyLog: $dailyLog,
                 currentWorker: $currentWorker,
@@ -39,34 +47,63 @@ class CreateExcavatorLogAction extends BaseAction
             );
 
             /*
-             * Operator may have already taken this machine himself.
+             * First check whether this excavator already has an assignment
+             * for the selected date.
              *
-             * In that case we don't create another assignment.
-             * We simply attach the existing assignment to the
-             * DailyLog and fill in Site Manager's data.
+             * An operator may have already taken the machine himself.
+             * In that case the Site Manager takes over the existing
+             * assignment instead of receiving "machine occupied".
              */
             $existingAssignment = MachineAssignment::query()
                 ->where('company_id', $currentWorker->company_id)
                 ->where('machine_id', $machine->id)
-                ->where('worker_id', $worker->id)
-                ->where('construction_site_id', $dailyLog->construction_site_id)
                 ->whereDate('date', $dailyLog->date)
-                ->whereHas('excavatorLog', function ($query) use ($worker) {
-                    $query
-                        ->whereNull('site_manager_started_at')
-                        ->where('created_by', $worker->id);
-                })
                 ->with('excavatorLog')
                 ->first();
 
             if ($existingAssignment) {
+                /*
+                 * Machine belongs to another operator.
+                 */
+                if ($existingAssignment->worker_id !== $worker->id) {
+                    throw new BusinessException(
+                        __('Excavator is already assigned to another operator.')
+                    );
+                }
+
+                /*
+                 * Same operator, but another construction site.
+                 */
+                if (
+                    $existingAssignment->construction_site_id !==
+                    $dailyLog->construction_site_id
+                ) {
+                    throw new BusinessException(
+                        __('Excavator is already assigned to another construction site.')
+                    );
+                }
+
+                /*
+                 * Same machine + same operator + same site + same date.
+                 *
+                 * Treat this as takeover of the operator's existing
+                 * self-assignment.
+                 */
+                $excavatorLog = $existingAssignment->excavatorLog;
+
+                if (! $excavatorLog) {
+                    throw new BusinessException(
+                        __('Excavator assignment does not have an excavator log.')
+                    );
+                }
+
                 $existingAssignment->update([
                     'daily_log_id' => $dailyLog->id,
                     'construction_site_id' => $dailyLog->construction_site_id,
                     'site_manager_id' => $dailyLog->site_manager_id,
                 ]);
 
-                $existingAssignment->excavatorLog->update([
+                $excavatorLog->update([
                     'site_manager_started_at' => $data->siteManagerStartedAt,
                     'site_manager_finished_at' => $data->siteManagerFinishedAt,
                     'note_site_manager' => $data->noteSiteManager,
@@ -79,7 +116,7 @@ class CreateExcavatorLogAction extends BaseAction
                     advancePayment: $data->advancePayment,
                 );
 
-                return $existingAssignment->excavatorLog->fresh([
+                return $excavatorLog->fresh([
                     'machineAssignment',
                     'worker',
                     'creator',
@@ -87,14 +124,12 @@ class CreateExcavatorLogAction extends BaseAction
             }
 
             /*
-             * No existing assignment for this operator + machine.
-             *
-             * Now we really need to check whether the excavator
-             * is available.
+             * No assignment for this excavator on this date.
              */
             $this->ensureExcavatorIsAvailable(
                 machineId: $machine->id,
                 startedAt: $data->siteManagerStartedAt ?? now(),
+                date: $dailyLog->date->toDateString(),
             );
 
             $assignment = MachineAssignment::create([
@@ -112,15 +147,20 @@ class CreateExcavatorLogAction extends BaseAction
                 'machine_assignment_id' => $assignment->id,
                 'worker_id' => $worker->id,
                 'created_by' => $currentWorker->id,
+
                 'site_manager_started_at' => $data->siteManagerStartedAt,
                 'site_manager_finished_at' => $data->siteManagerFinishedAt,
+
                 'operator_started_at' => null,
                 'operator_finished_at' => null,
+
                 'work_hours' => 0,
                 'start_work_hours' => null,
                 'finish_work_hours' => null,
+
                 'fuel_added' => 0,
                 'fuel_remaining' => null,
+
                 'note_site_manager' => $data->noteSiteManager,
                 'note_operator' => null,
             ]);
@@ -141,10 +181,12 @@ class CreateExcavatorLogAction extends BaseAction
     }
 
     /**
-     * Operator kreira svoj ExcavatorLog.
+     * Operator creates his own ExcavatorLog.
      */
-    public function executeForOperator(CreateExcavatorLogForOperatorData $data, Worker $currentWorker,): ExcavatorLog
-    {
+    public function executeForOperator(
+        CreateExcavatorLogForOperatorData $data,
+        Worker $currentWorker,
+    ): ExcavatorLog {
         return $this->transaction(function () use (
             $data,
             $currentWorker,
@@ -155,8 +197,8 @@ class CreateExcavatorLogAction extends BaseAction
                 );
             }
 
-            $constructionSite = \App\Models\ConstructionSite::query()
-                ->where('company_id', $currentWorker->company_id,)
+            $constructionSite = ConstructionSite::query()
+                ->where('company_id', $currentWorker->company_id)
                 ->whereKey($data->constructionSiteId)
                 ->first();
 
@@ -174,12 +216,13 @@ class CreateExcavatorLogAction extends BaseAction
             $this->ensureExcavatorIsAvailable(
                 machineId: $machine->id,
                 startedAt: now(),
+                date: today()->toDateString(),
             );
 
             $dailyLog = DailyLog::query()
-                ->where('company_id', $currentWorker->company_id,)
-                ->where('construction_site_id', $constructionSite->id,)
-                ->whereDate('date', today(),)
+                ->where('company_id', $currentWorker->company_id)
+                ->where('construction_site_id', $constructionSite->id)
+                ->whereDate('date', today())
                 ->first();
 
             $assignment = MachineAssignment::create([
@@ -197,15 +240,20 @@ class CreateExcavatorLogAction extends BaseAction
                 'machine_assignment_id' => $assignment->id,
                 'worker_id' => $currentWorker->id,
                 'created_by' => $currentWorker->id,
+
                 'site_manager_started_at' => null,
                 'site_manager_finished_at' => null,
+
                 'operator_started_at' => $data->operatorStartedAt,
                 'operator_finished_at' => $data->operatorFinishedAt,
+
                 'work_hours' => 0,
                 'start_work_hours' => null,
                 'finish_work_hours' => null,
+
                 'fuel_added' => 0,
                 'fuel_remaining' => null,
+
                 'note_site_manager' => null,
                 'note_operator' => $data->noteOperator,
             ]);
@@ -218,10 +266,12 @@ class CreateExcavatorLogAction extends BaseAction
         });
     }
 
-    private function findExcavator(int $machineId, int $companyId,): Machine
-    {
+    private function findExcavator(
+        int $machineId,
+        int $companyId,
+    ): Machine {
         $machine = Machine::query()
-            ->where('company_id', $companyId,)
+            ->where('company_id', $companyId)
             ->whereKey($machineId)
             ->first();
 
@@ -246,10 +296,12 @@ class CreateExcavatorLogAction extends BaseAction
         return $machine;
     }
 
-    private function findOperator(int $workerId, int $companyId,): Worker
-    {
+    private function findOperator(
+        int $workerId,
+        int $companyId,
+    ): Worker {
         $worker = Worker::query()
-            ->where('company_id', $companyId,)
+            ->where('company_id', $companyId)
             ->whereKey($workerId)
             ->first();
 
@@ -268,24 +320,42 @@ class CreateExcavatorLogAction extends BaseAction
         return $worker;
     }
 
-    private function ensureExcavatorIsAvailable(int $machineId, $startedAt,): void
-    {
+    private function ensureExcavatorIsAvailable(
+        int $machineId,
+        mixed $startedAt,
+        ?string $date = null,
+    ): void {
         $hasOverlappingLog = ExcavatorLog::query()
             ->whereHas(
                 'machineAssignment',
-                function (Builder $query) use ($machineId) {
+                function (Builder $query) use (
+                    $machineId,
+                    $date,
+                ) {
                     $query->where('machine_id', $machineId);
+
+                    if ($date !== null) {
+                        $query->whereDate('date', $date);
+                    }
                 }
             )
             ->where(function (Builder $query) use ($startedAt) {
                 $query
                     ->whereNull('site_manager_started_at')
-                    ->orWhere('site_manager_started_at', '<=', $startedAt,);
+                    ->orWhere(
+                        'site_manager_started_at',
+                        '<=',
+                        $startedAt
+                    );
             })
             ->where(function (Builder $query) use ($startedAt) {
                 $query
                     ->whereNull('site_manager_finished_at')
-                    ->orWhere('site_manager_finished_at', '>', $startedAt,);
+                    ->orWhere(
+                        'site_manager_finished_at',
+                        '>',
+                        $startedAt
+                    );
             })
             ->exists();
 
@@ -296,22 +366,24 @@ class CreateExcavatorLogAction extends BaseAction
         }
     }
 
-    private function ensureDailyLogAccess(DailyLog $dailyLog, Worker $currentWorker,): void
-    {
-        if ($dailyLog->company_id !== $currentWorker->company_id)
-        {
+    private function ensureDailyLogAccess(
+        DailyLog $dailyLog,
+        Worker $currentWorker,
+    ): void {
+        if ($dailyLog->company_id !== $currentWorker->company_id) {
             throw new BusinessException(
                 __('Daily log not found.')
             );
         }
 
-        if ($currentWorker->isAdmin())
-        {
+        if ($currentWorker->isAdmin()) {
             return;
         }
 
-        if (! $currentWorker->isSiteManager() || $dailyLog->site_manager_id !== $currentWorker->id)
-        {
+        if (
+            ! $currentWorker->isSiteManager()
+            || $dailyLog->site_manager_id !== $currentWorker->id
+        ) {
             throw new BusinessException(
                 __('You cannot manage this daily log.')
             );

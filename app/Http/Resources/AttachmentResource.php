@@ -28,7 +28,10 @@ class AttachmentResource extends JsonResource
 
             'download_url' => route(
                 'attachments.download',
-                $this->id,
+                [
+                    'attachment' => $this->id,
+                    'v' => $this->name,
+                ]
             ),
 
             'created_at' => $this->created_at,

@@ -44,8 +44,7 @@ class NotificationController extends ApiController
         $worker = auth()->user();
 
         return $this->success([
-            'count' => $this->notificationService
-                ->unreadCount($worker),
+            'count' => $this->notificationService->unreadCount($worker),
         ]);
     }
 

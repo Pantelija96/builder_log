@@ -21,8 +21,17 @@ class CreateTruckLogAction extends BaseAction
     public function __construct(
         private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
     ) {}
-    public function execute(DailyLog $dailyLog, CreateTruckLogData $data, Worker $currentWorker,): TruckLog {
-        return $this->transaction(function () use ($dailyLog, $data, $currentWorker) {
+
+    public function execute(
+        DailyLog $dailyLog,
+        CreateTruckLogData $data,
+        Worker $currentWorker,
+    ): TruckLog {
+        return $this->transaction(function () use (
+            $dailyLog,
+            $data,
+            $currentWorker,
+        ) {
             $this->ensureDailyLogAccess(
                 dailyLog: $dailyLog,
                 currentWorker: $currentWorker,
@@ -39,28 +48,48 @@ class CreateTruckLogAction extends BaseAction
             );
 
             /*
-             * Driver may have already assigned this truck to himself.
+             * First check whether this truck already has an assignment
+             * for the selected date.
              *
-             * In that case we do not create another MachineAssignment.
-             * Site Manager takes over the existing assignment and connects
-             * it to the DailyLog.
+             * A driver may have already assigned this truck to himself.
+             * In that case the Site Manager should take over the existing
+             * assignment instead of receiving "truck occupied".
              */
             $existingAssignment = MachineAssignment::query()
                 ->where('company_id', $currentWorker->company_id)
                 ->where('machine_id', $machine->id)
-                ->where('worker_id', $worker->id)
-                ->where('construction_site_id', $dailyLog->construction_site_id)
                 ->whereDate('date', $dailyLog->date)
                 ->with('truckLog')
                 ->first();
 
             if ($existingAssignment) {
-                $existingAssignment->update([
-                    'daily_log_id' => $dailyLog->id,
-                    'construction_site_id' => $dailyLog->construction_site_id,
-                    'site_manager_id' => $dailyLog->site_manager_id,
-                ]);
+                /*
+                 * Truck belongs to another driver for this date.
+                 */
+                if ($existingAssignment->worker_id !== $worker->id) {
+                    throw new BusinessException(
+                        'Truck is already assigned to another driver.'
+                    );
+                }
 
+                /*
+                 * Same driver, but another construction site.
+                 */
+                if (
+                    $existingAssignment->construction_site_id !==
+                    $dailyLog->construction_site_id
+                ) {
+                    throw new BusinessException(
+                        'Truck is already assigned to another construction site.'
+                    );
+                }
+
+                /*
+                 * Same truck + same driver + same site + same date.
+                 *
+                 * Treat this as takeover of the driver's existing
+                 * self-assignment.
+                 */
                 $truckLog = $existingAssignment->truckLog;
 
                 if (! $truckLog) {
@@ -68,6 +97,12 @@ class CreateTruckLogAction extends BaseAction
                         'Truck assignment does not have a truck log.'
                     );
                 }
+
+                $existingAssignment->update([
+                    'daily_log_id' => $dailyLog->id,
+                    'construction_site_id' => $dailyLog->construction_site_id,
+                    'site_manager_id' => $dailyLog->site_manager_id,
+                ]);
 
                 $truckLog->update([
                     'site_manager_started_at' => $data->siteManagerStartedAt,
@@ -89,16 +124,21 @@ class CreateTruckLogAction extends BaseAction
                 ]);
             }
 
+            /*
+             * No assignment for this truck on this date.
+             */
             $this->ensureTruckIsAvailable(
                 machineId: $machine->id,
                 startedAt: $data->siteManagerStartedAt ?? now(),
                 finishedAt: $data->siteManagerFinishedAt,
+                date: $dailyLog->date->toDateString(),
             );
 
             $this->ensureDriverIsAvailable(
                 workerId: $worker->id,
                 startedAt: $data->siteManagerStartedAt ?? now(),
                 finishedAt: $data->siteManagerFinishedAt,
+                date: $dailyLog->date->toDateString(),
             );
 
             $machineAssignment = MachineAssignment::create([
@@ -148,8 +188,14 @@ class CreateTruckLogAction extends BaseAction
         });
     }
 
-    public function executeForDriver(CreateTruckLogForDriverData $data, Worker $currentWorker,): TruckLog {
-        return $this->transaction(function () use ($data, $currentWorker) {
+    public function executeForDriver(
+        CreateTruckLogForDriverData $data,
+        Worker $currentWorker,
+    ): TruckLog {
+        return $this->transaction(function () use (
+            $data,
+            $currentWorker,
+        ) {
             if (! $currentWorker->isDriver()) {
                 throw new BusinessException(
                     'Only drivers can assign trucks to themselves.'
@@ -176,11 +222,13 @@ class CreateTruckLogAction extends BaseAction
             $this->ensureTruckIsAvailable(
                 machineId: $machine->id,
                 startedAt: $startedAt,
+                date: today()->toDateString(),
             );
 
             $this->ensureDriverIsAvailable(
                 workerId: $currentWorker->id,
                 startedAt: $startedAt,
+                date: today()->toDateString(),
             );
 
             $dailyLog = DailyLog::query()
@@ -229,7 +277,10 @@ class CreateTruckLogAction extends BaseAction
         });
     }
 
-    private function findTruck(int $machineId, int $companyId,): Machine {
+    private function findTruck(
+        int $machineId,
+        int $companyId,
+    ): Machine {
         $machine = Machine::query()
             ->where('company_id', $companyId)
             ->find($machineId);
@@ -255,7 +306,10 @@ class CreateTruckLogAction extends BaseAction
         return $machine;
     }
 
-    private function findDriver(int $workerId, int $companyId,): Worker {
+    private function findDriver(
+        int $workerId,
+        int $companyId,
+    ): Worker {
         $worker = Worker::query()
             ->where('company_id', $companyId)
             ->find($workerId);
@@ -275,29 +329,33 @@ class CreateTruckLogAction extends BaseAction
         return $worker;
     }
 
-    private function ensureTruckIsAvailable(int $machineId, mixed $startedAt, mixed $finishedAt = null,): void {
+    private function ensureTruckIsAvailable(
+        int $machineId,
+        mixed $startedAt,
+        mixed $finishedAt = null,
+        ?string $date = null,
+    ): void {
         $isOccupied = TruckLog::query()
             ->whereHas(
                 'machineAssignment',
-                fn (Builder $query) => $query
-                    ->where('machine_id', $machineId)
-            )
-            ->where(function (Builder $query) use ($startedAt, $finishedAt) {
-                /*
-                 * Existing interval overlaps the requested interval when:
-                 *
-                 * existing_start < requested_end
-                 * AND
-                 * existing_end > requested_start
-                 *
-                 * NULL manager times mean that the assignment is still
-                 * considered occupied/undefined from the manager's perspective.
-                 */
+                function (Builder $query) use (
+                    $machineId,
+                    $date,
+                ) {
+                    $query->where('machine_id', $machineId);
 
+                    if ($date !== null) {
+                        $query->whereDate('date', $date);
+                    }
+                }
+            )
+            ->where(function (Builder $query) use (
+                $startedAt,
+                $finishedAt,
+            ) {
                 $query
                     ->where(function (Builder $query) use ($finishedAt) {
-                        $query
-                            ->whereNull('site_manager_started_at');
+                        $query->whereNull('site_manager_started_at');
 
                         if ($finishedAt !== null) {
                             $query->orWhere(
@@ -306,7 +364,9 @@ class CreateTruckLogAction extends BaseAction
                                 $finishedAt
                             );
                         } else {
-                            $query->orWhereNotNull('site_manager_started_at');
+                            $query->orWhereNotNull(
+                                'site_manager_started_at'
+                            );
                         }
                     })
                     ->where(function (Builder $query) use ($startedAt) {
@@ -328,7 +388,66 @@ class CreateTruckLogAction extends BaseAction
         }
     }
 
-    private function ensureDailyLogAccess(DailyLog $dailyLog, Worker $currentWorker,): void {
+    private function ensureDriverIsAvailable(
+        int $workerId,
+        mixed $startedAt,
+        mixed $finishedAt = null,
+        ?string $date = null,
+    ): void {
+        $isOccupied = TruckLog::query()
+            ->where('worker_id', $workerId)
+            ->when(
+                $date,
+                fn (Builder $query, string $date) =>
+                $query->whereHas(
+                    'machineAssignment',
+                    fn (Builder $assignmentQuery) =>
+                    $assignmentQuery->whereDate('date', $date)
+                )
+            )
+            ->where(function (Builder $query) use (
+                $startedAt,
+                $finishedAt,
+            ) {
+                $query
+                    ->where(function (Builder $query) use ($finishedAt) {
+                        $query->whereNull('site_manager_started_at');
+
+                        if ($finishedAt !== null) {
+                            $query->orWhere(
+                                'site_manager_started_at',
+                                '<',
+                                $finishedAt
+                            );
+                        } else {
+                            $query->orWhereNotNull(
+                                'site_manager_started_at'
+                            );
+                        }
+                    })
+                    ->where(function (Builder $query) use ($startedAt) {
+                        $query
+                            ->whereNull('site_manager_finished_at')
+                            ->orWhere(
+                                'site_manager_finished_at',
+                                '>',
+                                $startedAt
+                            );
+                    });
+            })
+            ->exists();
+
+        if ($isOccupied) {
+            throw new BusinessException(
+                'Driver is already assigned to another truck during the selected period.'
+            );
+        }
+    }
+
+    private function ensureDailyLogAccess(
+        DailyLog $dailyLog,
+        Worker $currentWorker,
+    ): void {
         if ($dailyLog->company_id !== $currentWorker->company_id) {
             throw new BusinessException(
                 'Daily log does not belong to your company.'
@@ -348,44 +467,6 @@ class CreateTruckLogAction extends BaseAction
         if ($dailyLog->site_manager_id !== $currentWorker->id) {
             throw new BusinessException(
                 'You are not the site manager for this daily log.'
-            );
-        }
-    }
-
-    private function ensureDriverIsAvailable(int $workerId, mixed $startedAt, mixed $finishedAt = null,): void {
-        $isOccupied = TruckLog::query()
-            ->where('worker_id', $workerId)
-            ->where(function (Builder $query) use ($startedAt, $finishedAt) {
-                $query
-                    ->where(function (Builder $query) use ($finishedAt) {
-                        $query
-                            ->whereNull('site_manager_started_at');
-
-                        if ($finishedAt !== null) {
-                            $query->orWhere(
-                                'site_manager_started_at',
-                                '<',
-                                $finishedAt
-                            );
-                        } else {
-                            $query->orWhereNotNull('site_manager_started_at');
-                        }
-                    })
-                    ->where(function (Builder $query) use ($startedAt) {
-                        $query
-                            ->whereNull('site_manager_finished_at')
-                            ->orWhere(
-                                'site_manager_finished_at',
-                                '>',
-                                $startedAt
-                            );
-                    });
-            })
-            ->exists();
-
-        if ($isOccupied) {
-            throw new BusinessException(
-                'Driver is already assigned to another truck during the selected period.'
             );
         }
     }
