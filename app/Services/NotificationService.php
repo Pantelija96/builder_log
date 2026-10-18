@@ -6,6 +6,7 @@ use App\Actions\Notification\CreateNotificationAction;
 use App\Actions\Notification\MarkNotificationAsReadAction;
 use App\DTO\Notification\GetNotificationsData;
 use App\Enums\NotificationType;
+use App\Models\Document;
 use App\Models\Notification;
 use App\Models\Task;
 use App\Models\Worker;
@@ -148,5 +149,21 @@ class NotificationService
             ->update([
                 'read_at' => now(),
             ]);
+    }
+
+    public function documentCreated(
+        Worker $worker,
+        Document $document,
+    ): Notification {
+        return $this->create(
+            worker: $worker,
+            type: NotificationType::DOCUMENT,
+            title: 'Admin dodao novi dokument',
+            message: $document->name,
+            payload: [
+                'document_id' => $document->id,
+                'construction_site_id' => $document->construction_site_id,
+            ],
+        );
     }
 }

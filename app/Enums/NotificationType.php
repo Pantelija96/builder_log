@@ -13,4 +13,6 @@ enum NotificationType:string
     case DAILY_LOG='daily_log';
 
     case MACHINE='machine';
+
+    case DOCUMENT = 'document';
 }

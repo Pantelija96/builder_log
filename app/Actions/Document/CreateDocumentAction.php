@@ -8,14 +8,17 @@ use App\Enums\LogEvent;
 use App\Models\Document;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
+use App\Services\NotificationService;
+use App\Services\WorkerPushNotificationService;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Str;
 
 class CreateDocumentAction extends BaseAction
 {
     public function __construct(
         private readonly UploadDocumentAction $uploadDocumentAction,
         private readonly LoggingService $logging,
+        private readonly NotificationService $notifications,
+        private readonly WorkerPushNotificationService $pushNotifications,
     ) {
     }
 
@@ -51,6 +54,8 @@ class CreateDocumentAction extends BaseAction
                 'uploaded_by' => $currentWorker->id,
             ]);
 
+            $this->notifySiteManagers($document);
+
             $this->logging->activity(
                 actor: $currentWorker,
                 subject: $document,
@@ -69,5 +74,34 @@ class CreateDocumentAction extends BaseAction
                 'uploader',
             ]);
         });
+    }
+
+    private function notifySiteManagers(
+        Document $document,
+    ): void {
+        $siteManagers = $document
+            ->constructionSite
+            ->siteManagers()
+            ->where('is_active', true)
+            ->get();
+
+        foreach ($siteManagers as $manager) {
+            $notification = $this->notifications->documentCreated(
+                worker: $manager,
+                document: $document,
+            );
+
+            $this->pushNotifications->send(
+                worker: $manager,
+                title: $notification->title,
+                body: $notification->message,
+                data: [
+                    'type' => 'document_created',
+                    'document_id' => $document->id,
+                    'construction_site_id' => $document->construction_site_id,
+                    'notification_id' => $notification->id,
+                ],
+            );
+        }
     }
 }
