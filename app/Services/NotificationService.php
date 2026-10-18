@@ -84,7 +84,7 @@ class NotificationService
         return $this->create(
             worker: $worker,
             type: NotificationType::TASK,
-            title: 'New task assigned',
+            title: 'Admin je zadao novi zadatak',
             message: $task->title,
             payload: [
                 'task_id' => $task->id,

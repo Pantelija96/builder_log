@@ -5,18 +5,20 @@ namespace App\Actions\Task;
 use App\Actions\BaseAction;
 use App\DTO\Task\CreateTaskData;
 use App\Enums\LogEvent;
+use App\Enums\WorkerRole;
+use App\Exceptions\BusinessException;
 use App\Models\Task;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
 use App\Services\NotificationService;
-use App\Enums\WorkerRole;
-use App\Exceptions\BusinessException;
+use App\Services\WorkerPushNotificationService;
 
 class CreateTaskAction extends BaseAction
 {
     public function __construct(
         private readonly LoggingService $logging,
         private readonly NotificationService $notifications,
+        private readonly WorkerPushNotificationService $pushNotifications,
     ) {
     }
 
@@ -58,7 +60,7 @@ class CreateTaskAction extends BaseAction
     {
         // One specific worker
         if ($task->worker_id !== null) {
-            $this->notifications->taskAssigned(
+            $this->notifyWorker(
                 worker: $task->worker,
                 task: $task,
             );
@@ -69,7 +71,7 @@ class CreateTaskAction extends BaseAction
         // Construction site -> site managers assigned to that site
         if ($task->construction_site_id !== null) {
             foreach ($task->constructionSite->siteManagers as $manager) {
-                $this->notifications->taskAssigned(
+                $this->notifyWorker(
                     worker: $manager,
                     task: $task,
                 );
@@ -85,12 +87,33 @@ class CreateTaskAction extends BaseAction
                 ->where('role', $task->target_role)
                 ->where('is_active', true)
                 ->each(function (Worker $worker) use ($task) {
-                    $this->notifications->taskAssigned(
+                    $this->notifyWorker(
                         worker: $worker,
                         task: $task,
                     );
                 });
         }
+    }
+
+    private function notifyWorker(
+        Worker $worker,
+        Task $task,
+    ): void {
+        $notification = $this->notifications->taskAssigned(
+            worker: $worker,
+            task: $task,
+        );
+
+        $this->pushNotifications->send(
+            worker: $worker,
+            title: $notification->title,
+            body: $notification->message,
+            data: [
+                'type' => 'task_assigned',
+                'task_id' => $task->id,
+                'notification_id' => $notification->id,
+            ],
+        );
     }
 
     private function ensureValidTargetWorker(
