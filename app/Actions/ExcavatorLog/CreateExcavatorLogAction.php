@@ -13,12 +13,16 @@ use App\Models\ExcavatorLog;
 use App\Models\Machine;
 use App\Models\MachineAssignment;
 use App\Models\Worker;
+use App\Services\NotificationService;
+use App\Services\WorkerPushNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 
 class CreateExcavatorLogAction extends BaseAction
 {
     public function __construct(
         private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
+        private readonly NotificationService $notifications,
+        private readonly WorkerPushNotificationService $pushNotifications,
     ) {}
 
     public function execute(
@@ -116,6 +120,14 @@ class CreateExcavatorLogAction extends BaseAction
                     advancePayment: $data->advancePayment,
                 );
 
+                if ($currentWorker->isSiteManager()) {
+                    $this->notifyOperator(
+                        assignment: $existingAssignment,
+                        operator: $worker,
+                        assignedBy: $currentWorker,
+                    );
+                }
+
                 return $excavatorLog->fresh([
                     'machineAssignment',
                     'worker',
@@ -171,6 +183,14 @@ class CreateExcavatorLogAction extends BaseAction
                 finishedAt: $data->siteManagerFinishedAt,
                 advancePayment: $data->advancePayment,
             );
+
+            if ($currentWorker->isSiteManager()) {
+                $this->notifyOperator(
+                    assignment: $assignment,
+                    operator: $worker,
+                    assignedBy: $currentWorker,
+                );
+            }
 
             return $excavatorLog->fresh([
                 'machineAssignment',
@@ -264,6 +284,32 @@ class CreateExcavatorLogAction extends BaseAction
                 'creator',
             ]);
         });
+    }
+
+    private function notifyOperator(
+        MachineAssignment $assignment,
+        Worker $operator,
+        Worker $assignedBy,
+    ): void {
+        $notification = $this->notifications->machineAssigned(
+            worker: $operator,
+            assignment: $assignment,
+            assignedBy: $assignedBy,
+            machineType: 'excavator',
+        );
+
+        $this->pushNotifications->send(
+            worker: $operator,
+            title: $notification->title,
+            body: $notification->message,
+            data: [
+                'type' => 'excavator_assigned',
+                'machine_assignment_id' => $assignment->id,
+                'machine_id' => $assignment->machine_id,
+                'construction_site_id' => $assignment->construction_site_id,
+                'notification_id' => $notification->id,
+            ],
+        );
     }
 
     private function findExcavator(

@@ -6,7 +6,11 @@ use App\Actions\Notification\CreateNotificationAction;
 use App\Actions\Notification\MarkNotificationAsReadAction;
 use App\DTO\Notification\GetNotificationsData;
 use App\Enums\NotificationType;
+use App\Models\DailyLog;
 use App\Models\Document;
+use App\Models\ExcavatorLog;
+use App\Models\MachineAssignment;
+use App\Models\Note;
 use App\Models\Notification;
 use App\Models\Task;
 use App\Models\Worker;
@@ -23,8 +27,7 @@ class NotificationService
 
     private function query(Worker $worker)
     {
-        return Notification::query()
-            ->whereBelongsTo($worker);
+        return Notification::query()->whereBelongsTo($worker);
     }
 
     public function create(
@@ -35,13 +38,20 @@ class NotificationService
         ?array $payload = null,
     ): Notification {
 
-        return $this->createNotificationAction->execute(
+        $notification = $this->createNotificationAction->execute(
             worker: $worker,
             type: $type,
             title: $title,
             message: $message,
             payload: $payload,
         );
+
+        if ($type !== NotificationType::TASK) {
+            $notification->markAsRead();
+            $notification->refresh();
+        }
+
+        return $notification;
     }
 
     public function get(
@@ -98,9 +108,9 @@ class NotificationService
         return $this->create(
             worker: $worker,
             type: NotificationType::TASK,
-            title: 'Task completed',
+            title: 'Zavrsen zadatak',
             message: sprintf(
-                '%s %s completed task "%s".',
+                '%s %s je zavrsio: "%s".',
                 $completedBy->first_name,
                 $completedBy->last_name,
                 $task->title,
@@ -117,9 +127,9 @@ class NotificationService
         return $this->create(
             worker: $worker,
             type: NotificationType::TASK,
-            title: 'Task reopened',
+            title: 'Zadatak ponovo otvoren',
             message: sprintf(
-                '%s %s reopened task "%s".',
+                '%s %s je ponovo otvorio zadatak: "%s".',
                 $reopenedBy->first_name,
                 $reopenedBy->last_name,
                 $task->title,
@@ -163,6 +173,105 @@ class NotificationService
             payload: [
                 'document_id' => $document->id,
                 'construction_site_id' => $document->construction_site_id,
+            ],
+        );
+    }
+
+    public function machineAssigned(
+        Worker $worker,
+        MachineAssignment $assignment,
+        Worker $assignedBy,
+        string $machineType,
+    ): Notification {
+        return $this->create(
+            worker: $worker,
+            type: NotificationType::MACHINE_ASSIGNMENT,
+            title: ucfirst($machineType) . ' ti je dodeljen',
+            message: sprintf(
+                '%s %s ti je dodelio %s.',
+                $assignedBy->first_name,
+                $assignedBy->last_name,
+                $machineType,
+            ),
+            payload: [
+                'machine_assignment_id' => $assignment->id,
+                'machine_id' => $assignment->machine_id,
+                'construction_site_id' => $assignment->construction_site_id,
+                'machine_type' => $machineType,
+                'assigned_by' => $assignedBy->id,
+            ],
+        );
+    }
+
+    public function workerStartedDay(
+        Worker $worker,
+        Worker $startedBy,
+        int $machineAssignmentId,
+        string $logType,
+        int $logId,
+    ): Notification {
+        return $this->create(
+            worker: $worker,
+            type: NotificationType::ATTENDANCE,
+            title: 'Radnik zapoceo dan',
+            message: sprintf(
+                '%s %s je zapoceo radni dan.',
+                $startedBy->first_name,
+                $startedBy->last_name,
+            ),
+            payload: [
+                'worker_id' => $startedBy->id,
+                'machine_assignment_id' => $machineAssignmentId,
+                'log_type' => $logType,
+                'log_id' => $logId,
+            ],
+        );
+    }
+
+    public function workerFinishedDay(
+        Worker $worker,
+        Worker $finishedBy,
+        int $machineAssignmentId,
+        string $logType,
+        int $logId,
+    ): Notification {
+        return $this->create(
+            worker: $worker,
+            type: NotificationType::ATTENDANCE,
+            title: 'Radnik zavrsio dan',
+            message: sprintf(
+                '%s %s je zavrsio radni dan.',
+                $finishedBy->first_name,
+                $finishedBy->last_name,
+            ),
+            payload: [
+                'worker_id' => $finishedBy->id,
+                'machine_assignment_id' => $machineAssignmentId,
+                'log_type' => $logType,
+                'log_id' => $logId,
+            ],
+        );
+    }
+
+    public function noteCreated(
+        Worker $worker,
+        Note $note,
+        Worker $createdBy,
+    ): Notification {
+        return $this->create(
+            worker: $worker,
+            type: NotificationType::NOTE,
+            title: 'Kreiran novi gradjevinski dnvnik',
+            message: sprintf(
+                '%s %s je kreirao novi gradjevinski dnvnik',
+                $createdBy->first_name,
+                $createdBy->last_name,
+            ),
+            payload: [
+                'note_id' => $note->id,
+                'daily_log_id' => $note->daily_log_id,
+                'construction_site_id' => $note->construction_site_id,
+                'created_by' => $createdBy->id,
             ],
         );
     }

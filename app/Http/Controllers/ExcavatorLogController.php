@@ -79,10 +79,7 @@ class ExcavatorLogController extends ApiController
             reason: $request->string('reason')->toString(),
         );
 
-        return $this->success(
-            ExcavatorLogResource::make($excavatorLog),
-            'Excavator log updated successfully.',
-        );
+        return $this->success(ExcavatorLogResource::make($excavatorLog), 'Excavator log updated successfully.',);
     }
 
     public function destroy(ExcavatorLog $excavatorLog, DeleteExcavatorLogRequest $request,): JsonResponse

@@ -14,12 +14,16 @@ use App\Models\Machine;
 use App\Models\MachineAssignment;
 use App\Models\TruckLog;
 use App\Models\Worker;
+use App\Services\NotificationService;
+use App\Services\WorkerPushNotificationService;
 use Illuminate\Database\Eloquent\Builder;
 
 class CreateTruckLogAction extends BaseAction
 {
     public function __construct(
         private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
+        private readonly NotificationService $notifications,
+        private readonly WorkerPushNotificationService $pushNotifications,
     ) {}
 
     public function execute(
@@ -117,6 +121,14 @@ class CreateTruckLogAction extends BaseAction
                     advancePayment: $data->advancePayment,
                 );
 
+                if ($currentWorker->isSiteManager()) {
+                    $this->notifyDriver(
+                        assignment: $existingAssignment,
+                        driver: $worker,
+                        assignedBy: $currentWorker,
+                    );
+                }
+
                 return $truckLog->fresh([
                     'machineAssignment',
                     'worker',
@@ -179,6 +191,14 @@ class CreateTruckLogAction extends BaseAction
                 finishedAt: $data->siteManagerFinishedAt,
                 advancePayment: $data->advancePayment,
             );
+
+            if ($currentWorker->isSiteManager()) {
+                $this->notifyDriver(
+                    assignment: $machineAssignment,
+                    driver: $worker,
+                    assignedBy: $currentWorker,
+                );
+            }
 
             return $truckLog->fresh([
                 'machineAssignment',
@@ -275,6 +295,32 @@ class CreateTruckLogAction extends BaseAction
                 'creator',
             ]);
         });
+    }
+
+    private function notifyDriver(
+        MachineAssignment $assignment,
+        Worker $driver,
+        Worker $assignedBy,
+    ): void {
+        $notification = $this->notifications->machineAssigned(
+            worker: $driver,
+            assignment: $assignment,
+            assignedBy: $assignedBy,
+            machineType: 'truck',
+        );
+
+        $this->pushNotifications->send(
+            worker: $driver,
+            title: $notification->title,
+            body: $notification->message,
+            data: [
+                'type' => 'truck_assigned',
+                'machine_assignment_id' => $assignment->id,
+                'machine_id' => $assignment->machine_id,
+                'construction_site_id' => $assignment->construction_site_id,
+                'notification_id' => $notification->id,
+            ],
+        );
     }
 
     private function findTruck(

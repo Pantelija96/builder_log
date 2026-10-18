@@ -3,19 +3,17 @@
 namespace App\Services;
 
 use App\Models\WorkerDevice;
-use App\Services\Logging\LoggingService;
+use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Exception\Messaging\NotFound;
 use Kreait\Firebase\Exception\MessagingException;
 use Kreait\Firebase\Messaging\CloudMessage;
-use Kreait\Firebase\Messaging\Notification;
 use Throwable;
 
 class FirebasePushService
 {
     public function __construct(
         private readonly Messaging $messaging,
-        private readonly LoggingService $loggingService,
     ) {}
 
     public function sendToDevice(
@@ -26,14 +24,12 @@ class FirebasePushService
     ): bool {
         $message = CloudMessage::new()
             ->withToken($device->fcm_token)
-            ->withNotification(
-                Notification::create(
-                    $title,
-                    $body,
-                )
-            )
             ->withData(
-                $this->normalizeData($data)
+                $this->normalizeData([
+                    'title' => $title,
+                    'body' => $body,
+                    ...$data,
+                ])
             );
 
         try {
@@ -43,7 +39,7 @@ class FirebasePushService
         } catch (NotFound $exception) {
             $this->deactivateDevice($device);
 
-            $this->loggingService->error(
+            Log::error(
                 'Firebase push token not found.',
                 [
                     'worker_device_id' => $device->id,
@@ -54,7 +50,7 @@ class FirebasePushService
 
             return false;
         } catch (MessagingException $exception) {
-            $this->loggingService->error(
+            Log::error(
                 'Firebase push failed.',
                 [
                     'worker_device_id' => $device->id,
@@ -65,7 +61,7 @@ class FirebasePushService
 
             return false;
         } catch (Throwable $exception) {
-            $this->loggingService->error(
+            Log::error(
                 'Unexpected Firebase push error.',
                 [
                     'worker_device_id' => $device->id,
@@ -78,15 +74,17 @@ class FirebasePushService
         }
     }
 
-    private function deactivateDevice(WorkerDevice $device): void
-    {
+    private function deactivateDevice(
+        WorkerDevice $device,
+    ): void {
         $device->update([
             'is_active' => false,
         ]);
     }
 
-    private function normalizeData(array $data): array
-    {
+    private function normalizeData(
+        array $data,
+    ): array {
         return collect($data)
             ->mapWithKeys(
                 fn ($value, $key) => [
