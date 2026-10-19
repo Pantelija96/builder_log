@@ -224,5 +224,88 @@ class WorkerSeeder extends Seeder
                 'hourly_rate' => $hourlyRate,
             ]);
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Development / Testing Accounts
+        |--------------------------------------------------------------------------
+        |
+        | Password for all accounts: password
+        |
+        */
+
+        $testUsers = [
+            [
+                'first_name' => 'Pantelija',
+                'last_name' => 'Stosic',
+                'nickname' => 'panta',
+                'phone_prefix' => '701',
+            ],
+            [
+                'first_name' => 'Strahinja',
+                'last_name' => 'Stanojevic',
+                'nickname' => 'stana',
+                'phone_prefix' => '702',
+            ],
+            [
+                'first_name' => 'Dusan',
+                'last_name' => 'Garabinovic',
+                'nickname' => 'dule',
+                'phone_prefix' => '703',
+            ],
+        ];
+
+        $testRoles = [
+            [
+                'role' => WorkerRole::ADMIN,
+                'suffix' => '',
+                'phone_suffix' => '01',
+                'hourly_rate' => null,
+            ],
+            [
+                'role' => WorkerRole::SITE_MANAGER,
+                'suffix' => '-mng',
+                'phone_suffix' => '02',
+                'hourly_rate' => null,
+            ],
+            [
+                'role' => WorkerRole::OPERATOR,
+                'suffix' => '-op',
+                'phone_suffix' => '03',
+                'hourly_rate' => 900,
+            ],
+            [
+                'role' => WorkerRole::DRIVER,
+                'suffix' => '-dr',
+                'phone_suffix' => '04',
+                'hourly_rate' => 800,
+            ],
+        ];
+
+        foreach ($testUsers as $testUser) {
+            foreach ($testRoles as $testRole) {
+                $username =
+                    $testUser['nickname']
+                    . $testRole['suffix'];
+
+                Worker::create([
+                    'company_id' => $company->id,
+                    'first_name' => $testUser['first_name'],
+                    'last_name' => $testUser['last_name'],
+                    'phone' => sprintf(
+                        '+38160%s%s',
+                        $testUser['phone_prefix'],
+                        $testRole['phone_suffix'],
+                    ),
+                    'role' => $testRole['role'],
+                    'username' => $username,
+                    'password' => 'password',
+                    'email' => $username . '@builderlog.local',
+                    'is_active' => true,
+                    'is_available' => true,
+                    'hourly_rate' => $testRole['hourly_rate'],
+                ]);
+            }
+        }
     }
 }

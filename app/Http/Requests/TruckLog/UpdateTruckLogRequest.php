@@ -91,6 +91,18 @@ class UpdateTruckLogRequest extends FormRequest
                 'string',
                 'max:1000',
             ],
+
+            //helper fields for notification
+
+            'started' => [
+                'sometimes',
+                'boolean',
+            ],
+
+            'finished' => [
+                'sometimes',
+                'boolean',
+            ],
         ];
     }
 }

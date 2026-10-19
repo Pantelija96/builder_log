@@ -11,6 +11,7 @@ use App\Actions\Task\UpdateTaskAction;
 use App\DTO\Task\CreateTaskData;
 use App\DTO\Task\GetTasksData;
 use App\DTO\Task\UpdateTaskData;
+use App\Enums\NotificationType;
 use App\Models\Task;
 use App\Models\Worker;
 use App\QueryFilters\TaskFilter;
@@ -26,6 +27,7 @@ class TaskService
         private readonly CompleteTaskAction $complete,
         private readonly ReopenTaskAction $reopen,
     ) {}
+
     private function query()
     {
         return Task::query()
@@ -34,9 +36,9 @@ class TaskService
                 'worker',
                 'constructionSite',
                 'completedBy',
-//                'attachments',
             ]);
     }
+
     private function myTasksQuery(Worker $worker)
     {
         return Task::query()
@@ -45,6 +47,19 @@ class TaskService
                 'worker',
                 'constructionSite',
                 'completedBy',
+
+                /*
+                 * Load only notifications belonging to the
+                 * currently authenticated worker.
+                 *
+                 * Newest notification comes first.
+                 */
+                'notifications' => function ($query) use ($worker) {
+                    $query
+                        ->where('worker_id', $worker->id)
+                        ->where('type', NotificationType::TASK)
+                        ->latest('id');
+                },
             ])
             ->where('company_id', $worker->company_id)
             ->where(function ($query) use ($worker) {
@@ -70,13 +85,19 @@ class TaskService
             });
     }
 
-    public function create(CreateTaskData $data, Worker $worker,): Task {
+    public function create(
+        CreateTaskData $data,
+        Worker $worker,
+    ): Task {
         return $this->create->execute(
             $data,
             $worker,
         );
     }
-    public function get(GetTasksData $data,): Collection {
+
+    public function get(
+        GetTasksData $data,
+    ): Collection {
         return (new TaskFilter($data))
             ->apply(
                 $this->query()
@@ -85,7 +106,11 @@ class TaskService
             ->limit($data->list->limit)
             ->get();
     }
-    public function getMyTasks(Worker $worker, GetTasksData $data,): Collection {
+
+    public function getMyTasks(
+        Worker $worker,
+        GetTasksData $data,
+    ): Collection {
         return (new TaskFilter($data))
             ->apply(
                 $this->myTasksQuery($worker)
@@ -94,10 +119,20 @@ class TaskService
             ->limit($data->list->limit)
             ->get();
     }
-    public function findById(int $id,): ?Task {
-        return $this->query()->find($id);
+
+    public function findById(
+        int $id,
+    ): ?Task {
+        return $this->query()
+            ->find($id);
     }
-    public function update(Task $task, UpdateTaskData $data, Worker $worker, ?string $reason,): Task {
+
+    public function update(
+        Task $task,
+        UpdateTaskData $data,
+        Worker $worker,
+        ?string $reason,
+    ): Task {
         return $this->update->execute(
             $task,
             $data,
@@ -105,27 +140,43 @@ class TaskService
             $reason,
         );
     }
-    public function delete(Task $task, Worker $worker, string $reason,): void {
+
+    public function delete(
+        Task $task,
+        Worker $worker,
+        string $reason,
+    ): void {
         $this->delete->execute(
             $task,
             $worker,
             $reason,
         );
     }
-    public function markAsRead(Task $task, Worker $worker,): Task
-    {
+
+    public function markAsRead(
+        Task $task,
+        Worker $worker,
+    ): Task {
         return $this->markAsRead->execute(
             task: $task,
             worker: $worker,
         );
     }
-    public function complete(Task $task, Worker $worker,): Task {
+
+    public function complete(
+        Task $task,
+        Worker $worker,
+    ): Task {
         return $this->complete->execute(
             $task,
             $worker,
         );
     }
-    public function reopen(Task $task, Worker $worker,): Task {
+
+    public function reopen(
+        Task $task,
+        Worker $worker,
+    ): Task {
         return $this->reopen->execute(
             $task,
             $worker,

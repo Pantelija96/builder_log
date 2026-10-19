@@ -19,6 +19,8 @@ readonly class UpdateTruckLogData
         public ?float $advancePayment,
         public ?string $noteSiteManager,
         public ?string $noteOperator,
+        public ?bool $started,
+        public ?bool $finished,
         public array $providedFields,
     ) {
     }
@@ -64,6 +66,10 @@ readonly class UpdateTruckLogData
 
             noteSiteManager: $request->input('note_site_manager'),
             noteOperator: $request->input('note_operator'),
+
+
+            started: $request->has('started') ? $request->boolean('started') : null,
+            finished: $request->has('finished') ? $request->boolean('finished') : null,
 
             providedFields: $request->keys(),
         );

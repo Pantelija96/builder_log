@@ -160,27 +160,10 @@ class UpdateExcavatorLogAction extends BaseAction
                     $data->noteOperator;
             }
 
-            /*
-             * Determine whether this PATCH represents
-             * actual start/end of operator's work day.
-             *
-             * We only notify on null -> non-null transition.
-             */
-            $operatorStartedDay =
-                $currentWorker->isOperator()
-                && array_key_exists('operator_started_at', $values)
-                && empty($oldValues['operator_started_at'])
-                && $values['operator_started_at'] !== null;
+            $operatorStartedDay = $currentWorker->isOperator() && $data->started === true;
 
-            $operatorFinishedDay =
-                $currentWorker->isOperator()
-                && array_key_exists('operator_finished_at', $values)
-                && empty($oldValues['operator_finished_at'])
-                && $values['operator_finished_at'] !== null;
+            $operatorFinishedDay = $currentWorker->isOperator() && $data->finished === true;
 
-            /*
-             * Update
-             */
             $excavatorLog->update($values);
 
             $this->logging->activity(

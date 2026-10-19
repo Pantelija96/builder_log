@@ -2,8 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Enums\NotificationType;
-use App\Models\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -14,18 +12,9 @@ class TaskResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $worker = $request->user();
-
-        $taskNotification = null;
-
-        if ($worker !== null) {
-            $taskNotification = Notification::query()
-                ->where('worker_id', $worker->id)
-                ->where('type', NotificationType::TASK)
-                ->where('payload->task_id', $this->id)
-                ->orderBy('id')
-                ->first();
-        }
+        $taskNotification = $this->relationLoaded('notifications')
+            ? $this->notifications->first()
+            : null;
 
         return [
             'id' => $this->id,
@@ -33,23 +22,12 @@ class TaskResource extends JsonResource
             'description' => $this->description,
             'due_date' => $this->due_date?->toDateString(),
 
-            /*
-             * Existing global Task read state.
-             *
-             * Keep these fields unchanged for backwards compatibility.
-             */
             'read_at' => $this->read_at,
             'is_read' => $this->isRead(),
 
-            /*
-             * Per-worker notification read state.
-             *
-             * This tells the frontend whether the notification belonging
-             * to THIS task and the currently authenticated worker has
-             * already been read.
-             */
             'notification_read_at' => $taskNotification?->read_at,
-            'notification_is_read' => $taskNotification?->read_at !== null,
+
+            'notification_is_read' => !$taskNotification || $taskNotification->read_at !== null,
 
             'completed_at' => $this->completed_at,
             'is_completed' => $this->isCompleted(),

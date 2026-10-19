@@ -21,6 +21,7 @@ class Notification extends Model
         'message',
         'payload',
         'read_at',
+        'task_id',
     ];
 
     protected function casts(): array
@@ -54,5 +55,10 @@ class Notification extends Model
                 'read_at' => now(),
             ]);
         }
+    }
+
+    public function task(): BelongsTo
+    {
+        return $this->belongsTo(Task::class);
     }
 }

@@ -8,6 +8,7 @@ use App\DTO\Notification\GetNotificationsData;
 use App\Enums\NotificationType;
 use App\Models\DailyLog;
 use App\Models\Document;
+use App\Models\Excavator;
 use App\Models\ExcavatorLog;
 use App\Models\MachineAssignment;
 use App\Models\Note;
@@ -36,6 +37,7 @@ class NotificationService
         string $title,
         string $message,
         ?array $payload = null,
+        ?Task $task = null,
     ): Notification {
 
         $notification = $this->createNotificationAction->execute(
@@ -44,6 +46,7 @@ class NotificationService
             title: $title,
             message: $message,
             payload: $payload,
+            task: $task,
         );
 
         if ($type !== NotificationType::TASK) {
@@ -71,8 +74,10 @@ class NotificationService
     public function unreadCount(
         Worker $worker,
     ): int {
-
-        return $this->query($worker)
+        return Notification::query()
+            ->where('worker_id', $worker->id)
+            ->where('type', NotificationType::TASK)
+            ->whereNotNull('task_id')
             ->whereNull('read_at')
             ->count();
     }
@@ -91,7 +96,7 @@ class NotificationService
             ->execute($notification);
     }
 
-    public function taskAssigned(Worker $worker, Task $task,): Notification {
+    public function taskAssigned(Worker $worker, Task $task): Notification {
         return $this->create(
             worker: $worker,
             type: NotificationType::TASK,
@@ -100,10 +105,11 @@ class NotificationService
             payload: [
                 'task_id' => $task->id,
             ],
+            task: $task,
         );
     }
 
-    public function taskCompleted(Worker $worker, Task $task, Worker $completedBy,): Notification
+    public function taskCompleted(Worker $worker, Task $task, Worker $completedBy): Notification
     {
         return $this->create(
             worker: $worker,
@@ -119,10 +125,11 @@ class NotificationService
                 'task_id' => $task->id,
                 'completed_by' => $completedBy->id,
             ],
+            task: $task,
         );
     }
 
-    public function taskReopened(Worker $worker, Task $task, Worker $reopenedBy,): Notification
+    public function taskReopened(Worker $worker, Task $task, Worker $reopenedBy): Notification
     {
         return $this->create(
             worker: $worker,
@@ -138,6 +145,7 @@ class NotificationService
                 'task_id' => $task->id,
                 'reopened_by' => $reopenedBy->id,
             ],
+            task: $task,
         );
     }
 
@@ -145,16 +153,17 @@ class NotificationService
     {
         Notification::query()
             ->where('type', NotificationType::TASK)
-            ->where('payload->task_id', $task->id)
+            ->where('task_id', $task->id)
             ->forceDelete();
     }
 
-    public function markTaskNotificationAsRead(Worker $worker, Task $task,): void {
-
+    public function markTaskNotificationAsRead(
+        Worker $worker,
+        Task $task,
+    ): void {
         Notification::query()
-            ->whereBelongsTo($worker)
-            ->where('type', NotificationType::TASK)
-            ->where('payload->task_id', $task->id)
+            ->where('worker_id', $worker->id)
+            ->where('task_id', $task->id)
             ->whereNull('read_at')
             ->update([
                 'read_at' => now(),
@@ -183,15 +192,17 @@ class NotificationService
         Worker $assignedBy,
         string $machineType,
     ): Notification {
+        $machineName = $this->machineTypeMapping($machineType);
+
         return $this->create(
             worker: $worker,
             type: NotificationType::MACHINE_ASSIGNMENT,
-            title: ucfirst($machineType) . ' ti je dodeljen',
+            title: $machineName . ' ti je dodeljen',
             message: sprintf(
                 '%s %s ti je dodelio %s.',
                 $assignedBy->first_name,
                 $assignedBy->last_name,
-                $machineType,
+                strtolower($machineName),
             ),
             payload: [
                 'machine_assignment_id' => $assignment->id,
@@ -261,9 +272,9 @@ class NotificationService
         return $this->create(
             worker: $worker,
             type: NotificationType::NOTE,
-            title: 'Kreiran novi gradjevinski dnvnik',
+            title: 'Kreiran novi gradjevinski izvestaj',
             message: sprintf(
-                '%s %s je kreirao novi gradjevinski dnvnik',
+                '%s %s je kreirao novi gradjevinski izvestaj',
                 $createdBy->first_name,
                 $createdBy->last_name,
             ),
@@ -274,5 +285,14 @@ class NotificationService
                 'created_by' => $createdBy->id,
             ],
         );
+    }
+
+    private function machineTypeMapping(string $type): string
+    {
+        return match (strtolower($type)) {
+            'excavator' => 'Bager',
+            'truck' => 'Kamion',
+            default => $type,
+        };
     }
 }

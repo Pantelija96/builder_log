@@ -26,6 +26,9 @@ readonly class UpdateExcavatorLogData
         public ?string $noteSiteManager,
         public ?string $noteOperator,
 
+        public ?bool $started,
+        public ?bool $finished,
+
         public array $providedFields,
     ) {}
 
@@ -45,6 +48,8 @@ readonly class UpdateExcavatorLogData
             advancePayment: $request->has('advance_payment') ? $request->float('advance_payment') : null,
             noteSiteManager: $request->has('note_site_manager') ? $request->input('note_site_manager') : null,
             noteOperator: $request->has('note_operator') ? $request->input('note_operator') : null,
+            started: $request->has('started') ? $request->boolean('started') : null,
+            finished: $request->has('finished') ? $request->boolean('finished') : null,
             providedFields: $request->keys(),
         );
     }

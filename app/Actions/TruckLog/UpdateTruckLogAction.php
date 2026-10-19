@@ -186,33 +186,10 @@ class UpdateTruckLogAction extends BaseAction
                 );
             }
 
-            /*
-             * Detect real start/end transitions.
-             *
-             * Notification should only be sent when Driver himself
-             * changes null -> non-null.
-             */
-            $driverStartedDay =
-                $currentWorker->isDriver()
-                && array_key_exists(
-                    'operator_started_at',
-                    $values,
-                )
-                && empty($oldValues['operator_started_at'])
-                && $values['operator_started_at'] !== null;
+            $driverStartedDay = $currentWorker->isDriver() && $data->started === true;
 
-            $driverFinishedDay =
-                $currentWorker->isDriver()
-                && array_key_exists(
-                    'operator_finished_at',
-                    $values,
-                )
-                && empty($oldValues['operator_finished_at'])
-                && $values['operator_finished_at'] !== null;
+            $driverFinishedDay = $currentWorker->isDriver() && $data->finished === true;
 
-            /*
-             * Update
-             */
             $truckLog->update($values);
 
             $truckLog->load('machineAssignment.worker');
@@ -255,9 +232,6 @@ class UpdateTruckLogAction extends BaseAction
                 reason: $reason,
             );
 
-            /*
-             * Database + push notifications to all active admins.
-             */
             if ($driverStartedDay) {
                 $this->notifyAdminsWorkerStartedDay(
                     truckLog: $truckLog,
