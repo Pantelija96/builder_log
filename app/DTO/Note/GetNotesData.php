@@ -10,6 +10,7 @@ readonly class GetNotesData
 {
     public function __construct(
         public ListQueryData $list,
+        public ?int $id,
         public ?int $dailyLogId,
         public ?int $constructionSiteId,
         public ?int $siteManagerId,
@@ -24,6 +25,7 @@ readonly class GetNotesData
     {
         return new self(
             list: ListQueryData::fromRequest($request),
+            id: $request->integer('id') ?: null,
             dailyLogId: $request->integer('daily_log_id') ?: null,
             constructionSiteId: $request->integer('construction_site_id') ?: null,
             siteManagerId: $request->integer('site_manager_id') ?: null,

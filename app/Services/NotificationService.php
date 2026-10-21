@@ -170,6 +170,18 @@ class NotificationService
             ]);
     }
 
+    public function markAllTaskNotificationsAsRead(
+        Task $task,
+    ): void {
+        Notification::query()
+            ->where('type', NotificationType::TASK)
+            ->where('task_id', $task->id)
+            ->whereNull('read_at')
+            ->update([
+                'read_at' => now(),
+            ]);
+    }
+
     public function documentCreated(
         Worker $worker,
         Document $document,

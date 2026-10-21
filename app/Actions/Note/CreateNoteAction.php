@@ -63,13 +63,6 @@ class CreateNoteAction extends BaseAction
                     worker: $currentWorker,
                 );
             }
-
-            /*
-             * Notify all active admins only when:
-             *
-             * 1. Note was created by a Site Manager
-             * 2. notify_admin is enabled for this Note
-             */
             if ($currentWorker->isSiteManager() && $note->notify_admin) {
                 $this->notifyAdmins(
                     note: $note,

@@ -160,9 +160,13 @@ class UpdateExcavatorLogAction extends BaseAction
                     $data->noteOperator;
             }
 
-            $operatorStartedDay = $currentWorker->isOperator() && $data->started === true;
+            $operatorStartedDay =
+                $currentWorker->isOperator()
+                && $data->started === true;
 
-            $operatorFinishedDay = $currentWorker->isOperator() && $data->finished === true;
+            $operatorFinishedDay =
+                $currentWorker->isOperator()
+                && $data->finished === true;
 
             $excavatorLog->update($values);
 
@@ -257,10 +261,10 @@ class UpdateExcavatorLogAction extends BaseAction
                     body: $notification->message,
                     data: [
                         'type' => 'worker_day_started',
+                        'worker_type' => 'operator',
                         'worker_id' => $worker->id,
                         'excavator_log_id' => $excavatorLog->id,
-                        'machine_assignment_id' =>
-                            $excavatorLog->machine_assignment_id,
+                        'machine_assignment_id' => $excavatorLog->machine_assignment_id,
                         'notification_id' => $notification->id,
                     ],
                 );
@@ -279,9 +283,9 @@ class UpdateExcavatorLogAction extends BaseAction
                 $excavatorLog,
                 $worker,
             ) {
-                $notification = $this->notifications->workerStartedDay(
+                $notification = $this->notifications->workerFinishedDay(
                     worker: $admin,
-                    startedBy: $worker,
+                    finishedBy: $worker,
                     machineAssignmentId: $excavatorLog->machine_assignment_id,
                     logType: 'excavator',
                     logId: $excavatorLog->id,
@@ -293,10 +297,10 @@ class UpdateExcavatorLogAction extends BaseAction
                     body: $notification->message,
                     data: [
                         'type' => 'worker_day_finished',
+                        'worker_type' => 'operator',
                         'worker_id' => $worker->id,
                         'excavator_log_id' => $excavatorLog->id,
-                        'machine_assignment_id' =>
-                            $excavatorLog->machine_assignment_id,
+                        'machine_assignment_id' => $excavatorLog->machine_assignment_id,
                         'notification_id' => $notification->id,
                     ],
                 );

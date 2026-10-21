@@ -25,6 +25,12 @@ class NoteFilter extends BaseFilter
     {
         $query
             ->when(
+                $this->data->id,
+                fn (Builder $query, int $id) =>
+                $query->where('id', $id)
+            )
+
+            ->when(
                 $this->data->dailyLogId,
                 fn (Builder $query, int $dailyLogId) =>
                 $query->where('daily_log_id', $dailyLogId)

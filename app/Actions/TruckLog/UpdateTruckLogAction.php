@@ -283,8 +283,8 @@ class UpdateTruckLogAction extends BaseAction
                         'worker_id' => $worker->id,
                         'log_type' => 'truck',
                         'truck_log_id' => $truckLog->id,
-                        'machine_assignment_id' =>
-                            $truckLog->machine_assignment_id,
+                        'worker_type' => 'driver',
+                        'machine_assignment_id' => $truckLog->machine_assignment_id,
                         'notification_id' => $notification->id,
                     ],
                 );
@@ -320,8 +320,8 @@ class UpdateTruckLogAction extends BaseAction
                         'worker_id' => $worker->id,
                         'log_type' => 'truck',
                         'truck_log_id' => $truckLog->id,
-                        'machine_assignment_id' =>
-                            $truckLog->machine_assignment_id,
+                        'worker_type' => 'driver',
+                        'machine_assignment_id' => $truckLog->machine_assignment_id,
                         'notification_id' => $notification->id,
                     ],
                 );

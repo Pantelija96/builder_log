@@ -27,6 +27,11 @@ class GetNotesRequest extends FormRequest
                 Rule::exists('daily_logs', 'id'),
             ],
 
+            'id' => [
+                'nullable',
+                Rule::exists('notes', 'id'),
+            ],
+
             'construction_site_id' => [
                 'nullable',
                 Rule::exists('construction_sites', 'id'),

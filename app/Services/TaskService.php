@@ -16,6 +16,7 @@ use App\Models\Task;
 use App\Models\Worker;
 use App\QueryFilters\TaskFilter;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Builder;
 
 class TaskService
 {
@@ -28,7 +29,13 @@ class TaskService
         private readonly ReopenTaskAction $reopen,
     ) {}
 
-    private function query()
+    /**
+     * Generic task query.
+     *
+     * Used for admin/backoffice endpoints where we are not
+     * filtering tasks for one specific worker.
+     */
+    private function query(): Builder
     {
         return Task::query()
             ->with([
@@ -39,7 +46,19 @@ class TaskService
             ]);
     }
 
-    private function myTasksQuery(Worker $worker)
+    /**
+     * Tasks visible to one specific worker.
+     *
+     * A worker can see:
+     *
+     * 1. A task directly assigned to them.
+     * 2. A general role task assigned to their role.
+     * 3. If they are a Site Manager, a construction-site task
+     *    for a site they are assigned to.
+     *
+     * Task notifications are also loaded only for this worker.
+     */
+    private function myTasksQuery(Worker $worker): Builder
     {
         return Task::query()
             ->with([
@@ -48,12 +67,6 @@ class TaskService
                 'constructionSite',
                 'completedBy',
 
-                /*
-                 * Load only notifications belonging to the
-                 * currently authenticated worker.
-                 *
-                 * Newest notification comes first.
-                 */
                 'notifications' => function ($query) use ($worker) {
                     $query
                         ->where('worker_id', $worker->id)
@@ -62,25 +75,54 @@ class TaskService
                 },
             ])
             ->where('company_id', $worker->company_id)
-            ->where(function ($query) use ($worker) {
+            ->where(function (Builder $query) use ($worker) {
 
-                // Directly assigned to this worker
-                $query->where('worker_id', $worker->id);
+                /*
+                 * 1. Directly assigned task.
+                 *
+                 * Example:
+                 * worker_id = 15
+                 */
+                $query->where(function (Builder $query) use ($worker) {
+                    $query->where('worker_id', $worker->id);
+                });
 
-                // Assigned to everyone with this worker's role
-                $query->orWhere(function ($query) use ($worker) {
+                /*
+                 * 2. Role task.
+                 *
+                 * Example:
+                 *
+                 * worker_id = null
+                 * construction_site_id = null
+                 * target_role = site_manager
+                 *
+                 * All workers with that role can see it.
+                 */
+                $query->orWhere(function (Builder $query) use ($worker) {
                     $query
                         ->whereNull('worker_id')
                         ->whereNull('construction_site_id')
                         ->where('target_role', $worker->role);
                 });
 
-                // Construction-site tasks only apply to site managers
+                /*
+                 * 3. Construction-site task.
+                 *
+                 * Only Site Managers assigned to that site can see it.
+                 *
+                 * The task must not be directly assigned to another worker.
+                 */
                 if ($worker->isSiteManager()) {
-                    $query->orWhereHas(
-                        'constructionSite.siteManagers',
-                        fn ($q) => $q->whereKey($worker->id)
-                    );
+                    $query->orWhere(function (Builder $query) use ($worker) {
+                        $query
+                            ->whereNull('worker_id')
+                            ->whereNotNull('construction_site_id')
+                            ->whereHas(
+                                'constructionSite.siteManagers',
+                                fn (Builder $query) =>
+                                $query->whereKey($worker->id)
+                            );
+                    });
                 }
             });
     }
@@ -95,6 +137,9 @@ class TaskService
         );
     }
 
+    /**
+     * Generic/admin list of tasks.
+     */
     public function get(
         GetTasksData $data,
     ): Collection {
@@ -107,6 +152,9 @@ class TaskService
             ->get();
     }
 
+    /**
+     * Tasks visible to the authenticated worker.
+     */
     public function getMyTasks(
         Worker $worker,
         GetTasksData $data,
@@ -120,10 +168,31 @@ class TaskService
             ->get();
     }
 
+    /**
+     * Generic/admin lookup.
+     */
     public function findById(
         int $id,
     ): ?Task {
         return $this->query()
+            ->find($id);
+    }
+
+    /**
+     * Worker-specific lookup.
+     *
+     * Important for Android/mobile endpoints:
+     * prevents a worker from fetching a task that is not
+     * actually assigned/visible to them.
+     *
+     * Also loads only this worker's notification relation,
+     * so TaskResource gets the correct read state.
+     */
+    public function findMyTaskById(
+        int $id,
+        Worker $worker,
+    ): ?Task {
+        return $this->myTasksQuery($worker)
             ->find($id);
     }
 
