@@ -32,6 +32,10 @@ class CompleteTaskAction extends BaseAction
 
             $task->markAsCompleted($worker);
 
+            $this->notifications->markAllTaskNotificationsAsRead(
+                task: $task,
+            );
+
             $this->notifyAdmins(
                 task: $task,
                 completedBy: $worker,

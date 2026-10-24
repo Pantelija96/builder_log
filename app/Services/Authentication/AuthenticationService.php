@@ -30,8 +30,7 @@ class AuthenticationService
             throw new BusinessException('Invalid credentials.');
         }
 
-        $worker->tokens()->delete();
-        $token = $worker->createToken('mobile')->plainTextToken;
+        $token = $worker->createToken('api-session')->plainTextToken;
 
         return new LoginResponseData(
             worker: $worker,

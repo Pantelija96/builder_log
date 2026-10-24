@@ -109,9 +109,8 @@ class NotificationService
         );
     }
 
-    public function taskCompleted(Worker $worker, Task $task, Worker $completedBy): Notification
-    {
-        return $this->create(
+    public function taskCompleted(Worker $worker, Task $task, Worker $completedBy,): Notification {
+        $notification = $this->create(
             worker: $worker,
             type: NotificationType::TASK,
             title: 'Zavrsen zadatak',
@@ -127,6 +126,10 @@ class NotificationService
             ],
             task: $task,
         );
+
+        $notification->markAsRead();
+
+        return $notification->refresh();
     }
 
     public function taskReopened(Worker $worker, Task $task, Worker $reopenedBy): Notification

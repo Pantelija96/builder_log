@@ -28,3 +28,4 @@ Thumbs.db
 *.zip
 /storage/firebase/*
 !/storage/firebase/.gitkeep
+.cache/

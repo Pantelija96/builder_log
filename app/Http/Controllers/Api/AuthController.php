@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\DTO\Requests\Auth\LoginData;
+use App\Exceptions\BusinessException;
 use App\Http\Controllers\ApiController;
 use App\Http\Requests\API\LoginRequest;
 use App\Http\Resources\LoginResource;
@@ -21,7 +22,12 @@ class AuthController extends ApiController
     {
         $data = LoginData::fromRequest($request);
 
-        $response = $this->authenticationService->login($data);
+        try {
+            $response = $this->authenticationService->login($data);
+        } catch (BusinessException $exception) {
+            // Authentication failures must not become an unhandled HTTP 500.
+            return $this->error($exception->getMessage(), status: $exception->status());
+        }
 
         return $this->success(
             new LoginResource($response),
@@ -52,10 +58,7 @@ class AuthController extends ApiController
 
     public function logoutAll(Request $request)
     {
-        $request
-            ->user()
-            ->tokens()
-            ->delete();
+        $request->user()->tokens()->delete();
 
         return $this->success(
             message: 'Logged out from all devices.'
