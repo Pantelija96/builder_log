@@ -14,7 +14,12 @@
 /.zed
 /auth.json
 /node_modules
+/BuilderLogPWA/node_modules/
+/BuilderLogPWA/dist/
+/BuilderLogPWA/.local/
+/BuilderLogPWA/.idea/
 /public/build
+/public/app/
 /public/fonts-manifest.dev.json
 /public/hot
 /public/storage

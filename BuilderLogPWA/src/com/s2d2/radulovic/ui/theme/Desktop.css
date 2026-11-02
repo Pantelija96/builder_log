@@ -1,0 +1,232 @@
+/* Keep the original mobile boxes and their sizing/scrolling contexts intact. */
+.desktop-shell, .desktop-workspace, .desktop-content { display: contents; }
+.desktop-sidebar, .desktop-topbar { display: none; }
+.desktop-content[hidden] { display: none; }
+
+@media (min-width: 1024px) {
+  :root {
+    --desktop-paper: #f6f5f1;
+    --desktop-line: #e5e4de;
+    --desktop-sidebar-width: 232px;
+  }
+  :root body, :root .role-screen { background: var(--desktop-paper); }
+  :root .role-screen[hidden] { display: none; }
+  :root :is(button, a, input, textarea, select, [tabindex]):focus-visible {
+    outline: 3px solid #a87600;
+    outline-offset: 3px;
+  }
+  :root button { transition: background-color .15s, border-color .15s; }
+  :root .desktop-shell { display: block; min-height: 100dvh; }
+  :root .desktop-sidebar {
+    display: flex; flex-direction: column; position: fixed; inset: 0 auto 0 0;
+    width: var(--desktop-sidebar-width); padding: 24px 16px 16px;
+    background: #fff; border-right: 1px solid var(--desktop-line); z-index: 20;
+    overflow-y: auto; overscroll-behavior: contain;
+  }
+  .desktop-brand { display: flex; align-items: center; gap: 12px; padding: 0 8px 28px; }
+  .desktop-brand img { width: 40px; height: 40px; object-fit: contain; }
+  .desktop-brand strong { display: block; font-size: 22px; font-weight: 900; letter-spacing: -.7px; }
+  .desktop-brand span { display: block; font-size: 11px; color: #6b6b63; letter-spacing: .2px; }
+  .desktop-sidebar nav { display: flex; flex-direction: column; gap: 5px; }
+  .desktop-sidebar nav button {
+    display: flex; align-items: center; gap: 12px; min-height: 43px; padding: 9px 12px;
+    width: 100%; border: 1px solid transparent; border-radius: 7px; background: transparent;
+    color: #4f514c; text-align: left; font: 500 13px/20px Roboto, sans-serif; letter-spacing: .1px;
+  }
+  .desktop-sidebar nav button span::first-letter { text-transform: uppercase; }
+  .desktop-sidebar nav img { width: 22px; height: 22px; object-fit: contain; opacity: .75; flex-shrink: 0; }
+  .desktop-sidebar nav button:hover { background: #f6f5f1; }
+  .desktop-sidebar nav button[aria-current=page] {
+    background: #fff3c4; color: #07131b; border-color: #ffe18a;
+    box-shadow: inset 3px 0 #ffc400; font-weight: 700;
+  }
+  .desktop-sidebar nav button[aria-current=page] img { opacity: 1; }
+  .desktop-account { margin-top: auto; padding: 24px 8px 0; overflow-wrap: anywhere; }
+  .desktop-account > span { display: block; color: #777; font-size: 11px; }
+  .desktop-account > strong { display: block; font-size: 13px; line-height: 20px; margin: 2px 0 14px; }
+  .desktop-account button {
+    width: 100%; display: flex; align-items: center; gap: 10px; padding: 12px 0;
+    border: 0; border-top: 1px solid var(--desktop-line); background: transparent;
+    text-align: left; font-size: 13px; color: #4f514c;
+  }
+  .desktop-account svg { width: 20px; height: 20px; }
+  :root .desktop-workspace { display: block; margin-left: var(--desktop-sidebar-width); min-width: 0; }
+  :root .desktop-topbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    min-height: 84px; padding: 16px 32px; background: #fff; border-bottom: 1px solid var(--desktop-line);
+  }
+  .desktop-topbar > div { min-width: 0; }
+  .desktop-topbar div > span { display: block; color: #777; font-size: 11px; }
+  .desktop-topbar strong { display: block; font-size: 16px; line-height: 24px; overflow-wrap: anywhere; }
+  .desktop-user-menu { position: relative; max-width: 40%; flex-shrink: 0; }
+  .desktop-user-trigger {
+    display: flex; align-items: center; gap: 10px; max-width: 100%; min-height: 42px;
+    padding: 8px 12px; border: 1px solid var(--desktop-line); border-radius: 8px;
+    background: #fff; color: #4f514c; font: 500 13px/20px Roboto, sans-serif; text-align: left;
+  }
+  .desktop-user-trigger span { min-width: 0; overflow-wrap: anywhere; }
+  .desktop-user-trigger img { width: 16px; height: 16px; flex-shrink: 0; }
+  .desktop-user-trigger:hover, .desktop-user-trigger[aria-expanded=true] { background: #fff9e6; border-color: #dfbb4e; }
+  .desktop-user-dropdown {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; padding: 6px;
+    width: 192px; max-width: calc(100vw - 32px); background: #fff;
+    border: 1px solid var(--desktop-line); border-radius: 8px; box-shadow: 0 8px 24px #07131b1a;
+  }
+  .desktop-user-dropdown button {
+    display: block; width: 100%; min-height: 40px; padding: 10px 12px; text-align: left;
+    border: 0; border-radius: 5px; background: #fff; color: #07131b; font: 500 13px/20px Roboto, sans-serif;
+  }
+  .desktop-user-dropdown button:hover, .desktop-user-dropdown button:focus-visible { background: #fff3c4; }
+  .desktop-user-dropdown .desktop-user-logout { color: #b3261e; }
+  .desktop-account button[aria-current=page] { color: #07131b; background: #fff3c4; }
+  :root .desktop-content[hidden] { display: none; }
+  :root .login-fields { width: 100%; max-width: 480px; margin-inline: auto; }
+  :root .desktop-content { display: block; padding: 28px 32px 40px; max-width: 1664px; margin: 0 auto; }
+  :root .desktop-content > :is(.admin-screen, .admin-home, .manager-home,
+    .manager-workers, .manager-delivery-notes, .manager-documents, .manager-notes,
+    .manager-expenses, .manager-tasks, .manager-machines, .manager-subcontractors,
+    .note-form, .delivery-note-form) {
+    max-width: none; width: 100%; margin: 0; padding: 0; min-height: 0;
+    background: transparent; height: auto; gap: 22px;
+  }
+  :root .desktop-content .manager-header { border-radius: 10px; padding: 18px 24px; }
+  :root .desktop-content .manager-header h1 { font-size: 22px; }
+  :root .desktop-content :is(.manager-home-content, .admin-home-body) { max-width: none; padding: 24px 0 0; gap: 24px; }
+  :root :is(.manager-name, .admin-role strong) { font-size: 16px; line-height: 24px; }
+  :root .manager-role-row > img, :root .admin-role > img { width: 48px; height: 48px; }
+  :root .manager-admin-tasks { margin-left: auto; width: 240px; flex-basis: 240px; }
+  :root .manager-site-picker { max-width: 520px; }
+  :root .manager-menu { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+  :root .manager-menu-tile { height: 154px; border: 1px solid var(--desktop-line); box-shadow: 0 2px 4px #07131b06; gap: 18px; }
+  :root .manager-menu-tile:hover { background: #fff9e6; border-color: #dfbb4e; }
+  :root .manager-menu-tile span { font-size: 13px; line-height: 20px; }
+
+  /* Shared page headers, controls and cards; no data/action duplication. */
+  :root .desktop-content :is(.admin-title, .workers-title, .delivery-title, .documents-title) { padding-bottom: 18px; border-bottom: 1px solid var(--desktop-line); }
+  :root .desktop-content :is(.admin-title, .workers-title, .delivery-title, .documents-title) h1 { font-size: 23px; line-height: 30px; letter-spacing: -.3px; }
+  :root .desktop-content :is(.admin-title, .workers-title, .delivery-title, .documents-title) p { font-size: 12px; line-height: 20px; color: #777; }
+  :root .desktop-content :is(.admin-title > span, .workers-title > img, .delivery-title > span, .documents-title > span) { width: 52px; height: 52px; flex-shrink: 0; }
+  :root .desktop-content :is(.admin-search, .workers-search, .subcontractor-search) { background: #fff; }
+  :root .desktop-content :is(.standard-site-date, .admin-notes-filters) {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr); gap: 20px; align-items: end;
+    padding: 18px; border: 1px solid var(--desktop-line); border-radius: 10px; background: #fff;
+  }
+  :root .desktop-content :is(.standard-site-card, .workers-site-card, .admin-date-range,
+    .admin-documents-sites, .admin-notes-filters, .admin-expenses-period, .construction-site-picker) { box-shadow: none; }
+  :root .desktop-content .standard-site-card { padding: 0; }
+  :root .desktop-content .selection-field { min-height: 44px; height: auto; }
+  :root .desktop-content .selection-value { font-size: 14px; line-height: 22px; }
+  :root .desktop-content :is(.standard-date-row, .workers-date-row) { min-height: 44px; }
+  :root .desktop-content :is(.standard-date-row, .workers-date-row) strong { font-size: 14px; line-height: 20px; }
+  :root .desktop-content :is(.standard-date-row, .workers-date-row) small { font-size: 12px; line-height: 18px; }
+  :root .desktop-content :is(.admin-summary-grid) { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; }
+  :root .desktop-content .admin-summary { height: 124px; padding: 20px; }
+  :root .desktop-content .admin-summary .admin-summary-copy > strong { font-size: 28px; line-height: 34px; }
+  :root .desktop-content :is(.admin-card, .admin-worker-row, .admin-machine-row, .admin-finance-row,
+    .admin-document-row, .admin-note-card, .note-card, .document-card, .machine-card, .expense-row) { box-shadow: none; border: 1px solid var(--desktop-line); }
+  :root .desktop-content :is(.admin-notice, .note-empty) { min-height: 130px; padding: 24px; }
+  :root .desktop-content > .admin-screen > :is(.admin-primary, .admin-add-worker, .admin-machine-add,
+    .admin-document-add), :root .desktop-content > .manager-notes > .note-new { width: auto; min-width: 210px; align-self: flex-end; justify-self: end; padding-inline: 24px; }
+
+  /* Attendance keeps the same worker controls and values, with readable columns. */
+  :root .desktop-content .admin-live { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: start; align-items: end; }
+  :root .desktop-content .admin-live > * { grid-column: 1 / -1; min-width: 0; }
+  :root .desktop-content .admin-live > .selection-dropdown { grid-column: 1; }
+  :root .desktop-content .admin-live > .admin-live-date { grid-column: 2; }
+  :root .desktop-content .admin-attendance { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(300px, 1.6fr); padding: 16px 20px; background: #fff; gap: 4px 24px; }
+  :root .desktop-content .admin-attendance > header { grid-column: 1; }
+  :root .desktop-content .admin-attendance > small { grid-column: 1; }
+  :root .desktop-content .admin-attendance > .admin-values { grid-column: 2; grid-row: 1 / 3; border: 0; align-items: center; gap: 20px; }
+  :root .desktop-content .admin-attendance header > strong { font-size: 14px; }
+  :root .desktop-content .admin-attendance .admin-value small { font-size: 11px; }
+  :root .desktop-content .admin-attendance .admin-value strong { font-size: 14px; }
+  :root .desktop-content .worker-card { padding: 14px 18px; gap: 18px; box-shadow: none; }
+  :root .desktop-content .worker-card-main { gap: 20px; }
+  :root .desktop-content .worker-card-main > strong { font-size: 15px; line-height: 22px; }
+  :root .desktop-content .worker-cell small { font-size: 11px; line-height: 20px; }
+  :root .desktop-content .worker-cell b { height: 36px; font-size: 14px; line-height: 34px; }
+  :root .desktop-content .worker-section-title { font-size: 12px; padding-block: 8px; }
+  :root .desktop-content :is(.manager-workers, .admin-documents, .admin-worker-details, .admin-manager-details) {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; align-items: start;
+  }
+  :root .desktop-content :is(.manager-workers, .admin-documents, .admin-worker-details, .admin-manager-details) > * { grid-column: 1 / -1; min-width: 0; }
+  :root .desktop-content .manager-workers > .workers-site-card,
+  :root .desktop-content .admin-documents > .admin-documents-sites,
+  :root .desktop-content :is(.admin-worker-details, .admin-manager-details) > .admin-identity { grid-column: 1; }
+  :root .desktop-content .manager-workers > .workers-date-row,
+  :root .desktop-content .admin-documents > .admin-search,
+  :root .desktop-content :is(.admin-worker-details, .admin-manager-details) > .admin-date-range { grid-column: 2; }
+  :root .desktop-content .manager-workers > .workers-site-card { max-width: none; padding: 0; }
+  :root .desktop-content .manager-workers > .workers-date-row { align-self: end; }
+  :root .desktop-content .admin-documents > .admin-search { align-self: end; }
+
+  /* Lists that benefit from cards retain their existing content and actions. */
+  :root .desktop-content :is(.admin-document-list, .documents-list, .note-list, .admin-notes-list, .machine-list, .subcontractor-list, .admin-machine-list) {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start;
+  }
+  :root .desktop-content :is(.admin-document-list, .documents-list, .note-list, .admin-notes-list, .machine-list, .subcontractor-list, .admin-machine-list) > * { min-width: 0; }
+  :root .desktop-content :is(.admin-note-card, .note-card) { min-height: 140px; padding: 18px; }
+  :root .desktop-content :is(.note-thumb, .admin-note-thumbnail) { width: 112px; height: 90px; }
+  :root .desktop-content :is(.admin-note-copy > strong, .admin-note-copy time, .note-card-text small) { font-size: 12px; }
+  :root .desktop-content :is(.construction-site-actions) { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  :root .desktop-content .construction-site-actions > button { height: 120px; border: 1px solid var(--desktop-line); box-shadow: none; }
+  :root .desktop-content .construction-site-actions span { font-size: 12px; line-height: 18px; }
+  :root .desktop-content .construction-site-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  :root .desktop-content .admin-expenses-period { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 24px; padding: 20px; border: 1px solid var(--desktop-line); }
+  :root .desktop-content .admin-expenses-dates { flex: 1; }
+  :root .desktop-content .admin-expenses { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+  :root .desktop-content .admin-expenses > :not(.admin-expenses-category) { grid-column: 1 / -1; }
+  :root .desktop-content .expense-add-actions { align-self: flex-end; width: min(100%, 540px); }
+  :root .desktop-content .expense-summary { max-width: 900px; gap: 20px; }
+  :root .desktop-content .expense-summary > div { padding: 20px; }
+  :root .desktop-content .expense-summary h3 { font-size: 13px; }
+  :root .desktop-content .expense-summary > div > strong { font-size: 28px; line-height: 36px; }
+  :root .desktop-content .expense-scroll { overflow: visible; }
+  :root .desktop-content .expense-row { align-items: center; padding: 18px 20px; }
+  :root .desktop-content .expense-row-end { flex-direction: row; align-items: center; gap: 24px; margin-left: auto; }
+
+  /* Forms use shared fields; long text and field errors keep their full row. */
+  :root .desktop-content .admin-form { height: auto; min-height: calc(100dvh - 156px); }
+  :root .desktop-content .admin-form-fields,
+  :root .desktop-content .admin-task-creation > fieldset {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; align-items: start; gap: 20px 24px; overflow: visible;
+    padding: 24px; border: 1px solid var(--desktop-line); border-radius: 10px; background: #fff;
+  }
+  :root .desktop-content .admin-form-fields > :not(.admin-field),
+  :root .desktop-content .admin-form-fields > .admin-field:has(textarea),
+  :root .desktop-content .admin-task-creation > fieldset > :has(textarea),
+  :root .desktop-content .admin-task-creation > fieldset > .admin-task-tabs,
+  :root .desktop-content .admin-task-creation > fieldset > .admin-task-input,
+  :root .desktop-content .admin-task-creation > fieldset > .error-message { grid-column: 1 / -1; }
+  :root .desktop-content .admin-form footer { justify-content: flex-end; margin-top: 24px; }
+  :root .desktop-content .admin-form footer button { flex: 0 1 220px; }
+  :root .desktop-content .admin-task-creation > fieldset > .admin-task-add { grid-column: 1 / -1; justify-self: end; min-width: 220px; padding-inline: 24px; }
+  :root .desktop-content :is(.note-form, .delivery-note-form) { max-width: 1100px; }
+  :root .app-dialog:is(.worker-editor, .machine-editor, .admin-details-modal, .work-editor) { width: min(720px, calc(100vw - 80px)); max-width: 720px; }
+  :root .app-dialog:is(.admin-site-picker, .admin-document-delete, .admin-task-delete) { width: min(680px, calc(100vw - 80px)); max-width: 680px; }
+  :root .app-dialog.attendance-time-picker { width: 440px; max-width: calc(100vw - 80px); }
+
+  /* Driver/operator workflow: independent cards share the wider work area. */
+  :root .driver-work-screen { max-width: 1400px; padding: 32px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+  :root .driver-work-screen > .driver-title { grid-column: 1 / -1; padding-bottom: 20px; border-bottom: 1px solid var(--desktop-line); }
+  :root .driver-title h1 { font-size: 24px; line-height: 32px; }
+  :root .driver-title p { font-size: 13px; }
+  :root .driver-work-screen .work-card { padding: 24px; border: 1px solid var(--desktop-line); box-shadow: none; gap: 18px; }
+  :root .driver-work-screen .work-label { font-size: 13px; }
+  :root .driver-work-screen > :is(.error-message, .status-message) { grid-column: 1 / -1; }
+  :root .settings-screen { margin-block: 32px; height: auto; min-height: calc(100dvh - 64px); border: 1px solid var(--desktop-line); border-radius: 12px; padding: 32px; }
+  :root .desktop-content > .settings-screen { max-width: 1000px; margin: 0; min-height: 0; height: auto; gap: 24px; }
+  :root .desktop-content > .settings-screen .settings-title { padding-bottom: 20px; border-bottom: 1px solid var(--desktop-line); }
+  :root .desktop-content > .settings-screen .settings-title h1 { font-size: 23px; line-height: 30px; }
+  :root .desktop-content > .settings-screen .settings-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; overflow: visible; flex: none; }
+  :root .desktop-content > .settings-screen .settings-fields > .error-message { grid-column: 1 / -1; }
+  :root .desktop-content > .settings-screen .settings-actions { justify-content: flex-end; margin-top: 12px; }
+  :root .desktop-content > .settings-screen .settings-actions button { flex: 0 1 180px; }
+}
+
+@media (min-width: 1440px) {
+  :root { --desktop-sidebar-width: 256px; }
+  :root .manager-menu { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  :root .desktop-content { padding: 36px 40px 48px; }
+  :root .desktop-content .construction-site-actions { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
