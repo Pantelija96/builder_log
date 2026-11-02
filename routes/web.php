@@ -2,9 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::redirect('/', '/app/');
 
 // Static files are served by the web server. Only /app browser navigations
 // reach this route; a missing asset must remain a 404, not receive SPA HTML.

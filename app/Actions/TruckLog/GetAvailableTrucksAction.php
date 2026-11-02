@@ -37,25 +37,10 @@ class GetAvailableTrucksAction
                         ->whereHas(
                             'truckLog',
                             function (Builder $query) use ($now) {
-                                $query
-                                    ->where(function (Builder $query) use ($now) {
-                                        $query
-                                            ->whereNull('site_manager_started_at')
-                                            ->orWhere(
-                                                'site_manager_started_at',
-                                                '<=',
-                                                $now,
-                                            );
-                                    })
-                                    ->where(function (Builder $query) use ($now) {
-                                        $query
-                                            ->whereNull('site_manager_finished_at')
-                                            ->orWhere(
-                                                'site_manager_finished_at',
-                                                '>',
-                                                $now,
-                                            );
-                                    });
+                                $this->applyOccupiedNowCondition(
+                                    $query,
+                                    $now,
+                                );
                             }
                         );
                 }
@@ -65,5 +50,33 @@ class GetAvailableTrucksAction
                 'truck',
             ])
             ->get();
+    }
+
+    private function applyOccupiedNowCondition(
+        Builder $query,
+        mixed $now,
+    ): void {
+        $query->where(
+            function (Builder $query) use ($now) {
+                $query
+                    ->whereNull('site_manager_started_at')
+                    ->orWhereNull('site_manager_finished_at')
+                    ->orWhere(
+                        function (Builder $query) use ($now) {
+                            $query
+                                ->where(
+                                    'site_manager_started_at',
+                                    '<=',
+                                    $now,
+                                )
+                                ->where(
+                                    'site_manager_finished_at',
+                                    '>',
+                                    $now,
+                                );
+                        }
+                    );
+            }
+        );
     }
 }
