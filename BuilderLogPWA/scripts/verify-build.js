@@ -23,6 +23,8 @@ for (const file of readdirSync(join(output, 'assets')).filter(name => /\.(js|css
   const content = readFileSync(join(output, 'assets', file), 'utf8');
   assert.ok(!/["'`(]\/assets\//.test(content), `Unprefixed asset in ${file}`);
 }
-assert.ok(!existsSync(join(output, 'sw.js')), 'No service worker belongs to this integration.');
+const worker = readFileSync(join(output, 'firebase-messaging-sw.js'), 'utf8');
+assert.ok(worker.includes('builderlog-2ce47'), 'Worker must include the configured Firebase project.');
+assert.ok(!/importScripts\s*\(/.test(worker), 'Worker must bundle its dependencies locally.');
 assert.ok(!html.includes('/src/'));
-console.log('PASS: /app/ HTML, bundled assets, manifest and icons; no service worker.');
+console.log('PASS: /app/ HTML, bundled assets, manifest and icons and bundled notification service worker.');

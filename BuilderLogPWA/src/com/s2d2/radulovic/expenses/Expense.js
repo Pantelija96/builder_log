@@ -2,7 +2,7 @@ export default class Expense {
   #id = 0;
   #title = null;
   #description = null;
-  #amount = null;
+  #amount = 0;
   #date = null;
   #constructionSiteId = 0;
   #constructionSiteName = null;
@@ -11,7 +11,7 @@ export default class Expense {
     this.#id = id;
     this.#title = title;
     this.#description = description == null || description === 'null' ? '-' : description;
-    this.#amount = amount;
+    this.#amount = Math.trunc(Number(amount));
     this.#date = date != null && date.length >= 10
       ? date.substring(8, 10) + '.' + date.substring(5, 7) + '.' + date.substring(0, 4) + '.'
       : '';

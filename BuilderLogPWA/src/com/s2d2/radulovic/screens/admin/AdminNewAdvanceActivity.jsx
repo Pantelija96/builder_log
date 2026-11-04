@@ -5,7 +5,7 @@ import { dateLabel } from '../../ui/components/AttendancePickers.jsx';
 import './AdminNewAdvanceActivity.css';
 
 export default function AdminNewAdvanceActivity({ manager, advance = null, busy, error, onCancel, onSave }) {
-  const [amount, setAmount] = useState(() => advance ? String(advance.getAmount()) : '');
+  const [amount, setAmount] = useState(() => advance ? String(Math.trunc(advance.getAmount())) : '');
   const [touched, setTouched] = useState(false);
   const [date] = useState(today);
   const numericAmount = Number(amount.replace(',', '.'));

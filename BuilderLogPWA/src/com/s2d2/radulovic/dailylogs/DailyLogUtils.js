@@ -5,7 +5,7 @@ import ExcavatorLog from '../attendances/ExcavatorLog.js';
 import SubcontractorAttendance from '../attendances/SubcontractorAttendance.js';
 import WorkerAttendance from '../attendances/WorkerAttendance.js';
 import DailyLog from './DailyLog.js';
-import Session from '../network/Session.js';
+import Session, { JSONObject } from '../network/Session.js';
 import WebUtils from '../network/WebUtils.js';
 
 export default class DailyLogUtils {
@@ -388,7 +388,8 @@ export default class DailyLogUtils {
   }
 
   static getAdminSubcontractorAttendancesFromServer(subcontractorId, dateFrom, dateTo, callback) {
-    const endpoint = 'subcontractor-logs?subcontractor_id=' + subcontractorId + '&start_date=' + dateFrom + '&end_date=' + dateTo + '&sort=date&direction=desc';
+    const endpoint = 'subcontractor-logs?subcontractor_id=' + subcontractorId + '&date_from=' +
+    dateFrom + '&date_to=' + dateTo + '&sort=date&direction=desc';
 
     WebUtils.sendGETRequest(endpoint, {}, { Authorization: Session.getSessionToken() }, {
       onSuccess(responseBody) {
@@ -396,7 +397,9 @@ export default class DailyLogUtils {
           const attendances = [];
           const attendancesPerSite = new Map();
           for (const data of JSON.parse(responseBody).data) {
+            if (data.construction_site == null) continue;
             const manager = data.site_manager;
+            const constructionSiteId = new JSONObject(data).getInt('construction_site_id');
             const constructionSiteName = data.construction_site.name;
             const managerName = manager.first_name + ' ' + manager.last_name;
             const attendance = new SubcontractorAttendance(
@@ -404,10 +407,10 @@ export default class DailyLogUtils {
               data.worker_count ?? 0, data.note ?? '', data.date, constructionSiteName, managerName,
             );
             attendances.push(attendance);
-            if (!attendancesPerSite.has(constructionSiteName)) {
-              attendancesPerSite.set(constructionSiteName, []);
+            if (!attendancesPerSite.has(constructionSiteId)) {
+              attendancesPerSite.set(constructionSiteId, []);
             }
-            attendancesPerSite.get(constructionSiteName).push(attendance);
+            attendancesPerSite.get(constructionSiteId).push(attendance);
           }
           callback.onSuccess(attendances, attendancesPerSite);
         } catch (exception) {

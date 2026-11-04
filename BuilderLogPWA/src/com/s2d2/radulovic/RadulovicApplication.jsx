@@ -16,18 +16,36 @@ import WebUtils, { onAuthenticationFailure, onAuthenticatedRequestSuccess } from
 import useForegroundRefresh from './ui/components/useForegroundRefresh.js';
 import SessionGuard from './SessionGuard.jsx';
 import getSharedPreferences from './utils/SharedPreferences.js';
+import isInstalledIosPwa from './utils/InstalledIosPwa.js';
 import Role from './employee/Role.js';
 import NetworkLoadingState from './NetworkLoadingState.js';
 import StartupSplash from './ui/components/StartupSplash.jsx';
 import NetworkLoadingOverlay from './ui/components/NetworkLoadingOverlay.jsx';
+import useNotificationRouting from './notifications/useNotificationRouting.js';
+import { resetBackLayers } from './ui/components/useBackLayer.js';
+import IosNotificationPermissionPrompt from './IosNotificationPermissionPrompt.jsx';
 import './ui/theme/DriverSelection.css';
 import './ui/theme/DriverWork.css';
 
+const installedIosPwa = isInstalledIosPwa();
+
 export default function RadulovicApplication() {
-    const [screen, setScreen] = useState({ name: 'loading' });
+    const [screen, setScreen] = useState({ name: installedIosPwa ? 'login' : 'loading' });
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [settingsBusy, setSettingsBusy] = useState(false);
     const [notice, setNotice] = useState('');
+    const [notificationDestination, setNotificationDestination] = useState(null);
+    const [homeVersion, setHomeVersion] = useState(0);
+    useNotificationRouting({
+        ready: screen.name === 'admin-home' || screen.name === 'manager-home',
+        async onTap() {
+            setSettingsOpen(false);
+            setNotificationDestination(null);
+            setHomeVersion(value => value + 1);
+            await resetBackLayers();
+        },
+        onOpen: setNotificationDestination,
+    });
 
     const requestVersion = useRef(0);
     const automaticRecoveryAttempted = useRef(false);
@@ -52,6 +70,7 @@ export default function RadulovicApplication() {
     }
 
     function logout() {
+        setNotificationDestination(null);
         setSettingsOpen(false);
         setNotice('');
         requestVersion.current++;
@@ -72,6 +91,12 @@ export default function RadulovicApplication() {
                 allowAutomaticLogin: false,
             });
             return;
+        }
+
+        if (installedIosPwa) {
+            import('./notifications/IosPushNotifications.js')
+                .then(module => module.refreshIosPushNotifications())
+                .catch(error => console.error('Notification initialization failed', error));
         }
 
         const role = currentUser.getRole();
@@ -151,6 +176,7 @@ export default function RadulovicApplication() {
     }
 
     function requireLogin(allowAutomaticLogin = true, error = '') {
+        setNotificationDestination(null);
         setSettingsOpen(false);
 
         requestVersion.current++;
@@ -171,6 +197,7 @@ export default function RadulovicApplication() {
 
     /*
      * Restore saved authentication session after browser refresh.
+     * Installed iOS apps instead start at login with Remember me, as in the old PWA.
      *
      * Session.loadToken() restores the stored Bearer token.
      * Session.restoreCurrentUser() validates it through GET /me
@@ -179,6 +206,8 @@ export default function RadulovicApplication() {
      * No backend changes are required.
      */
     useEffect(() => {
+        if (installedIosPwa) return;
+
         const hasSavedToken = Session.loadToken();
 
         if (!hasSavedToken) {
@@ -379,6 +408,9 @@ export default function RadulovicApplication() {
 
                                 {screen.name === 'admin-home' && (
                                     <AdminHomeActivity
+                                        key={homeVersion}
+                                        notificationDestination={notificationDestination}
+                                        onOpenNotification={setNotificationDestination}
                                         onSettings={() => setSettingsOpen(true)}
                                         onLogout={() => logoutFromSettings(logout)}
                                         settingsContent={settingsPage}
@@ -389,6 +421,9 @@ export default function RadulovicApplication() {
 
                                 {screen.name === 'manager-home' && (
                                     <ManagerHomeActivity
+                                        key={homeVersion}
+                                        notificationDestination={notificationDestination}
+                                        onOpenNotification={setNotificationDestination}
                                         active={!settingsOpen}
                                         onSettings={() => setSettingsOpen(true)}
                                         onLogout={() => logoutFromSettings(logout)}
@@ -408,7 +443,7 @@ export default function RadulovicApplication() {
                                             <button
                                                 type="button"
                                                 className="primary-button"
-                                                onClick={logout}
+                                                onClick={() => logoutFromSettings(logout)}
                                             >
                                                 Nazad na prijavu
                                             </button>
@@ -448,6 +483,8 @@ export default function RadulovicApplication() {
             />
 
             <ToastHost />
+
+            <IosNotificationPermissionPrompt active={screen.name !== 'loading' && requests === 0} />
 
             {requests > 0 &&
                 screen.name !== 'loading' && (

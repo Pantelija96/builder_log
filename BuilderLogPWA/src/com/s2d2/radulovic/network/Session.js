@@ -308,7 +308,7 @@ export default class Session {
 
   /**
    * @typedef {Object} AdminSubcontractorsAttendanceCallback
-   * @property {(attendances: Array<SubcontractorAttendance>, attendancesPerSite: Map<string, Array<SubcontractorAttendance>>) => void} onSuccess
+   * @property {(attendances: Array<SubcontractorAttendance>, attendancesPerSite: Map<number, Array<SubcontractorAttendance>>) => void} onSuccess
    * @property {(exception: Error) => void} onFailure
    */
 
@@ -2106,7 +2106,8 @@ export default class Session {
 
             for (let i = 0; i < suppliersJSON.length(); i++) {
                 let supplier = suppliersJSON.getJSONObject(i);
-                suppliers.push(new Supplier(supplier.getInt("id"), supplier.getString("name"), supplier.getBoolean("is_active")));
+                suppliers.push(new Supplier(supplier.getInt("id"), supplier.getString("name"),
+                supplier.getString("phone"), supplier.getBoolean("is_active")));
             }
 
             callback.onSuccess(Object.freeze([...suppliers]));
@@ -2328,6 +2329,7 @@ export default class Session {
 
             for (let i = 0; i < expensesJSON.length(); i++) {
                 let expense = expensesJSON.getJSONObject(i);
+                if (expense.isNull("construction_site")) continue;
                 let constructionSiteJson = expense.getJSONObject("construction_site");
 
                 expenses.push(new AdminExpense(expense.getInt("id"), expense.getString("title"),
@@ -2803,3 +2805,6 @@ function parseAndroidJson(source) {
   }
   return next();
 }
+
+// Reuse the same Android JSON conversions in notification persistence.
+export { JSONObject, JSONArray, parseAndroidJson, jsonText };

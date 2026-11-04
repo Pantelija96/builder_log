@@ -39,8 +39,9 @@ export default function AdminTruckDetailsActivity({ machine, onBack, onUpdated }
     .sort((a, b) => dateKey(b.date).localeCompare(dateKey(a.date)));
   const incomplete = entry => entry.start == null || entry.end == null;
   const status = ({ inactive: ['Neaktivan', '#e00015'], service: ['Servis', '#c98200'], maintenance: ['Servis', '#c98200'] })[identity.getStatus()?.toLowerCase()] || ['Aktivan', '#0e8a3a'];
+  const workedDays = new Set(entries.map(entry => entry.date).filter(date => date.trim())).size;
   const summaries = [
-    ['Dana radio', entries.length ? String(entries.length) : '-', 'dana', 'blue', 'calendar'],
+    ['Dana radio', entries.length ? String(workedDays) : '-', 'dana', 'blue', 'calendar'],
     ['Km prešao', entries.length ? kilometers(entries.reduce((sum, entry) => sum + (incomplete(entry) ? 0 : entry.end - entry.start), 0)) : '-', 'km ukupno', 'green', 'meter'],
     ['Trenutno km', kilometers(entries[0]?.end), 'trenutno stanje', 'gold', 'truck'],
     ['Nepotpuni unosi', entries.length ? String(entries.filter(incomplete).length) : '-', 'unosa', 'red', 'warning'],

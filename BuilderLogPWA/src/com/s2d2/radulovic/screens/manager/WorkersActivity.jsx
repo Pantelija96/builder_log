@@ -1,5 +1,5 @@
 import { ASSET_BASE } from '../../utils/AssetPaths.js';
-import { withRsd } from '../../utils/MoneyDisplay.js';
+import { formatMoney, withRsd } from '../../utils/MoneyDisplay.js';
 import { showToast } from '../../ui/components/Toast.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import Session from '../../network/Session.js';
@@ -149,7 +149,7 @@ function WorkerSection({ title, rows, highlighted, collapsible, onEdit, onRemove
     {expanded && (!rows.length ? <div className="workers-empty">Nema radnika.</div> : rows.map(row => {
       const enabled = !!row.attendance || row.worker.isAvailableToday();
       const amount = Math.trunc(Number(row.attendance?.getAdvance()));
-      const advance = amount ? Math.abs(amount).toLocaleString('de-DE') : '-';
+      const advance = amount ? formatMoney(Math.abs(amount)) : '-';
       return <div key={row.worker.getId()} className={'worker-card' + (row.attendance ? ' present' : '') + (!enabled ? ' unavailable' : '')}>
         {row.attendance && <button className="worker-remove" aria-label={'Obriši evidenciju: ' + row.worker.getFullName()} onClick={() => onRemove(row)}>×</button>}
         <button className="worker-card-main" aria-label={'Evidencija: ' + row.worker.getFullName()} disabled={!enabled} onClick={() => onEdit(row)}>

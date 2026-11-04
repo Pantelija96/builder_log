@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Session from '../../network/Session.js';
 import useBackLayer from '../../ui/components/useBackLayer.js';
 import AdminExpenseDetailsActivity from './AdminExpenseDetailsActivity.jsx';
-import { Title, Notice, DateField, useLoad, monthStart, today } from './AdminShared.jsx';
+import { Title, Notice, DateField, useLoad, monthStart, today, money } from './AdminShared.jsx';
 import './AdminExpensesActivity.css';
 import './AdminExpensesByAdminActivity.css';
 
@@ -23,7 +23,7 @@ function wholeDinars(values) {
   let rounded = absolute / divisor;
   const remainder = absolute % divisor;
   if (remainder * 2n > divisor || (remainder * 2n === divisor && rounded % 2n !== 0n)) rounded++;
-  return new Intl.NumberFormat('sr-RS').format(total < 0n ? -rounded : rounded);
+  return money(total < 0n ? -rounded : rounded);
 }
 function sortDate(expense) {
   const parts = /^(\d{2})\.(\d{2})\.(\d{4})\.$/.exec(expense.getDate());

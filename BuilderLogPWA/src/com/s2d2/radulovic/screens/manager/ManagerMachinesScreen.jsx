@@ -1,6 +1,6 @@
 import { ASSET_BASE } from '../../utils/AssetPaths.js';
 import LoadFailureToast from '../../LoadFailureToast.jsx';
-import { withRsd } from '../../utils/MoneyDisplay.js';
+import { formatMoney, withRsd } from '../../utils/MoneyDisplay.js';
 import { showToast } from '../../ui/components/Toast.jsx';
 import React, { useEffect, useRef, useState } from 'react';
 import Session from '../../network/Session.js';
@@ -16,7 +16,10 @@ import './WorkersActivity.css';
 import './DeliveryNotesActivity.css';
 import './ManagerMachinesScreen.css';
 
-const formattedAdvance = value => Number(value) ? new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 }).format(Number(value)) : '-';
+const formattedAdvance = value => {
+  const amount = Math.trunc(Number(value));
+  return amount ? formatMoney(amount) : '-';
+};
 export default function ManagerMachinesScreen({ onBack }) {
   const [type, setType] = useState('excavator');
   const [site, setSite] = useState(() => Session.getDefaultConstructionSite());
@@ -148,7 +151,7 @@ function MachineScreen({ type, setType, site, setSite, date, setDate, onBack }) 
         <button disabled={row.otherSite} aria-expanded={expanded === row.id} onClick={() => setExpanded(expanded === row.id ? null : row.id)}><span><strong>{row.name}</strong><small>{row.otherSite ? (truck ? 'Kamion se nalazi na drugom gradilištu' : 'Mašina se nalazi na drugom gradilištu') : row.worked ? (truck ? 'Radio danas' : 'Radila danas') : (truck ? 'Nije označen kao aktivan' : 'Nije označena kao aktivna')}</small></span><img src={ASSET_BASE + 'drawable/ic_chevron_' + (expanded === row.id ? 'down' : 'right') + '.svg'} alt="" /></button>
       </div>
       {expanded === row.id && <div className="machine-card-body"><WorkerPicker truck={truck} workers={workers} occupied={occupied} selected={row.worker} locked={row.worked && !!row.worker} onSelected={worker => setRows(previous => previous.map(item => item.id === row.id ? { ...item, worker } : item))} />
-        <div className="machine-values">{[['Od', row.from], ['Do', row.to], ['Akontacija', row.advance]].map(([label, value]) => <label key={label}>{label}<button disabled={!log} onClick={() => edit(row)}>{label === 'Akontacija' ? withRsd(value) : value}</button></label>)}</div>
+        <div className="machine-values">{[['Od', row.from], ['Do', row.to], ['Akontacija', row.advance]].map(([label, value]) => <label key={label}>{label}<button disabled={!log} onClick={() => edit(row)}>{label === 'Akontacija' ? withRsd(formatMoney(value.replaceAll('.', ''))) : value}</button></label>)}</div>
         <label className="machine-note-display">Napomena<button disabled={!log} onClick={() => edit(row)} className={!row.note ? 'empty' : ''}>{row.note || 'Dodaj napomenu'}</button></label>
       </div>}
     </article>)}</div>}

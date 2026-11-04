@@ -58,7 +58,7 @@ export default function DriverTasksCard({ expanded, onExpandedChange }) {
     </button>
     
     {expanded && <>
-      {loading ? <p className="driver-tasks-notice">Učitavanje zadataka...</p> : !tasks.length && !error && <p className="driver-tasks-notice">Nema zadataka.</p>}
+      {loading ? <p className="driver-tasks-notice">Učitavanje zadataka...</p> : !tasks.length && <p className="driver-tasks-notice">Nema zadataka.</p>}
       {[...tasks].sort((a, b) => Number(a.done) - Number(b.done) || dateSortTimestamp(b.date) - dateSortTimestamp(a.date)).map(task => <div className="driver-task" key={task.id}>
         <input type="checkbox" aria-label={task.title} checked={task.done} disabled={task.updating} onChange={() => { onExpandedChange(false); update(task, task.done ? 'reopen' : 'complete'); }} />
         <button className="task-description" onClick={() => { setSelected(task); onExpandedChange(false); }}>

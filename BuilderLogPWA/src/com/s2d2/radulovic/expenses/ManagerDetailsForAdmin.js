@@ -36,7 +36,7 @@ export default class ManagerDetailsForAdmin {
       }
       const expensesSum = this.#expensesByDate.get(expense.getDate()).first;
       const advancesSum = this.#expensesByDate.get(expense.getDate()).second;
-      const amount = Math.trunc(Number(expense.getAmount().replaceAll(',', '.')));
+      const amount = expense.getAmount();
       this.#expensesByDate.set(expense.getDate(), Object.freeze({ first: expensesSum + amount, second: advancesSum }));
     }
 

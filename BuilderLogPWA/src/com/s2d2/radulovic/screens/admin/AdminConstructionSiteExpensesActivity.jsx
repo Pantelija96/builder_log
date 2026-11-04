@@ -1,6 +1,7 @@
 import { ASSET_BASE } from '../../utils/AssetPaths.js';
 import LoadFailureToast from '../../LoadFailureToast.jsx';
 import { withRsd } from '../../utils/MoneyDisplay.js';
+import { dateSortTimestamp } from '../../utils/DateSorting.js';
 import React, { useState } from 'react';
 import Session from '../../network/Session.js';
 import SelectionDropdown from '../../ui/components/SelectionDropdown.jsx';
@@ -25,7 +26,14 @@ export default function AdminConstructionSiteExpensesActivity({ onBack, initialS
   const all = site === allSites;
   const expenses = useLoad(cb => {
     if (!site || all) { cb.onSuccess([[], []]); return; }
-    Session.getExpensesForConstructionSite(site.getId(), from, to, { onSuccess(admin, manager) { cb.onSuccess([admin, manager]); }, onFailure: cb.onFailure });
+    Session.getExpensesForConstructionSite(site.getId(), from, to, {
+      onSuccess(admin, manager) {
+        const sortedAdmin = [...admin].sort((a, b) => dateSortTimestamp(b.getDate()) - dateSortTimestamp(a.getDate()));
+        const sortedManager = [...manager].sort((a, b) => dateSortTimestamp(b.getDate()) - dateSortTimestamp(a.getDate()));
+        cb.onSuccess([sortedAdmin, sortedManager]);
+      },
+      onFailure: cb.onFailure,
+    });
   }, [site, from, to], [[], []]);
   const salaries = useLoad(cb => !site || all ? cb.onSuccess([]) : Session.getWorkerSalariesFromServer(from, to, site.getId(), cb), [site, from, to], []);
   const summaries = useLoad(cb => !all ? cb.onSuccess(new Map()) : Session.getExpensesForAllSitesSite(from, to, cb), [all, from, to], new Map());

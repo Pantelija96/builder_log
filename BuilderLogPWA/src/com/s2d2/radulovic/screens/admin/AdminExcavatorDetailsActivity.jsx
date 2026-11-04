@@ -32,8 +32,9 @@ export default function AdminExcavatorDetailsActivity({ machine, onBack, onUpdat
     .sort((a, b) => dateKey(b.date).localeCompare(dateKey(a.date)));
   const incomplete = entry => entry.start == null || entry.end == null;
   const status = ({ inactive: ['Neaktivan', '#e00015'], service: ['Servis', '#c98200'], maintenance: ['Servis', '#c98200'] })[identity.getStatus()?.toLowerCase()] || ['Aktivan', '#0e8a3a'];
+  const workedDays = new Set(entries.map(entry => entry.date).filter(date => date.trim())).size;
   const summaries = [
-    ['Dana radio', entries.length ? String(entries.length) : '-', 'dana', 'blue', 'calendar'],
+    ['Dana radio', entries.length ? String(workedDays) : '-', 'dana', 'blue', 'calendar'],
     ['Sati radio', entries.length ? hours(entries.reduce((sum, entry) => sum + (incomplete(entry) ? 0 : entry.end - entry.start), 0)) + 'h' : '-', 'ukupno', 'green', 'clock'],
     ['Radni sati', entries[0]?.end == null ? '-' : hours(entries[0].end) + 'h', 'radnih sati', 'gold', 'excavator'],
     ['Nepotpuni unosi', entries.length ? String(entries.filter(incomplete).length) : '-', 'unosa', 'red', 'warning'],

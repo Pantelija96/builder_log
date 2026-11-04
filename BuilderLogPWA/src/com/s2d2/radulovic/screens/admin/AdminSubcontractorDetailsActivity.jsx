@@ -42,11 +42,11 @@ export default function AdminSubcontractorDetailsActivity({ subcontractor, onBac
     onSuccess(records, perSite) {
       const sorted = items => [...items].sort((a, b) => (b.getDate() || '').localeCompare(a.getDate() || ''));
       const entries = sorted(records).map(entryOf), byId = new Map(entries.map(entry => [entry.id, entry]));
-      const groups = [...perSite].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([name, items]) => {
+      const groups = [...perSite].map(([id, items]) => {
         const rows = sorted(items).map(item => byId.get(item.getSubcontractorAttendanceId())).filter(Boolean);
-        return { name, entries: rows, days: new Set(rows.map(entry => entry.date)).size, minutes: rows.reduce((sum, entry) => sum + (entry.minutes || 0), 0),
+        return { id, name: items[0].getConstructionSite(), entries: rows, days: new Set(rows.map(entry => entry.date)).size, minutes: rows.reduce((sum, entry) => sum + (entry.minutes || 0), 0),
           workerMinutes: rows.reduce((sum, entry) => sum + (entry.workerMinutes || 0), 0), notes: rows.filter(entry => entry.note.trim()).length };
-      });
+      }).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : a.id - b.id);
       cb.onSuccess({ entries, groups });
     }, onFailure: cb.onFailure,
   }), [subcontractor.getSubcontractorId(), from, to], { entries: [], groups: [] });
@@ -62,7 +62,7 @@ export default function AdminSubcontractorDetailsActivity({ subcontractor, onBac
       </div>
     </div>
     <DateRange from={from} to={to} onChange={dates}/>
-    {!state.loading && !state.error && groups.length > 0 && <div className="subdetail-summary"><header><span>Gradilište</span><span>Broj dana</span></header>{groups.map(group => <div key={group.name}><strong>{group.name}</strong><b>{group.days}</b></div>)}</div>}
+    {!state.loading && !state.error && groups.length > 0 && <div className="subdetail-summary"><header><span>Gradilište</span><span>Broj dana</span></header>{groups.map(group => <div key={group.id}><strong>{group.name}</strong><b>{group.days}</b></div>)}</div>}
     <div className="subdetail-tabs" role="tablist">{['AKTIVNOSTI', 'PO GRADILIŠTIMA'].map((label, index) => <button type="button" role="tab" key={label} aria-selected={tab === index} onClick={() => { if (tab !== index) { setTab(index); setExpanded(null); setSite(null); } }}>{label}</button>)}</div>
     {state.loading ? <Notice>Učitavanje...</Notice> : state.error ? <LoadFailureToast message="Učitavanje aktivnosti nije uspelo."/> : !entries.length || (tab === 1 && !groups.length) ? <Notice>{tab === 0 ? 'Nema aktivnosti za izabrani period.' : 'Nema gradilišta za izabrani period.'}</Notice> :
       tab === 0 ? <div className="subdetail-list"><h2>Evidencija aktivnosti</h2>{entries.map(entry => <Card key={entry.id} expanded={expanded === entry.id}>
@@ -73,12 +73,12 @@ export default function AdminSubcontractorDetailsActivity({ subcontractor, onBac
           <div className="subdetail-metrics"><Metric label="Broj radnika" value={String(entry.workers)} icon="ic_workers_black_no_bg_original_proportions"/><Metric label="Radnik-sat" value={hours(entry.workerMinutes)} icon="ic_worker_hour"/></div>
           <div className="subdetail-entry-note"><small>Napomena</small><strong>{text(entry.note)}</strong></div>
         </Gesture>}
-      </Card>)}</div> : <div className="subdetail-list">{groups.map(group => <Card key={group.name} expanded={site === group.name}>
-        <button className="subdetail-site-heading" type="button" aria-expanded={site === group.name} onClick={() => setSite(site === group.name ? null : group.name)}>
-          <span><strong>{group.name}</strong><img className="app-chevron" style={{ transform: site === group.name ? 'rotate(-90deg)' : undefined }} src={ASSET_BASE + "drawable/ic_chevron_right.svg"} alt={site === group.name ? 'Sakrij gradilište' : 'Prikaži gradilište'}/></span>
+      </Card>)}</div> : <div className="subdetail-list">{groups.map(group => <Card key={group.id} expanded={site === group.id}>
+        <button className="subdetail-site-heading" type="button" aria-expanded={site === group.id} onClick={() => setSite(site === group.id ? null : group.id)}>
+          <span><strong>{group.name}</strong><img className="app-chevron" style={{ transform: site === group.id ? 'rotate(-90deg)' : undefined }} src={ASSET_BASE + "drawable/ic_chevron_right.svg"} alt={site === group.id ? 'Sakrij gradilište' : 'Prikaži gradilište'}/></span>
           <div className="subdetail-site-metrics">{[['Dana', group.days], ['Sati', hours(group.minutes)], ['Napomene', group.notes], ['Radnik-sati', hours(group.workerMinutes)]].map(([label, value]) => <div key={label}><small>{label}</small><b>{value}</b></div>)}</div>
         </button>
-        {site === group.name && <div className="subdetail-site-entries">{group.entries.map(entry => <Gesture key={entry.id} className="subdetail-site-entry" entry={entry} onPreview={setPreview}>
+        {site === group.id && <div className="subdetail-site-entries">{group.entries.map(entry => <Gesture key={entry.id} className="subdetail-site-entry" entry={entry} onPreview={setPreview}>
           <div className="subdetail-site-entry-values">{[['Datum', entry.date], ['Od', entry.from], ['Do', entry.to], ['Broj radnika', entry.workers], ['Napomena', text(entry.note)]].map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}</div>
           <div className="subdetail-manager">Dodao: {entry.manager}</div>
         </Gesture>)}</div>}

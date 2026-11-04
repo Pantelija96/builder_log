@@ -14,7 +14,9 @@ import WorkersActivity from './WorkersActivity.jsx';
 import Session from '../../network/Session.js';
 import SelectionDropdown from '../../ui/components/SelectionDropdown.jsx';
 import { SettingsIcon } from '../../ui/components/SettingsAccessBar.jsx';
-import Modal from '../../ui/components/Modal.jsx';
+import NotificationBellIcon from '../../NotificationBellIcon.jsx';
+import NotificationDestination from '../../notifications/NotificationDestination.jsx';
+import NotificationsActivity from '../general/NotificationsActivity.jsx';
 import './ManagerHomeActivity.css';
 
 const menu = [
@@ -28,7 +30,7 @@ const menu = [
   ['ic_workers_black_no_bg_original_proportions', 'PODIZVOĐAČI'],
 ];
 
-export default function ManagerHomeActivity({ onSettings, active = true, onLogout, settingsContent, onCloseSettings, settingsBusy }) {
+export default function ManagerHomeActivity({ onSettings, active = true, onLogout, settingsContent, onCloseSettings, settingsBusy, notificationDestination, onOpenNotification }) {
   const [site, setSite] = useState(() => Session.getDefaultConstructionSite());
   const [sites, setSites] = useState([]);
   const [count, setCount] = useState(0);
@@ -37,7 +39,8 @@ export default function ManagerHomeActivity({ onSettings, active = true, onLogou
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
   const [section, setSection] = useState(null);
-  const childScreenOpen = section === 'RADNICI' || section === 'OTPREMNICE' || section === 'DOKUMENTI' || section === 'TROŠKOVI' || section === 'GRAĐEVINSKI DNEVNIK' || section === 'ZADACI ADMINA' || section === 'RADNE MAŠINE' || section === 'PODIZVOĐAČI';
+  useEffect(() => { if (notificationDestination) setSection('notification'); }, [notificationDestination]);
+  const childScreenOpen = section === 'notification' || section === 'RADNICI' || section === 'OTPREMNICE' || section === 'DOKUMENTI' || section === 'TROŠKOVI' || section === 'GRAĐEVINSKI DNEVNIK' || section === 'ZADACI ADMINA' || section === 'RADNE MAŠINE' || section === 'PODIZVOĐAČI' || section === 'Obaveštenja';
   useBackLayer(childScreenOpen, () => setSection(null));
   const lock = useRef(false);
   const mounted = useRef(false);
@@ -98,6 +101,8 @@ export default function ManagerHomeActivity({ onSettings, active = true, onLogou
   }
 
   function renderContent() {
+  if (section === 'notification') return <NotificationDestination key={notificationDestination.key} destination={notificationDestination} onBack={() => setSection(null)} />;
+  if (section === 'Obaveštenja') return <NotificationsActivity onBack={() => setSection(null)} onOpenAfterLeaving={onOpenNotification} />;
   if (section === 'PODIZVOĐAČI') return <SubcontractorsActivity onBack={() => setSection(null)} />;
   if (section === 'RADNE MAŠINE') return <ManagerMachinesScreen onBack={() => setSection(null)} />;
   if (section === 'ZADACI ADMINA') return <TasksActivity onBack={() => setSection(null)} />;
@@ -111,8 +116,8 @@ export default function ManagerHomeActivity({ onSettings, active = true, onLogou
     <header className="manager-header">
       <img className="manager-logo" src={ASSET_BASE + "drawable/radulovic_logo.svg"} alt="Radulovic logo" />
       <h1>Radulović gradnja</h1>
-      <button className="manager-notifications" aria-label="Obaveštenja" onClick={() => setSection('Obaveštenja')}>
-        <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2Zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1Zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5Z" /></svg>
+      <button type="button" className="manager-notifications" onClick={() => setSection('Obaveštenja')}>
+        <NotificationBellIcon />
       </button>
       <button className="settings-icon-button" aria-label="Podešavanja" onClick={onSettings}><SettingsIcon /></button>
     </header>
@@ -137,10 +142,6 @@ export default function ManagerHomeActivity({ onSettings, active = true, onLogou
         </button>)}
       </nav>
     </div>
-    {section && <Modal title={section} onClose={() => setSection(null)}
-      actions={<button className="text-button confirm-button" onClick={() => setSection(null)}>OK</button>}>
-      <p>{section === 'Obaveštenja' ? 'Obaveštenja još nisu dostupna u ovoj verziji aplikacije.' : 'Ovaj ekran još nije dostupan u ovoj verziji aplikacije.'}</p>
-    </Modal>}
   </section>;
   }
   return <DesktopShell menu={menu} selected={menu.findIndex(([, title]) => title === section) < 0 ? null : menu.findIndex(([, title]) => title === section)}

@@ -8,14 +8,32 @@ import LoginCredentials from '../../LoginCredentials.js';
 import getSharedPreferences from '../../utils/SharedPreferences.js';
 import Modal from '../../ui/components/Modal.jsx';
 import { SettingsIcon } from '../../ui/components/SettingsAccessBar.jsx';
+import isInstalledIosPwa from '../../utils/InstalledIosPwa.js';
+import IosNotificationSettings from '../../notifications/IosNotificationSettings.jsx';
 import './SettingsActivity.css';
 
 const settingsValue = value => value == null || value.trim().toLowerCase() === 'null' ? '' : value;
 // Shared by the existing Settings action and the desktop header.
+let logoutPending;
 export function logoutFromSettings(onLogout, preferences = getSharedPreferences('com.s2d2.radulovic.LOGIN_PREFERENCES')) {
-  LoginCredentials.clear(preferences);
-  preferences.edit().remove('user_role').apply();
-  onLogout();
+  const finish = () => {
+    LoginCredentials.clear(preferences);
+    preferences.edit().remove('user_role').apply();
+    onLogout();
+    return true;
+  };
+  if (!isInstalledIosPwa()) return finish();
+  if (logoutPending) return logoutPending;
+  logoutPending = import('../../notifications/IosPushNotifications.js')
+    .then(module => module.logoutIosPushNotifications())
+    .then(finish)
+    .catch(error => {
+      console.error('Could not unregister device during logout', error);
+      showToast('Odjava nije uspela. Pokušajte ponovo.');
+      return false;
+    })
+    .finally(() => { logoutPending = undefined; });
+  return logoutPending;
 }
 const fields = [
   ['first_name', 'Ime *', 'Ime', 'given-name'],
@@ -46,8 +64,14 @@ export default function SettingsActivity({ onBack, onLogout, embedded = false, o
     restorePassword();
     return () => { active = false; };
   }, []);
-  function logout() {
-    logoutFromSettings(onLogout, preferences);
+  async function logout() {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    if (!await logoutFromSettings(onLogout, preferences)) {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
   const [visible, setVisible] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
@@ -102,6 +126,7 @@ export default function SettingsActivity({ onBack, onLogout, embedded = false, o
     </header>
     <form ref={form} onSubmit={save} noValidate className="settings-form">
       <div className="settings-fields">
+        {isInstalledIosPwa() && <IosNotificationSettings disabled={saving} />}
         {fields.map(([key, label, placeholder, autocomplete]) => {
           const message = (touched[key] || submitted) ? validation(key) : '';
           return <div className="settings-field" key={key}>
@@ -128,9 +153,9 @@ export default function SettingsActivity({ onBack, onLogout, embedded = false, o
         <button type="submit" className="settings-save" disabled={saving || !credentialsReady}><img src={ASSET_BASE + "drawable/ic_save.svg"} alt="" />Sačuvaj</button>
       </footer>
     </form>
-    {showLogout && <Modal className="settings-logout-dialog" title={<><LogoutIcon />Odjava</>} onClose={() => setShowLogout(false)}
-      actions={<><button type="button" className="text-button" onClick={() => setShowLogout(false)}>Otkaži</button>
-        <button type="button" className="text-button logout-button" onClick={logout}><LogoutIcon />Odjavi se</button></>}>
+    {showLogout && <Modal className="settings-logout-dialog" title={<><LogoutIcon />Odjava</>} busy={saving} onClose={() => setShowLogout(false)}
+      actions={<><button type="button" className="text-button" disabled={saving} onClick={() => setShowLogout(false)}>Otkaži</button>
+        <button type="button" className="text-button logout-button" disabled={saving} onClick={logout}><LogoutIcon />Odjavi se</button></>}>
       <p>Da li želite da se odjavite?</p>
     </Modal>}
   </Screen>;

@@ -1,0 +1,17 @@
+.admin-add-supplier {height:100dvh;min-height:0;overflow:hidden;gap:16px;}
+.admin-add-supplier>.admin-title>span img {width:42px;height:42px;filter:brightness(0);}
+.add-supplier-scroll {flex:1;min-height:0;overflow-y:auto;padding-bottom:4px;}
+.add-supplier-fields {padding:14px;border-radius:8px;outline:1px solid #d0d0d0;outline-offset:-1px;box-shadow:0 2px 4px #0003;background:white;display:flex;flex-direction:column;gap:12px;}
+.add-supplier-field {display:flex;flex-direction:column;gap:5px;min-width:0;}
+.add-supplier-field>span {font:900 13px/24px Roboto;color:#07131b;}
+.add-supplier-field input {width:100%;min-width:0;height:46px;padding:0 12px;border:1px solid #e8e8e8;border-radius:8px;background:white;color:black;font:400 16px/24px Roboto;}
+.add-supplier-field input::placeholder {font-size:14px;color:#777;opacity:1;}
+.add-supplier-field input[aria-invalid=true] {border-color:#b3261e;}
+.add-supplier-status {display:flex;height:46px;overflow:hidden;border-radius:8px;outline:1px solid #d0d0d0;outline-offset:-1px;}
+.add-supplier-status button {flex:1;min-width:0;padding:0;border:0;background:white;color:#777;font:700 14px/24px Roboto;}
+.add-supplier-status button[aria-pressed=true] {background:#ffc400;color:black;font-weight:900;}
+.add-supplier-save {width:100%;height:48px;flex-shrink:0;display:flex;align-items:center;justify-content:center;gap:8px;padding:0;border:0;border-radius:8px;background:#ffc400;color:black;font:900 14px/24px Roboto;}
+.add-supplier-save img {width:20px;height:20px;filter:brightness(0);}
+.add-supplier-error {display:block;color:#b3261e;font:400 12px/24px Roboto;}
+.add-supplier-readonly {height:46px;padding:0 12px;display:flex;align-items:center;background:#f7f7f7;border-radius:8px;outline:1px solid #e8e8e8;outline-offset:-1px;color:black;font:700 14px/24px Roboto;}
+.add-supplier-footer {flex-shrink:0;}

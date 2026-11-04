@@ -23,6 +23,9 @@ await expect('/api/v1/me', 401);
 await expect('/', 200);
 const manifest = await (await expect('/app/manifest.webmanifest', 200)).json();
 assert.equal(new URL(manifest.start_url, origin + '/app/manifest.webmanifest').pathname, '/app/');
+const worker = await expect('/app/firebase-messaging-sw.js', 200);
+assert.ok(/javascript/.test(worker.headers.get('content-type')), 'Worker must be served as JavaScript.');
+assert.ok((await worker.text()).includes('builderlog-2ce47'));
 const resources = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(match => match[1]);
 for (const icon of manifest.icons) resources.push(new URL(icon.src, origin + '/app/manifest.webmanifest').pathname);
 for (const path of new Set(resources)) {

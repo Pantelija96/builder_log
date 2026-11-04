@@ -16,7 +16,14 @@ import AdminEmployeeForm from './AdminEmployeeForm.jsx';
 import AdminWorkerPaymentsActivity from './AdminWorkerPaymentsActivity.jsx';
 import AdminManagerDetailsActivity from './AdminManagerDetailsActivity.jsx';
 export default function AdminWorkerDetailsActivity(props) {
+  if (!props.worker) return <WorkerById {...props}/>;
   return props.worker.getRole()===Role.SITE_MANAGER?<AdminManagerDetailsActivity {...props}/>:<WorkerDetails {...props}/>;
+}
+function WorkerById({workerId,...props}) {
+  const info=useLoad(cb=>Session.getWorkerDetailsAdmin(workerId,cb),[workerId]);
+  useForegroundRefresh(info.reload,!info.data);
+  if(info.data)return <AdminWorkerDetailsActivity {...props} worker={info.data}/>;
+  return <section className="admin-screen admin-worker-details"><Title title="AKTIVNOST RADNIKA" subtitle="Pregled aktivnosti zaposlenog po izabranom periodu." icon="ic_construction_worker_black"/>{info.error&&<LoadFailureToast message="Učitavanje podataka radnika nije uspelo."/>}</section>;
 }
 export function Identity({worker,onEdit,onTasks}) {
   const phone=worker.getPhoneNumber()?.trim();
@@ -59,7 +66,7 @@ function ActivityEntry({entry:a,driver,truck,expanded,onToggle}) {
         {(truck||incomplete)&&<MaterialIcon name={incomplete?'warning':'check'} size={truck?28:20}/>}</span>
       {!truck&&<strong>{a.getConstructionSiteName()||'-'}</strong>}
     </button>
-    {expanded&&<>{driver?<div className="admin-time-blocks"><TimeBlock title="Šef" start={start} end={end} total={hours(estimatedMinutes(start,end,true))}/><TimeBlock title={truck?'Vozač':'Bagerista'} start={driverStart} end={driverEnd} total={hours(estimatedMinutes(driverStart,driverEnd,true))}/></div>:<div className="admin-values"><Value label="Od" value={start}/><Value label="Do" value={end}/><Value label="Ukupno" value={hours(estimatedMinutes(start,end))}/><Value label="Akontacija" value={withRsd(a.getAdvance())}/></div>}
+    {expanded&&<>{driver?<div className="admin-time-blocks"><TimeBlock title="Šef" start={start} end={end} total={hours(estimatedMinutes(start,end,true))}/><TimeBlock title={truck?'Vozač':'Bagerista'} start={driverStart} end={driverEnd} total={hours(estimatedMinutes(driverStart,driverEnd,true))}/></div>:<div className="admin-values"><Value label="Od" value={start}/><Value label="Do" value={end}/><Value label="Ukupno" value={hours(estimatedMinutes(start,end))}/><Value label="Akontacija" value={withRsd(money(a.getAdvance()))}/></div>}
     {truck&&<div className="admin-values admin-kilometers"><Value label="Km početak" value={a.getStartKm()}/><Value label="Km kraj" value={a.getEndKm()}/></div>}</>}
   </article>;
 }
@@ -68,7 +75,7 @@ function TimeBlock({title,start,end,total}) {
 }
 
 function WorkerAdvances({worker,rows,from,to,onBack}) {
-  const amount=value=>{const text=String(value??'');const number=Number(text.replace(',','.'));return text.trim()&&Number.isFinite(number)?number.toLocaleString('sr-RS',{maximumFractionDigits:2}):text||'-';};
+  const amount=value=>{const text=String(value??'');const number=Number(text.replace(',','.'));return text.trim()&&Number.isFinite(number)?money(number):text||'-';};
   const [selected,setSelected]=useState(null);const advances=rows.filter(a=>Number(a.getAdvance())).sort((a,b)=>dateKey(b.getDate()).localeCompare(dateKey(a.getDate())));
   return <section className="admin-screen admin-worker-advances"><Title title="AKONTACIJE" subtitle="Pregled akontacija zaposlenog." icon="ic_wallet_black" onBack={onBack}/><WorkerOwner worker={worker}/><AdvanceDateRange from={from} to={to}/><h2>Akontacije</h2>{advances.length?<div className="admin-advance-list">{advances.map((a,i)=><button className="admin-finance-row" key={i} onClick={()=>setSelected(a)}><Value label="Datum" value={a.getDate()||'-'}/><Value label="Gradilište" value={a.getConstructionSiteName()||'-'}/><Value label="Iznos" value={withRsd(amount(a.getAdvance()))}/></button>)}</div>:<Notice>Nema akontacija za izabrani period.</Notice>}{selected&&<Modal className="admin-advance-details" title={<><span className="admin-advance-dialog-icon"><Icon name="ic_wallet_black"/></span><span>Detalji akontacije</span></>} onClose={()=>setSelected(null)} actions={<button className="text-button" onClick={()=>setSelected(null)}>Zatvori</button>}><Value label="Gradilište" value={selected.getConstructionSiteName()||'-'}/><Value label="Datum" value={selected.getDate()||'-'}/><Value label="Iznos" value={withRsd(amount(selected.getAdvance()))}/></Modal>}</section>;
 }

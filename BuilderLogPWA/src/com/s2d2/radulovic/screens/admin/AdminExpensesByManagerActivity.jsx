@@ -17,7 +17,7 @@ function inPeriod(row, from, to) {
   const date = new Date(key + 'T00:00:00');
   return date.getFullYear() === Number(parts[3]) && date.getMonth() + 1 === Number(parts[2]) && date.getDate() === Number(parts[1]) && key >= from && key <= to;
 }
-const expenseAmount = expense => Number(expense.getAmount().replace(',', '.')) || 0;
+const expenseAmount = expense => expense.getAmount();
 export default function AdminExpensesByManagerActivity() {
   const [manager, setManager] = useState(null);
   const [from, setFrom] = useState(monthStart);

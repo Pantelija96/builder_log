@@ -12,7 +12,7 @@ import Session from '../../network/Session.js';
 import SelectionDropdown from '../../ui/components/SelectionDropdown.jsx';
 import Modal from '../../ui/components/Modal.jsx';
 import { showToast } from '../../ui/components/Toast.jsx';
-import { Title, Icon, MaterialIcon, DateRange, Notice, useLoad, mutate, monthStart, today } from './AdminShared.jsx';
+import { Title, Icon, MaterialIcon, DateRange, Notice, useLoad, mutate, monthStart, today, money } from './AdminShared.jsx';
 import './AdminConstructionSiteDetailsActivity.css';
 
 const actions = [
@@ -87,7 +87,7 @@ export default function AdminConstructionSiteDetailsActivity() {
     <Title title="GRADILIŠTA" subtitle="Pregled ključnih podataka i sekcija za izabrano gradilište." icon="ic_construction_site_crane"/>
     <div className="construction-site-picker"><SelectionDropdown label="Gradilište" placeholder="Izaberite gradilište" icon="ic_construction_site_crane" options={sites.data} selected={site} onSelected={setSite} maxMenuHeight={180} emptyText=" "/></div>
     <DateRange from={from} to={to} onChange={(start, end) => { setFrom(start); setTo(end); }}/>
-    {site && <button type="button" className="construction-site-costs" onClick={() => sectionAction(4)}><i/><span><small>Ukupni troškovi</small><strong>{costs.loading || costs.data == null ? '-' : new Intl.NumberFormat('sr-RS', { maximumFractionDigits: 0 }).format(costs.data) + ' RSD'}</strong></span><Icon name="ic_chevron_right"/></button>}
+    {site && <button type="button" className="construction-site-costs" onClick={() => sectionAction(4)}><i/><span><small>Ukupni troškovi</small><strong>{costs.loading || costs.data == null ? '-' : money(costs.data) + ' RSD'}</strong></span><Icon name="ic_chevron_right"/></button>}
     <div className="construction-site-management">
       <ManagementButton icon="add" className="site-add" onClick={() => setAdding(true)}>Dodaj novo gradilište</ManagementButton>
       {!site ? <Notice>Nije odabrano gradilište.</Notice> : <>

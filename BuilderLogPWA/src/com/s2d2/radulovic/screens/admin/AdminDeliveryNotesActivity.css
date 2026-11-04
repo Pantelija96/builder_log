@@ -1,6 +1,8 @@
 .admin-delivery-notes>.admin-title>button {display:none;}
 .admin-delivery-notes>.admin-title>span img {width:34px;height:34px;}
 .admin-delivery-notes>.admin-title p {color:black;}
+.admin-delivery-suppliers {display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:48px;min-height:48px;flex-shrink:0;padding:0;border:0;border-radius:8px;background:#ffc400;color:black;font:900 14px/24px Roboto;}
+.admin-delivery-suppliers>img {width:40px;height:40px;flex-shrink:0;filter:brightness(0);}
 .admin-delivery-sites,.admin-delivery-dates {background:white;border-radius:8px;box-shadow:0 2px 4px #0003;}
 .admin-delivery-sites {padding:8px;}
 .admin-delivery-sites .selection-dropdown>label {font:700 12px/24px Roboto;margin-bottom:4px;}

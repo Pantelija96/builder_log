@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite';
 import { fileURLToPath } from 'node:url';
 import { lstatSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
+import notificationWorkerPlugin from './scripts/notification-worker.js';
 
 const backend = fileURLToPath(new URL('../', import.meta.url));
 const publicDirectory = resolve(backend, 'public');
@@ -21,6 +22,7 @@ export default defineConfig(({ command, mode }) => {
       emptyOutDir: true,
     },
     plugins: [
+      notificationWorkerPlugin(),
       {
         name: 'protect-laravel-public-directory',
         configResolved(config) {

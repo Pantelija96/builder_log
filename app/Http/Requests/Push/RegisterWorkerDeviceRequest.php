@@ -17,7 +17,7 @@ class RegisterWorkerDeviceRequest extends FormRequest
             'platform' => [
                 'required',
                 'string',
-                'in:android,ios',
+                'in:android,ios,web',
             ],
 
             'device_uuid' => [

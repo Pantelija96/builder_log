@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import AdminDeliveryNoteDetails from './AdminDeliveryNoteDetails.jsx';
+import AdminSuppliersActivity from './AdminSuppliersActivity.jsx';
 import useBackLayer from '../../ui/components/useBackLayer.js';
 import Session from '../../network/Session.js';
 import TimeUtils from '../../utils/TimeUtils.js';
@@ -16,7 +17,9 @@ export default function AdminDeliveryNotesActivity({ onBack, initialSite, initia
   const [to, setTo] = useState(() => initialTo ?? today());
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
+  const [suppliersOpen, setSuppliersOpen] = useState(false);
   useBackLayer(!!selected, () => setSelected(null));
+  useBackLayer(suppliersOpen, () => setSuppliersOpen(false));
   const sites = useLoad(cb => Session.getAllSitesFromServer(cb), [], []);
   const notes = useLoad(cb => {
     if (!site) { cb.onSuccess([]); return; }
@@ -30,9 +33,11 @@ export default function AdminDeliveryNotesActivity({ onBack, initialSite, initia
     const value = TimeUtils.formatDate(date);
     setFrom(value); setTo(value);
   }
+  if (suppliersOpen) return <AdminSuppliersActivity/>;
   if (selected) return <AdminDeliveryNoteDetails note={selected} onBack={() => setSelected(null)}/>;
   return <section className="admin-screen admin-delivery-notes">
     <Title title="OTPREMNICE" subtitle="Pregled otpremnica materijala." icon="ic_document_lines_black" onBack={onBack}/>
+    <button type="button" className="admin-delivery-suppliers" onClick={() => setSuppliersOpen(true)}><Icon name="ic_supplier"/>Dobavljači</button>
     <div className="admin-delivery-sites">
       <SelectionDropdown label="Gradilište" placeholder="Izaberite gradilište" icon="ic_construction_site_crane" options={[allSites, ...sites.data]} selected={site} disabled={lockSite} onSelected={setSite}/>
     </div>

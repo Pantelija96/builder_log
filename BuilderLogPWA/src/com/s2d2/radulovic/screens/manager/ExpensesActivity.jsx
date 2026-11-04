@@ -1,5 +1,5 @@
 import { ASSET_BASE } from '../../utils/AssetPaths.js';
-import { withRsd } from '../../utils/MoneyDisplay.js';
+import { formatMoney as money, withRsd } from '../../utils/MoneyDisplay.js';
 import { showToast } from '../../ui/components/Toast.jsx';
 import useBackLayer from '../../ui/components/useBackLayer.js';
 import React, { useEffect, useRef, useState } from 'react';
@@ -15,7 +15,6 @@ import './DeliveryNotesActivity.css';
 import './ExpensesActivity.css';
 
 const amountInt = value => Math.trunc(Number(String(value).replace(',', '.'))) || 0;
-const money = value => new Intl.NumberFormat('sr-RS').format(value);
 const icon = name => ASSET_BASE + 'drawable/' + name + '.svg';
 export default function ExpensesActivity({ onBack }) {
   const [site, setSite] = useState(() => Session.getDefaultConstructionSite());
@@ -92,9 +91,9 @@ export default function ExpensesActivity({ onBack }) {
       const endpoint = 'daily-logs/' + dailyLog.getDailyLogId() + '/expenses';
       const headers = { Authorization: Session.getSessionToken() };
       if (editor.id) {
-        WebUtils.sendPATCHRequest(endpoint + '/' + editor.id, JSON.stringify({ title: name, description: descriptionValue, amount, reason: 'korisnik ažurirao' }), headers, {
+        WebUtils.sendPATCHRequest(endpoint + '/' + editor.id, JSON.stringify({ title: name, description: descriptionValue, amount: amountInt(amount), reason: 'korisnik ažurirao' }), headers, {
           onSuccess() {
-            setExpenses(previous => previous.map(item => item.id === editor.id ? { ...item, name, description: descriptionValue, amount } : item));
+            setExpenses(previous => previous.map(item => item.id === editor.id ? { ...item, name, description: descriptionValue, amount: amountInt(amount) } : item));
             changeTotal(amountInt(amount) - amountInt(editor.amount)); done();
           }, onFailure: fail,
         });
@@ -106,7 +105,7 @@ export default function ExpensesActivity({ onBack }) {
           onSuccess(response) {
             try {
               const data = JSON.parse(response).data;
-              const created = { id: data.id, name: data.title ?? name, description: data.description ?? descriptionValue, amount: String(data.amount ?? amount),
+              const created = { id: data.id, name: data.title ?? name, description: data.description ?? descriptionValue, amount: amountInt(data.amount ?? amount),
                 date: dateLabel((data.date ?? dailyLog.getDailyLogDate()).slice(0, 10)), image: data.attachments?.[0]?.download_url || editor.image, dailyLog };
               setExpenses(previous => [created, ...previous]); changeTotal(amountInt(created.amount)); done();
             } catch { fail(); }
@@ -142,7 +141,7 @@ export default function ExpensesActivity({ onBack }) {
             <article className="expense-row" key={item.id}>
               <button className="expense-thumb" aria-label={'Račun: ' + item.name} disabled={!item.image} onClick={() => setPreview(item.image)}><Receipt image={item.image} /></button>
               <button className="delivery-details" aria-label={'Izmeni: ' + item.name} onClick={() => { setError(''); setEditor(item); }}><strong>{item.name}</strong><span>{item.description}</span><small>{item.date}</small></button>
-              <div className="expense-row-end"><strong>{withRsd(item.amount)}</strong><button className="delivery-delete" aria-label={'Obriši: ' + item.name} onClick={() => { setError(''); setRemoving(item); }}><img src={icon('ic_costs_trash')} alt="" /></button></div>
+              <div className="expense-row-end"><strong>{withRsd(money(item.amount))}</strong><button className="delivery-delete" aria-label={'Obriši: ' + item.name} onClick={() => { setError(''); setRemoving(item); }}><img src={icon('ic_costs_trash')} alt="" /></button></div>
             </article>)}</div>}
         </div>
       </section>}
@@ -165,7 +164,7 @@ function Receipt({ image }) {
   return image ? <AuthenticatedImage url={image} /> : <img className="expense-placeholder" src={icon('ic_costs_gallery')} alt="" />;
 }
 function ExpenseForm({ expense, onSave, onClose, onPreview, busy, error }) {
-  const [name, setName] = useState(expense.name), [description, setDescription] = useState(expense.description), [amount, setAmount] = useState(expense.amount);
+  const [name, setName] = useState(expense.name), [description, setDescription] = useState(expense.description), [amount, setAmount] = useState(String(expense.amount));
   const [submitted, setSubmitted] = useState(false);
   const [touched, setTouched] = useState({});
   const touch = key => setTouched(previous => ({ ...previous, [key]: true }));

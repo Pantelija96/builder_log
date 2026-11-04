@@ -34,3 +34,5 @@ Thumbs.db
 /storage/firebase/*
 !/storage/firebase/.gitkeep
 .cache/
+/activate-php.sh
+/build.sh

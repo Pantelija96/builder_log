@@ -3,7 +3,7 @@ import { useAdminTaskEditor } from './AdminEditTaskActivity.jsx';
 import useForegroundRefresh from '../../ui/components/useForegroundRefresh.js';
 import { showToast } from '../../ui/components/Toast.jsx';
 import Toast from '../../ui/components/Toast.jsx';
-import React, { useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { TaskDetails } from '../manager/TasksActivity.jsx';
 import Session from '../../network/Session.js';
 import AdminTaskControls, { workerRoles, workerLabels } from './AdminTaskControls.jsx';
@@ -14,8 +14,11 @@ import { Title, Icon, Notice, useLoad, mutate } from './AdminShared.jsx';
 import './AdminTasksActivity.css';
 
 
-export default function AdminTasksActivity() {
-  const [tab, setTab] = useState(0);
+export default function AdminTasksActivity({ initialTaskType, initialWorkerId = 0, initialSiteId = 0 } = {}) {
+  const initialTab = Math.max(0, ['GENERAL', 'MANAGER', 'CONSTRUCTION_SITE', 'EXCAVATOR_DRIVER', 'TRUCK_DRIVER'].indexOf(initialTaskType));
+  const [tab, setTab] = useState(initialTab);
+  const pendingWorker = useRef(initialWorkerId);
+  const pendingSite = useRef(initialSiteId);
   const [site, setSite] = useState(null);
   const [selectedWorkers, setSelectedWorkers] = useState({});
   const [removing, setRemoving] = useState(null);
@@ -29,6 +32,18 @@ export default function AdminTasksActivity() {
   useBackLayer(creating, () => setCreating(false), creatingBusy);
   const sites = useLoad(cb => Session.getAllSitesFromServer(cb), [], []);
   const workers = useLoad(cb => Session.getAllWorkersFromServerAdmin(cb), [], []);
+  useEffect(() => {
+    if (workers.loading || !pendingWorker.current) return;
+    const worker = workers.data.find(item => item.getId() === pendingWorker.current
+      && item.getRole() === workerRoles[initialTab]);
+    if (worker) setSelectedWorkers(values => ({ ...values, [initialTab]: worker }));
+    pendingWorker.current = 0;
+  }, [workers.loading, workers.data, initialTab]);
+  useEffect(() => {
+    if (sites.loading || !pendingSite.current) return;
+    setSite(sites.data.find(item => item.getId() === pendingSite.current) ?? null);
+    pendingSite.current = 0;
+  }, [sites.loading, sites.data]);
   const workerTab = !!workerRoles[tab];
   const worker = workerTab ? selectedWorkers[tab] : null;
   const labels = workerLabels[tab] || workerLabels[1];

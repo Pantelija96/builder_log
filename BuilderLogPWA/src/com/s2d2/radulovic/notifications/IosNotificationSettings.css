@@ -1,0 +1,13 @@
+.ios-notification-settings { grid-column: 1 / -1; display: flex; align-items: center; flex-shrink: 0; gap: 12px; width: 100%; min-height: 72px; padding: 12px; border: 1px solid var(--radulovic-border); border-radius: 8px; background: white; color: black; text-align: left; font-family: Roboto, sans-serif; }
+.ios-notification-settings > svg { flex-shrink: 0; }
+.ios-notification-settings-text { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; }
+#settings-notifications-label { font-size: 14px; line-height: 20px; font-weight: 900; }
+#settings-notifications-status { font-size: 12px; line-height: 16px; font-weight: 400; color: var(--radulovic-muted); }
+.ios-notification-switch { flex: 0 0 48px; width: 48px; height: 28px; padding: 2px; border-radius: 14px; background: #b8bec4; transition: background-color .15s ease; }
+.ios-notification-switch > span { display: block; width: 24px; height: 24px; border-radius: 50%; background: white; box-shadow: 0 1px 3px #0003; transition: transform .15s ease; }
+.ios-notification-settings[aria-checked="true"] .ios-notification-switch { background: var(--radulovic-yellow); }
+.ios-notification-settings[aria-checked="true"] .ios-notification-switch > span { transform: translateX(20px); }
+.ios-notification-settings:disabled { opacity: .6; }
+@media (prefers-reduced-motion: reduce) {
+  .ios-notification-switch, .ios-notification-switch > span { transition: none; }
+}

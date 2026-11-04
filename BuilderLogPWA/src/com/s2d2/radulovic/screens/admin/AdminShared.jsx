@@ -1,3 +1,4 @@
+import { formatMoney } from '../../utils/MoneyDisplay.js';
 import { ASSET_BASE } from '../../utils/AssetPaths.js';
 import React, { useEffect, useState } from 'react';
 import Session from '../../network/Session.js';
@@ -11,7 +12,7 @@ export const roleLabels = { SITE_MANAGER:'Šef gradilišta', WORKER:'Radnik', OP
 export const roleIcons = { SITE_MANAGER:'ic_site_manager_black', WORKER:'ic_construction_worker_black', OPERATOR:'ic_excavator_driver', TRUCK_DRIVER:'ic_truck_driver_black' };
 export const today = () => TimeUtils.formatDate(new Date());
 export const monthStart = () => today().slice(0,8)+'01';
-export const money = value => value == null ? '-' : new Intl.NumberFormat('sr-RS',{maximumFractionDigits:2}).format(value);
+export const money = formatMoney;
 export function minutes(start,end) {
   if(!/^\d{2}:\d{2}$/.test(start)||!/^\d{2}:\d{2}$/.test(end)) return null;
   const toMinutes=v=>Number(v.slice(0,2))*60+Number(v.slice(3,5));
@@ -48,6 +49,8 @@ export function Value({label,value}) { return <div className="admin-value"><smal
 // Material outlined vectors used by the Android details screens.
 export function MaterialIcon({name,size=24,...props}) {
   const paths={
+    add:'M19.0 13.0 h-6.0 v6.0 h-2.0 v-6.0 H5.0 v-2.0 h6.0 V5.0 h2.0 v6.0 h6.0 v2.0 Z',
+    phone:'M6.54 5.0 c0.06 0.89 0.21 1.76 0.45 2.59 l-1.2 1.2 c-0.41 -1.2 -0.67 -2.47 -0.76 -3.79 h1.51 m9.86 12.02 c0.85 0.24 1.72 0.39 2.6 0.45 v1.49 c-1.32 -0.09 -2.59 -0.35 -3.8 -0.75 l1.2 -1.19 M7.5 3.0 H4.0 c-0.55 0.0 -1.0 0.45 -1.0 1.0 c0.0 9.39 7.61 17.0 17.0 17.0 c0.55 0.0 1.0 -0.45 1.0 -1.0 v-3.49 c0.0 -0.55 -0.45 -1.0 -1.0 -1.0 c-1.24 0.0 -2.45 -0.2 -3.57 -0.57 c-0.1 -0.04 -0.21 -0.05 -0.31 -0.05 c-0.26 0.0 -0.51 0.1 -0.71 0.29 l-2.2 2.2 c-2.83 -1.45 -5.15 -3.76 -6.59 -6.59 l2.2 -2.2 c0.28 -0.28 0.36 -0.67 0.25 -1.02 C8.7 6.45 8.5 5.25 8.5 4.0 c0.0 -0.55 -0.45 -1.0 -1.0 -1.0 Z',
     clock:'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2ZM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8Zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7Z',
     event:'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2Zm0 16H5V8h14v11ZM5 6V5h14v1H5Zm11.53 5.06-1.06-1.06-4.88 4.88-2.12-2.12-1.06 1.06 3.18 3.18 5.94-5.94Z',
     warning:'M1 21h22L12 2 1 21Zm3.47-2L12 5.99 19.53 19H4.47ZM11 16h2v2h-2v-2Zm0-6h2v4h-2v-4Z',

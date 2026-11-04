@@ -24,8 +24,11 @@ function documentFilename(item) {
   return item.getName().replace(/[\\/:*?"<>|]/g, '_').trim() || 'document_' + item.getId() + '.pdf';
 }
 
-export default function DocumentsActivity({ onBack }) {
-  const [site, setSite] = useState(() => Session.getDefaultConstructionSite());
+export default function DocumentsActivity({ onBack, initialSiteId }) {
+  const [site, setSite] = useState(() => initialSiteId > 0 ? null : Session.getDefaultConstructionSite());
+  const [siteId, setSiteId] = useState(() => initialSiteId > 0 ? initialSiteId : Session.getDefaultConstructionSite()?.getId());
+  const selectedSiteId = useRef(siteId);
+  selectedSiteId.current = siteId;
   const [sites, setSites] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [search, setSearch] = useState('');
@@ -50,6 +53,7 @@ export default function DocumentsActivity({ onBack }) {
       onSuccess(items) {
         if (!active) return;
         setSites([...items.filter(item => item.canSelect()), ...items.filter(item => !item.canSelect())]);
+        if (initialSiteId > 0) setSite(items.find(item => item.getId() === selectedSiteId.current) ?? null);
       },
       onFailure() { if (active) setSitesError('Učitavanje gradilišta nije uspelo.'); },
     });
@@ -58,14 +62,14 @@ export default function DocumentsActivity({ onBack }) {
   useEffect(() => {
     let active = true;
     setDocuments([]); setError(''); setNotice('');
-    if (!site) { setLoading(false); return () => { active = false; }; }
+    if (siteId == null) { setLoading(false); return () => { active = false; }; }
     setLoading(true);
-    Session.getAllDocumentsFromServer(site.getId(), {
+    Session.getAllDocumentsFromServer(siteId, {
       onSuccess(items) { if (active) { setDocuments(items); setLoading(false); } },
       onFailure() { if (active) { setError('Učitavanje dokumenata nije uspelo.'); setLoading(false); } },
     });
     return () => { active = false; };
-  }, [site, retry]);
+  }, [siteId, retry]);
 
   function release(url) { URL.revokeObjectURL(url); urls.current.delete(url); }
   function download(url, name) {
@@ -127,7 +131,7 @@ export default function DocumentsActivity({ onBack }) {
       <span><img src={ASSET_BASE + "drawable/ic_folder_simple_black.svg"} alt="" /></span><div><h1>DOKUMENTI</h1><p>Sva dokumenta koja je admin ubacio.</p></div></header>
     <div className="documents-site-card manager-site-picker">
       <SelectionDropdown label="Gradilište" placeholder="Izaberite gradilište" icon="ic_construction_site_crane"
-        options={sites} selected={site} onSelected={setSite} optionEnabled={item => item.canSelect()} disabled={busy} maxMenuHeight={180} />
+        options={sites} selected={site} onSelected={value => { setSite(value); setSiteId(value.getId()); }} optionEnabled={item => item.canSelect()} disabled={busy} maxMenuHeight={180} />
       
     </div>
     <label className="documents-search"><img src={ASSET_BASE + "drawable/ic_search.svg"} alt="" /><input aria-label="Pretraži dokumente" placeholder="Pretraži dokumente..." value={search} onChange={event => setSearch(event.target.value)} /></label>

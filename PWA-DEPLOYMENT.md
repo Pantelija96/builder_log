@@ -1,5 +1,73 @@
 # BuilderLog React / Laravel deployment
 
+## Build script and cPanel upload
+
+From this project root, run `./build.sh` for local development or
+`./build.sh --production` to prepare dependencies without development packages
+for upload. The script automatically uses `.cache/php84/activate` when present,
+installs locked dependencies, builds and verifies `public/app/`, and clears
+Laravel's local configuration, route, event and view caches. It stops on errors.
+Production mode changes the local `vendor/` directory; run `./build.sh` again
+to restore development packages.
+
+It does not generate an application key, migrate the database, start a server,
+or create production caches. For local preview, activate PHP and run
+`php artisan serve`, then open `http://127.0.0.1:8000/app/`.
+
+Upload these runtime directories and files to the Laravel directory on cPanel:
+
+- `app/`, `bootstrap/`, `config/`, `database/migrations/`, `resources/`, `routes/`
+- `public/`, including the generated `public/app/` and hidden `.htaccess`
+- `vendor/` from the production build
+- `artisan`, `composer.json`, `composer.lock`
+- The `storage/` directory structure (including `framework/cache/data`,
+  `framework/sessions`, `framework/views` and `logs`), writable by PHP.
+
+Exclude laptop-generated `bootstrap/cache/*.php`, `storage/framework` cache,
+session and compiled view contents, local logs, local database files,
+`public/hot`, `public/storage` symlinks and development font manifests.
+Keep existing server uploads and storage data when updating an installation.
+Do not upload `.git/`, `.cache/`, `.aws/`, `.codex/`, `.agents/`, `node_modules/`,
+`BuilderLogPWA/`, tests, or the laptop activation script. Frontend sources and
+Node are not needed on the server because the assets are already compiled.
+
+Keep the server's production `.env` and `APP_KEY`. On a fresh installation,
+create a production `.env` with `APP_ENV=production`, `APP_DEBUG=false`, the
+HTTPS `APP_URL`, database credentials and required Firebase settings; generate
+an `APP_KEY` once with `php artisan key:generate`. Provision Firebase credential
+files separately outside `public/`. Never overwrite an existing production key
+with the laptop key.
+
+The domain document root must point to the project's `public/` directory,
+for example `/home/ACCOUNT/builder_log/public`. The application is served at
+`https://YOUR-DOMAIN/app/`. Do not expose the whole Laravel project through
+`public_html`. If cPanel does not let you change the domain's document root,
+ask the host to configure it before uploading to a public location.
+
+On cPanel, use PHP 8.4.1+ (8.4 or 8.5 compatible with the current lock file)
+for both the website and terminal. From the deployed Laravel root, after
+configuring `.env` and writable `storage/` and `bootstrap/cache/`, run:
+
+```sh
+composer check-platform-reqs --no-dev
+php artisan config:clear
+php artisan route:clear
+php artisan event:clear
+php artisan view:clear
+php artisan storage:link
+php artisan optimize
+```
+
+Create the storage link only if needed and not already correctly configured.
+If the release includes pending database migrations, back up the production
+database and apply `php artisan migrate --force` before caching/serving the new
+release. Do not run seeders or `migrate:fresh` against an existing production
+database. Configure a queue worker/scheduler separately if the deployed app
+uses them. `php artisan serve` is only for local preview.
+
+References: [Laravel deployment](https://laravel.com/framework/docs/deployment),
+[cPanel domain management](https://docs.cpanel.net/cpanel/domains/domains/manage-the-domain/110/).
+
 ## Raspored
 
 Glavni full-project repozitorijum sada je `builderLogBackend/`. Sadrži Laravel i običan frontend izvorni folder bez zasebnog Git repozitorijuma:
@@ -84,7 +152,11 @@ Laravel GET/HEAD ruta `/app/{path?}` pokriva samo `/app` i `/app/*`. Vraća gene
 
 Manifest sada koristi relativne `start_url` i `scope` (`./`) i relativne ikone. Pri učitavanju sa `/app/manifest.webmanifest` razrešavaju se pod `/app/`. Postojeći manifest `id: "/"` je zadržan radi identiteta aplikacije; to nije navigaciona ruta.
 
-U React projektu nije postojala Firebase/FCM ili service-worker implementacija. Prema izričitom zahtevu **nije dodat service worker, Firebase/FCM, offline režim ili cache logika**. `/app/sw.js` ne postoji i vraća 404. Backend Firebase nije menjan. Fizička instalacija PWA na telefonu nije testirana; mobilni browser raspored jeste.
+Firebase Web SDK i worker `/app/firebase-messaging-sw.js` sada su dodati kao osnova za obaveštenja. Worker se registruje samo iz instalirane iOS/iPadOS PWA aplikacije, sa scope `/app/`. Vite ga pakuje u jedan lokalni JavaScript fajl, u razvoju i produkciji. Nema fetch handlera, offline režima niti keširanja stranica ili asseta. Zajedničko skladište za stranicu i worker koristi IndexedDB bazu `radulovic.notifications`. Backend registracija prihvata platformu `web`. Posle prijave, uz odobrenu sistemsku dozvolu i uključena obaveštenja, PWA dobija FCM token pomoću Web/VAPID konfiguracije i šalje ga na `push/register`. Odobravanje dozvole i uključivanje u podešavanjima pokreću isti postupak. Povratak u aplikaciju i ponovno povezivanje proveravaju token i ponavljaju neuspelu registraciju. Isključivanje obaveštenja uklanja lokalnu push pretplatu čak i kada server nije dostupan; neuspešna odjava tokena se ponavlja pri sledećem povezivanju sa istim nalogom. Odjava korisnika, kao u Androidu, čeka uspešan `push/unregister`; ako ne uspe, sesija ostaje otvorena i prikazuje se Toast. Token, ID korisnika, uloga i stanje registracije dostupni su workeru kroz IndexedDB, bez lozinke ili API autorizacionog tokena. Postojeći sačuvani spiskovi obaveštenja još nisu migrirani. Prijem i sistemski prikaz poruka sada obrađuje `MyFirebaseMessagingService.js` u workeru. Koristi iste tipove, tekst i parsiranje ID-jeva kao Android, isti ID ažurira postojeće obaveštenje, a test poruka servera radi i bez `notification_id`. Isključena obaveštenja ili obrisana registracija sprečavaju prikaz. Worker čeka završetak `showNotification` i sprečava dupli automatski prikaz kroz Firebase.
+
+iOS zahteva vidljivo obaveštenje za svaki push, pa se sistemsko obaveštenje kreira i kada je aplikacija otvorena. Zbog toga je standardni `push` handler registrovan pre Firebase handlera koji bi preskočio sistemski prikaz za vidljiv prozor. Grupisanje, izgled i zvuk određuje iOS; ne pravi se dodatno Android zbirno obaveštenje. Otvaranje ili povratak u instaliranu iOS PWA aplikaciju sada uklanja sva njena sistemska obaveštenja, kao Android pri nastavku aktivnosti. Dodir obaveštenja takođe uklanja sva sistemska obaveštenja i fokusira postojeći prozor; ako prozor ne postoji, otvara se `/app/`. `NotificationRouter.js` zatim otvara isti ekran kao Android: konkretan dnevni unos, dokumente za navedeno gradilište, zadatke sa odgovarajućim tabom i filterom zaposlenog/gradilišta, ili aktivnost radnika. Odredište se čuva kroz prijavu i izbor gradilišta, vezano za nalog koji je primio obaveštenje. Uspešno otvoreno obaveštenje uklanja se iz postojećeg sačuvanog spiska; neuspešno učitavanje dnevnog unosa zadržava obaveštenje i prikazuje Android Toast. Registracija tokena i stanje prijave se time ne brišu. Prijem u sačuvanu istoriju i povezivanje zvonca/liste ostaju naredni koraci. Routing provere su u `BuilderLogPWA/tests/notification-routing/`: 30 unit testova i 20 browser scenarija sa produkcionim workerom. Klikovi u browser testovima su sintetički; OS focus/open je zabeležen, a IndexedDB, postMessage i navigacija aplikacije su stvarni. Dodir sistemskog obaveštenja na fizičkom iPhone-u još zahteva proveru.
+
+Provere u `BuilderLogPWA/tests/notification-background/` pokrivaju stvarni produkcioni worker i browser Notifications API sa lokalno ubrizganim push događajima: otvoren, sakriven i zatvoren prozor, ponovno pokretanje workera, duplikate, dozvole i OFF/odjavu. Korisnik je potvrdio osnovni prijem na iPhone-u. Novi tok brisanja i otvaranja nakon dodira još zahteva proveru na fizičkom uređaju. Smernice: [Apple Web Push](https://webkit.org/blog/12945/meet-web-push/) i [Firebase prijem poruka](https://firebase.google.com/docs/cloud-messaging/web/receive-messages).
 
 ## Provere prethodne integracione faze
 
