@@ -666,8 +666,8 @@ export default class Session {
       machine.isNull('license_plate') ? null : machine.getString('license_plate'), null);
   }
 
-  static getWorkerSalaryAdmin(workerId, callback) {
-    const endpoint = 'workers/' + workerId + '/salary';
+  static getWorkerSalaryAdmin(workerId, dateFrom, dateTo, callback) {
+    const endpoint = 'workers/' + workerId + '/salary?date_from=' + dateFrom + '&date_to=' + dateTo;
     WebUtils.sendGETRequest(endpoint, {}, { Authorization: Session.#sessionToken }, {
       onSuccess(responseBody) {
         try {

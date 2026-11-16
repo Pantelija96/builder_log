@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { Title, Icon } from './AdminShared.jsx';
+import { Title, Icon, mutate } from './AdminShared.jsx';
+import { showToast } from '../../ui/components/Toast.jsx';
 import useBackLayer from '../../ui/components/useBackLayer.js';
 import './AdminAddSupplierActivity.css';
 
@@ -22,7 +23,7 @@ export function AdminSupplierForm({ supplier = null, onBack }) {
   const focusedOnce = useRef(false);
   useBackLayer(true, onBack);
 
-  const invalidName = !editing && (!supplierName.trim() || supplierName === '-');
+  const invalidName = !supplierName.trim() || supplierName === '-';
   const showNameError = (touched || submitted) && invalidName;
 
   function save(event) {
@@ -42,7 +43,27 @@ export function AdminSupplierForm({ supplier = null, onBack }) {
     setSubmitted(false);
     setTouched(false);
     focusedOnce.current = false;
-    // Android also leaves submission unconnected until the endpoint is available.
+    document.activeElement?.blur();
+    mutate(editing ? 'PATCH' : 'POST', editing ? 'suppliers/' + supplier.getId() : 'suppliers', {
+      name: supplierName.trim(),
+      phone: supplierPhone.trim(),
+      is_active: supplierActive,
+    }, {
+      onSuccess() {
+        if (editing) {
+          showToast('Podaci uspešno ažurirani');
+          onBack();
+        } else {
+          setSupplierName('');
+          setSupplierPhone('');
+          setSupplierActive(true);
+          showToast('Dobavljač uspešno dodat');
+        }
+      },
+      onFailure() {
+        showToast(editing ? 'Neuspešno ažuriranje podataka' : 'Neuspešno dodavanje dobavljača');
+      },
+    });
   }
 
   return <form className={"admin-screen admin-add-supplier" + (editing ? " admin-edit-supplier" : "")} onSubmit={save} noValidate autoComplete="off">
@@ -50,9 +71,7 @@ export function AdminSupplierForm({ supplier = null, onBack }) {
       subtitle={editing ? "Izmena podataka za dobavljača" : "Dodavanje novog dobavljača"} icon="ic_supplier"/>
     <div className="add-supplier-scroll">
       <div className="add-supplier-fields">
-        {editing ? <div className="add-supplier-field">
-          <span>Naziv</span><div className="add-supplier-readonly">{supplierName}</div>
-        </div> : <div>
+        <div>
           <label className="add-supplier-field">
             <span>Naziv *</span>
             <input ref={nameInput} name="name" aria-label="Naziv *" aria-required="true"
@@ -63,7 +82,7 @@ export function AdminSupplierForm({ supplier = null, onBack }) {
               onBlur={() => { if (focusedOnce.current) setTouched(true); }}/>
           </label>
           {showNameError && <small id="supplier-name-error" className="add-supplier-error">Obavezno polje.</small>}
-        </div>}
+        </div>
         <div className="add-supplier-field">
           <span>Status</span>
           <div className="add-supplier-status" role="group" aria-label="Status">

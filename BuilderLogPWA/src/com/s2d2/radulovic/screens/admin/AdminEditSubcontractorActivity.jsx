@@ -5,7 +5,11 @@ import useBackLayer from '../../ui/components/useBackLayer.js';
 import './AdminAddSubcontractorActivity.css';
 
 export default function AdminEditSubcontractorActivity({ subcontractor, onBack, onSaved }) {
-  const name = subcontractor.getName();
+  const [name, setName] = useState(subcontractor.getName());
+  const [touched, setTouched] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const nameInput = useRef(null);
+  const invalidName = !name.trim() || name === '-';
   const [active, setActive] = useState(subcontractor.isActive());
   const [phone, setPhone] = useState(subcontractor.getPhoneNumber());
   const [busy, setBusy] = useState(false);
@@ -14,8 +18,15 @@ export default function AdminEditSubcontractorActivity({ subcontractor, onBack, 
   function save(event) {
     event.preventDefault();
     if (lock.current) return;
+    setSubmitted(true);
+    if (invalidName) {
+      nameInput.current.focus({ preventScroll: true });
+      nameInput.current.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    setSubmitted(false); setTouched(false);
     lock.current = true; setBusy(true);
-    mutate('PATCH', 'subcontractors/' + subcontractor.getSubcontractorId(), { name, phone: phone.trim(), is_active: active }, {
+    mutate('PATCH', 'subcontractors/' + subcontractor.getSubcontractorId(), { name: name.trim(), phone: phone.trim(), is_active: active }, {
       onSuccess() {
         lock.current = false; setBusy(false);
         showToast('Podaci uspešno ažurirani'); onSaved();
@@ -26,7 +37,10 @@ export default function AdminEditSubcontractorActivity({ subcontractor, onBack, 
   return <form className="admin-screen admin-add-subcontractor admin-edit-subcontractor" onSubmit={save} noValidate autoComplete="off">
     <Title title="IZMENA PODIZVOĐAČA" subtitle="Izmena podataka za podizvođača u sistemu." icon="ic_workers_black_no_bg_original_proportions"/>
     <div className="add-subcontractor-scroll"><fieldset disabled={busy} className="add-subcontractor-fields">
-      <div className="add-subcontractor-field"><span>Naziv</span><div className="add-subcontractor-type">{name}</div></div>
+      <label className="add-subcontractor-field"><span>Naziv *</span>
+        <input ref={nameInput} name="name" aria-label="Naziv *" aria-required="true" aria-invalid={(submitted || touched) && invalidName} placeholder="Unesite naziv" value={name} autoCapitalize="words" onChange={event => setName(event.target.value)} onBlur={() => setTouched(true)}/>
+        {(submitted || touched) && invalidName && <small className="add-subcontractor-error">Obavezno polje.</small>}
+      </label>
       <div className="add-subcontractor-field"><span>Status</span><div className="add-subcontractor-status" role="group" aria-label="Status">
         {[true, false].map(value => <button key={String(value)} type="button" aria-pressed={active === value} onClick={() => setActive(value)}>{value ? 'Aktivan' : 'Neaktivan'}</button>)}
       </div></div>

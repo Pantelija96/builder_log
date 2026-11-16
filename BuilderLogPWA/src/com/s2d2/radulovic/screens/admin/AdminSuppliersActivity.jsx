@@ -1,38 +1,58 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AdminAddSupplierActivity from './AdminAddSupplierActivity.jsx';
 import AdminEditSupplierActivity from './AdminEditSupplierActivity.jsx';
 import LoadFailureToast from '../../LoadFailureToast.jsx';
+import useForegroundRefresh from '../../ui/components/useForegroundRefresh.js';
 import Session from '../../network/Session.js';
 import { ASSET_BASE } from '../../utils/AssetPaths.js';
 import { showToast } from '../../ui/components/Toast.jsx';
 import Modal from '../../ui/components/Modal.jsx';
-import { Title, MaterialIcon, Search, Notice, useLoad } from './AdminShared.jsx';
+import { Title, MaterialIcon, Search, Notice, mutate } from './AdminShared.jsx';
 import './AdminSuppliersActivity.css';
 
 export default function AdminSuppliersActivity() {
   const [search, setSearch] = useState('');
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
-  const suppliers = useLoad(callback => Session.getAllSuppliersFromServer(callback), [], []);
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const reload = () => setRefreshKey(value => value + 1);
+  useEffect(() => {
+    let disposed = false;
+    setLoading(true); setLoadFailed(false);
+    Session.getAllSuppliersFromServer({
+      onSuccess(items) {
+        if (!disposed) { setSuppliers(items); setLoading(false); }
+      },
+      onFailure() {
+        if (!disposed) { setLoading(false); setLoadFailed(true); }
+      },
+    });
+    return () => { disposed = true; };
+  }, [refreshKey]);
+  useForegroundRefresh(reload, !adding && !editing);
   const query = search.trim().toLocaleLowerCase();
-  const visibleSuppliers = suppliers.data.filter(supplier => supplier.getName().toLocaleLowerCase().includes(query));
+  const visibleSuppliers = suppliers.filter(supplier => supplier.getName().toLocaleLowerCase().includes(query));
 
-  if (editing) return <AdminEditSupplierActivity supplier={editing} onBack={() => setEditing(null)}/>;
-  if (adding) return <AdminAddSupplierActivity onBack={() => setAdding(false)}/>;
+  if (editing) return <AdminEditSupplierActivity supplier={editing} onBack={() => { setEditing(null); reload(); }}/>;
+  if (adding) return <AdminAddSupplierActivity onBack={() => { setAdding(false); reload(); }}/>;
 
   return <section className="admin-screen admin-suppliers">
     <Title title="DOBAVLJAČI" icon="ic_supplier"/>
     <Search value={search} onChange={setSearch} placeholder="Pretraži dobavljače..."/>
     <button type="button" className="admin-supplier-add" onClick={() => setAdding(true)}><MaterialIcon name="add" size={22}/>Dodaj dobavljača</button>
-    {suppliers.loading ? <Notice>Učitavanje dobavljača...</Notice>
-      : suppliers.error ? <LoadFailureToast message="Učitavanje dobavljača nije uspelo."/>
+    {loading ? <Notice>Učitavanje dobavljača...</Notice>
+      : loadFailed ? <LoadFailureToast message="Učitavanje dobavljača nije uspelo."/>
       : !visibleSuppliers.length ? <Notice>Nema dobavljača za izabrani filter.</Notice>
-      : <div className="admin-supplier-list">{visibleSuppliers.map(supplier => <SupplierRow key={supplier.getId()} supplier={supplier} onEdit={() => setEditing(supplier)}/>)}</div>}
+      : <div className="admin-supplier-list">{visibleSuppliers.map(supplier => <SupplierRow key={supplier.getId()} supplier={supplier} onEdit={() => setEditing(supplier)} onDeleted={() => setSuppliers(items => items.filter(item => item.getId() !== supplier.getId()))}/>)}</div>}
   </section>;
 }
 
-function SupplierRow({ supplier, onEdit }) {
+function SupplierRow({ supplier, onEdit, onDeleted }) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const phoneNumber = supplier.getPhoneNumber()?.trim();
   const phone = phoneNumber && phoneNumber !== '-' && phoneNumber.toLowerCase() !== 'null' ? phoneNumber : null;
   function dial(event) {
@@ -45,11 +65,18 @@ function SupplierRow({ supplier, onEdit }) {
   }
   const phoneContent = <><MaterialIcon name="phone" size={14}/><span>{phone ?? '-'}</span></>;
   return <article className="admin-supplier-row">
-    {showDeleteDialog && <DeleteSupplierDialog supplier={supplier}
-      onDismiss={() => setShowDeleteDialog(false)}
+    {showDeleteDialog && <DeleteSupplierDialog supplier={supplier} deleting={deleting}
+      onDismiss={() => { if (!deleting) setShowDeleteDialog(false); }}
       onConfirm={() => {
-        // Android keeps the supplier until the delete endpoint is connected.
-        setShowDeleteDialog(false);
+        setDeleting(true);
+        mutate('DELETE', 'suppliers/' + supplier.getId(), { reason: 'admin obrisao' }, {
+          onSuccess() {
+            setDeleting(false); setShowDeleteDialog(false); onDeleted();
+          },
+          onFailure() {
+            setDeleting(false); showToast('Neuspešno brisanje dobavljača.');
+          },
+        });
       }}/>}
     <div className="admin-supplier-copy">
       <strong>{supplier.getName()}</strong>
@@ -61,11 +88,11 @@ function SupplierRow({ supplier, onEdit }) {
   </article>;
 }
 
-function DeleteSupplierDialog({ supplier, onDismiss, onConfirm }) {
-  return <Modal className="admin-supplier-delete" title="Obriši dobavljača?" onClose={onDismiss}
+function DeleteSupplierDialog({ supplier, deleting, onDismiss, onConfirm }) {
+  return <Modal className="admin-supplier-delete" title="Obriši dobavljača?" onClose={onDismiss} busy={deleting}
     actions={<>
-      <button type="button" onClick={onDismiss}>Otkaži</button>
-      <button type="button" className="supplier-delete-confirm" onClick={onConfirm}>Obriši</button>
+      <button type="button" disabled={deleting} onClick={onDismiss}>Otkaži</button>
+      <button type="button" className="supplier-delete-confirm" disabled={deleting} onClick={onConfirm}>{deleting ? 'Brisanje...' : 'Obriši'}</button>
     </>}>
     <p>Da li ste sigurni da želite da obrišete dobavljača {supplier.getName()}?</p>
   </Modal>;
