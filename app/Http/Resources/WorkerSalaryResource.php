@@ -11,6 +11,7 @@ class WorkerSalaryResource extends JsonResource
     {
         return [
             'worker_id' => $this->resource['worker_id'],
+            'worker' => WorkerResource::make($this->resource['worker']),
             'earned' => number_format($this->resource['earned'], 2, '.', ''),
             'advances' => number_format($this->resource['advances'], 2, '.', ''),
             'payments' => number_format($this->resource['payments'], 2, '.', ''),

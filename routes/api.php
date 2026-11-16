@@ -92,7 +92,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/workers', [WorkerController::class, 'index']);
         Route::get('/companies', [CompanyController::class, 'index']);
 //        Route::get('/construction-sites', [ConstructionSiteController::class, 'index']);
-        Route::get('/suppliers', [SupplierController::class, 'index']);
+//        Route::get('/suppliers', [SupplierController::class, 'index']);
         Route::get('/subcontractors', [SubcontractorController::class, 'index']);
         Route::get('/expenses', [ExpenseController::class, 'getAll']);
 
@@ -362,6 +362,16 @@ Route::prefix('v1')->group(function () {
                 Route::post('/unregister', 'unregister');
 
                 Route::post('/test', 'testSiteManagers');
+            });
+
+        Route::controller(SupplierController::class)
+            ->prefix('suppliers')
+            ->group(function () {
+                Route::get('/', 'index');
+                Route::get('/{supplier}', 'show');
+                Route::post('/', 'store');
+                Route::patch('/{supplier}', 'update');
+                Route::delete('/{supplier}', 'destroy');
             });
 
     });

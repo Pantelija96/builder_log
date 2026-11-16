@@ -2,28 +2,62 @@
 
 namespace App\Services;
 
+use App\DTO\WorkerAttendance\GetWorkerAttendancesData;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
 use App\Models\WorkerPayment;
-use App\DTO\WorkerAttendance\GetWorkerAttendancesData;
 use App\QueryFilters\WorkerAttendanceFilter;
 
 class WorkerSalaryService
 {
     private const DEFAULT_WORK_HOURS = 8;
 
-    public function getBalance(Worker $worker, Worker $currentWorker,): array {
+    public function getBalance(
+        Worker $worker,
+        Worker $currentWorker,
+        ?GetWorkerAttendancesData $data = null,
+    ): array {
         $this->ensureSameCompany(
             worker: $worker,
             currentWorker: $currentWorker,
         );
 
         /*
-         * Get all attendances for this worker.
+         * The route worker is authoritative.
+         *
+         * We intentionally do NOT use WorkerAttendanceFilter here,
+         * because /workers/{worker}/salary must always calculate
+         * salary for the worker from the route.
+         *
+         * Only date_from / date_to are applied from query parameters.
          */
-        $attendances = WorkerAttendance::query()
-            ->where('company_id', $currentWorker->company_id)
-            ->where('worker_id', $worker->id)
+        $attendanceQuery = WorkerAttendance::query()
+            ->where(
+                'company_id',
+                $currentWorker->company_id
+            )
+            ->where(
+                'worker_id',
+                $worker->id
+            );
+
+        if ($data?->dateFrom !== null) {
+            $attendanceQuery->whereDate(
+                'date',
+                '>=',
+                $data->dateFrom->toDateString(),
+            );
+        }
+
+        if ($data?->dateTo !== null) {
+            $attendanceQuery->whereDate(
+                'date',
+                '<=',
+                $data->dateTo->toDateString(),
+            );
+        }
+
+        $attendances = $attendanceQuery
             ->with([
                 'worker',
                 'creator',
@@ -52,15 +86,42 @@ class WorkerSalaryService
         );
 
         /*
-         * Get all salary payments made to this worker.
+         * Payments use the SAME requested period.
+         *
+         * Without date_from / date_to this remains the
+         * existing all-time behaviour.
          */
-        $payments = (float) WorkerPayment::query()
-            ->where('company_id', $currentWorker->company_id)
-            ->where('worker_id', $worker->id)
+        $paymentQuery = WorkerPayment::query()
+            ->where(
+                'company_id',
+                $currentWorker->company_id
+            )
+            ->where(
+                'worker_id',
+                $worker->id
+            );
+
+        if ($data?->dateFrom !== null) {
+            $paymentQuery->whereDate(
+                'date',
+                '>=',
+                $data->dateFrom->toDateString(),
+            );
+        }
+
+        if ($data?->dateTo !== null) {
+            $paymentQuery->whereDate(
+                'date',
+                '<=',
+                $data->dateTo->toDateString(),
+            );
+        }
+
+        $payments = (float) $paymentQuery
             ->sum('amount');
 
         /*
-         * Outstanding salary:
+         * Outstanding salary for the selected period:
          *
          * earned
          * - advances
@@ -82,7 +143,8 @@ class WorkerSalaryService
         /*
          * Worker can be paid only when:
          *
-         * 1. All attendances have an hourly rate.
+         * 1. All attendances in the selected result
+         *    have an hourly rate.
          * 2. There is something left to pay.
          */
         $canPay =
@@ -92,25 +154,39 @@ class WorkerSalaryService
         return [
             'worker_id' => $worker->id,
 
+            'worker' => $worker,
+
             'earned' => $calculated['earned'],
 
             'advances' => $calculated['advances'],
 
-            'payments' => round($payments, 2),
+            'payments' => round(
+                $payments,
+                2
+            ),
 
-            'outstanding' => $calculatedOutstanding,
+            'outstanding' =>
+                $calculatedOutstanding,
 
             'has_estimated_hours' =>
-                $calculated['has_estimated_hours'],
+                $calculated[
+                'has_estimated_hours'
+                ],
 
             'estimated_attendances' =>
-                $calculated['estimated_attendances'],
+                $calculated[
+                'estimated_attendances'
+                ],
 
             'has_missing_hourly_rates' =>
-                $calculated['has_missing_hourly_rates'],
+                $calculated[
+                'has_missing_hourly_rates'
+                ],
 
             'missing_hourly_rate_attendances' =>
-                $calculated['missing_hourly_rate_attendances'],
+                $calculated[
+                'missing_hourly_rate_attendances'
+                ],
 
             'can_pay' => $canPay,
 
@@ -118,7 +194,18 @@ class WorkerSalaryService
         ];
     }
 
-    public function getOutstanding(Worker $worker, Worker $currentWorker,): float {
+    public function getOutstanding(
+        Worker $worker,
+        Worker $currentWorker,
+    ): float {
+        /*
+         * IMPORTANT:
+         *
+         * No date filter is passed here.
+         *
+         * Actual outstanding balance used by the payment
+         * workflow remains ALL-TIME.
+         */
         $balance = $this->getBalance(
             worker: $worker,
             currentWorker: $currentWorker,
@@ -127,32 +214,55 @@ class WorkerSalaryService
         return (float) $balance['outstanding'];
     }
 
-    public function hasMissingHourlyRates(Worker $worker, Worker $currentWorker,): bool {
+    public function hasMissingHourlyRates(
+        Worker $worker,
+        Worker $currentWorker,
+    ): bool {
+        /*
+         * No date filter here either.
+         *
+         * Existing payment business logic remains unchanged.
+         */
         $balance = $this->getBalance(
             worker: $worker,
             currentWorker: $currentWorker,
         );
 
-        return $balance['has_missing_hourly_rates'];
+        return $balance[
+        'has_missing_hourly_rates'
+        ];
     }
 
-    private function ensureSameCompany(Worker $worker, Worker $currentWorker,): void {
+    private function ensureSameCompany(
+        Worker $worker,
+        Worker $currentWorker,
+    ): void {
         abort_unless(
-            $worker->company_id === $currentWorker->company_id,
+            $worker->company_id ===
+            $currentWorker->company_id,
             404
         );
     }
 
-    public function getAllBalances(GetWorkerAttendancesData $data, Worker $currentWorker,): array {
+    public function getAllBalances(
+        GetWorkerAttendancesData $data,
+        Worker $currentWorker,
+    ): array {
         abort_unless(
             $currentWorker->isAdmin(),
             403,
             'Only administrators can view worker salaries.'
         );
 
-        $periodQuery = WorkerAttendance::query()->where('company_id', $currentWorker->company_id);
+        $periodQuery = WorkerAttendance::query()
+            ->where(
+                'company_id',
+                $currentWorker->company_id
+            );
 
-        $periodQuery = (new WorkerAttendanceFilter($data))->apply($periodQuery);
+        $periodQuery =
+            (new WorkerAttendanceFilter($data))
+                ->apply($periodQuery);
 
         $periodAttendances = $periodQuery
             ->with([
@@ -169,8 +279,14 @@ class WorkerSalaryService
             ->values();
 
         $workers = Worker::query()
-            ->where('company_id', $currentWorker->company_id)
-            ->whereIn('id', $workerIds)
+            ->where(
+                'company_id',
+                $currentWorker->company_id
+            )
+            ->whereIn(
+                'id',
+                $workerIds
+            )
             ->orderBy('first_name')
             ->orderBy('last_name')
             ->get();
@@ -191,55 +307,130 @@ class WorkerSalaryService
         ];
 
         foreach ($workers as $worker) {
-            $workerPeriodAttendances = $periodAttendances
-                ->where('worker_id', $worker->id)
-                ->values();
+            $workerPeriodAttendances =
+                $periodAttendances
+                    ->where(
+                        'worker_id',
+                        $worker->id
+                    )
+                    ->values();
 
-            $period = $this->calculateAttendances(
-                $workerPeriodAttendances
-            );
+            $period =
+                $this->calculateAttendances(
+                    $workerPeriodAttendances
+                );
 
+            /*
+             * This remains ALL-TIME.
+             *
+             * getAllBalances already separates:
+             * - period
+             * - total
+             */
             $total = $this->getBalance(
                 worker: $worker,
                 currentWorker: $currentWorker,
             );
 
             $result[] = [
-                'worker_id' => $worker->id,
-                'first_name' => $worker->first_name,
-                'last_name' => $worker->last_name,
+                'worker_id' =>
+                    $worker->id,
+
+                'first_name' =>
+                    $worker->first_name,
+
+                'last_name' =>
+                    $worker->last_name,
 
                 'period' => [
-                    'earned' => $period['earned'],
-                    'advances' => $period['advances'],
-                    'worked_hours' => $period['worked_hours'],
-                    'has_estimated_hours' => $period['has_estimated_hours'],
-                    'estimated_attendances' => $period['estimated_attendances'],
-                    'has_missing_hourly_rates' => $period['has_missing_hourly_rates'],
-                    'missing_hourly_rate_attendances' => $period['missing_hourly_rate_attendances'],
+                    'earned' =>
+                        $period['earned'],
+
+                    'advances' =>
+                        $period['advances'],
+
+                    'worked_hours' =>
+                        $period['worked_hours'],
+
+                    'has_estimated_hours' =>
+                        $period[
+                        'has_estimated_hours'
+                        ],
+
+                    'estimated_attendances' =>
+                        $period[
+                        'estimated_attendances'
+                        ],
+
+                    'has_missing_hourly_rates' =>
+                        $period[
+                        'has_missing_hourly_rates'
+                        ],
+
+                    'missing_hourly_rate_attendances' =>
+                        $period[
+                        'missing_hourly_rate_attendances'
+                        ],
                 ],
 
                 'total' => [
-                    'earned' => $total['earned'],
-                    'advances' => $total['advances'],
-                    'payments' => $total['payments'],
-                    'outstanding' => $total['outstanding'],
-                    'has_estimated_hours' => $total['has_estimated_hours'],
-                    'estimated_attendances' => $total['estimated_attendances'],
-                    'has_missing_hourly_rates' => $total['has_missing_hourly_rates'],
-                    'missing_hourly_rate_attendances' => $total['missing_hourly_rate_attendances'],
-                    'can_pay' => $total['can_pay'],
+                    'earned' =>
+                        $total['earned'],
+
+                    'advances' =>
+                        $total['advances'],
+
+                    'payments' =>
+                        $total['payments'],
+
+                    'outstanding' =>
+                        $total['outstanding'],
+
+                    'has_estimated_hours' =>
+                        $total[
+                        'has_estimated_hours'
+                        ],
+
+                    'estimated_attendances' =>
+                        $total[
+                        'estimated_attendances'
+                        ],
+
+                    'has_missing_hourly_rates' =>
+                        $total[
+                        'has_missing_hourly_rates'
+                        ],
+
+                    'missing_hourly_rate_attendances' =>
+                        $total[
+                        'missing_hourly_rate_attendances'
+                        ],
+
+                    'can_pay' =>
+                        $total['can_pay'],
                 ],
             ];
 
-            $periodSummary['earned'] += $period['earned'];
-            $periodSummary['advances'] += $period['advances'];
-            $periodSummary['worked_hours'] += $period['worked_hours'];
+            $periodSummary['earned'] +=
+                $period['earned'];
 
-            $totalSummary['earned'] += $total['earned'];
-            $totalSummary['advances'] += $total['advances'];
-            $totalSummary['payments'] += $total['payments'];
-            $totalSummary['outstanding'] += $total['outstanding'];
+            $periodSummary['advances'] +=
+                $period['advances'];
+
+            $periodSummary['worked_hours'] +=
+                $period['worked_hours'];
+
+            $totalSummary['earned'] +=
+                $total['earned'];
+
+            $totalSummary['advances'] +=
+                $total['advances'];
+
+            $totalSummary['payments'] +=
+                $total['payments'];
+
+            $totalSummary['outstanding'] +=
+                $total['outstanding'];
         }
 
         return [
@@ -247,16 +438,42 @@ class WorkerSalaryService
 
             'summary' => [
                 'period' => [
-                    'earned' => round($periodSummary['earned'], 2),
-                    'advances' => round($periodSummary['advances'], 2),
-                    'worked_hours' => round($periodSummary['worked_hours'], 2),
+                    'earned' => round(
+                        $periodSummary['earned'],
+                        2
+                    ),
+
+                    'advances' => round(
+                        $periodSummary['advances'],
+                        2
+                    ),
+
+                    'worked_hours' => round(
+                        $periodSummary['worked_hours'],
+                        2
+                    ),
                 ],
 
                 'total' => [
-                    'earned' => round($totalSummary['earned'], 2),
-                    'advances' => round($totalSummary['advances'], 2),
-                    'payments' => round($totalSummary['payments'], 2),
-                    'outstanding' => round($totalSummary['outstanding'], 2),
+                    'earned' => round(
+                        $totalSummary['earned'],
+                        2
+                    ),
+
+                    'advances' => round(
+                        $totalSummary['advances'],
+                        2
+                    ),
+
+                    'payments' => round(
+                        $totalSummary['payments'],
+                        2
+                    ),
+
+                    'outstanding' => round(
+                        $totalSummary['outstanding'],
+                        2
+                    ),
                 ],
             ],
         ];
@@ -272,24 +489,35 @@ class WorkerSalaryService
         $missingHourlyRateAttendances = 0;
 
         foreach ($attendances as $attendance) {
-            $advance = (float) $attendance->advance_payment;
+            $advance =
+                (float) $attendance->advance_payment;
+
             $advances += $advance;
 
-            $isEstimated = $attendance->finished_at === null;
+            $isEstimated =
+                $attendance->finished_at === null;
 
             if ($isEstimated) {
-                $workedHours = self::DEFAULT_WORK_HOURS;
+                $workedHours =
+                    self::DEFAULT_WORK_HOURS;
+
                 $estimatedAttendances++;
             } else {
-                $workedMinutes = $attendance->started_at
-                    ->diffInMinutes($attendance->finished_at);
+                $workedMinutes =
+                    $attendance->started_at
+                        ->diffInMinutes(
+                            $attendance->finished_at
+                        );
 
-                $workedHours = $workedMinutes / 60;
+                $workedHours =
+                    $workedMinutes / 60;
             }
 
-            $workedHoursTotal += $workedHours;
+            $workedHoursTotal +=
+                $workedHours;
 
-            $hasHourlyRate = $attendance->hourly_rate !== null;
+            $hasHourlyRate =
+                $attendance->hourly_rate !== null;
 
             if (! $hasHourlyRate) {
                 $missingHourlyRateAttendances++;
@@ -300,17 +528,23 @@ class WorkerSalaryService
 
             if ($hasHourlyRate) {
                 $attendanceEarned =
-                    $workedHours * (float) $attendance->hourly_rate;
+                    $workedHours
+                    * (float) $attendance->hourly_rate;
 
                 $balanceEffect =
-                    $attendanceEarned - $advance;
+                    $attendanceEarned
+                    - $advance;
 
-                $earned += $attendanceEarned;
+                $earned +=
+                    $attendanceEarned;
             }
 
             $attendance->setAttribute(
                 'calculated_worked_hours',
-                round($workedHours, 2)
+                round(
+                    $workedHours,
+                    2
+                )
             );
 
             $attendance->setAttribute(
@@ -326,22 +560,39 @@ class WorkerSalaryService
             $attendance->setAttribute(
                 'calculated_earned',
                 $attendanceEarned !== null
-                    ? round($attendanceEarned, 2)
+                    ? round(
+                    $attendanceEarned,
+                    2
+                )
                     : null
             );
 
             $attendance->setAttribute(
                 'calculated_balance_effect',
                 $balanceEffect !== null
-                    ? round($balanceEffect, 2)
+                    ? round(
+                    $balanceEffect,
+                    2
+                )
                     : null
             );
         }
 
         return [
-            'earned' => round($earned, 2),
-            'advances' => round($advances, 2),
-            'worked_hours' => round($workedHoursTotal, 2),
+            'earned' => round(
+                $earned,
+                2
+            ),
+
+            'advances' => round(
+                $advances,
+                2
+            ),
+
+            'worked_hours' => round(
+                $workedHoursTotal,
+                2
+            ),
 
             'has_estimated_hours' =>
                 $estimatedAttendances > 0,
