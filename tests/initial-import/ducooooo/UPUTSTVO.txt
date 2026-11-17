@@ -1,0 +1,60 @@
+POČETNI CSV UVOZ
+
+Komanda: php artisan initial-data:import /putanja/do/csv --key=tosa
+Ovo je jednokratan uvoz NOVE firme i njenih početnih podataka.
+Ne koristi demo seedere, ne briše bazu i ne šalje HTTP zahteve.
+
+PRIPREMA
+1. Za Tošu i Pakija pripremite odvojene kopije foldera sabloni/.
+   Popunite svih sedam fajlova prema SPECIFIKACIJA.txt.
+   Fajl za koji nema podataka ostaje sa zaglavljem.
+   firma.csv mora imati tačno jednu firmu; radnici.csv bar jednog aktivnog admina.
+2. Komandu pokrenite u backend projektu na odgovarajućem okruženju.
+   Koristi bazu iz aktivne Laravel konfiguracije tog okruženja.
+   CSV fajlove držite van public/ foldera: sadrže početne lozinke.
+3. Instalirajte novu migraciju komandom:
+   php artisan migrate
+   Migracija dodaje tabelu initial_data_imports za evidenciju završenih uvoza.
+   Ne koristiti migrate:fresh niti db:seed za ovaj postupak.
+
+PROVERA BEZ UPISA
+php artisan initial-data:import /putanja/do/tosa --key=tosa --dry-run
+
+Proverava obavezna polja, tipove, opsege, duplikate, šifre i postojeća
+korisnička imena/registracije. Prijavljuje fajl, broj zapisa i kolonu.
+Broj zapisa uključuje zaglavlje; ćelija sa prelomom reda ostaje jedan zapis.
+--dry-run ne upisuje podatke niti menja šemu baze.
+Migracija mora prethodno biti instalirana.
+
+UVOZ
+php artisan initial-data:import /putanja/do/tosa --key=tosa
+php artisan initial-data:import /putanja/do/paki --key=paki
+
+Svaku komandu pokrenuti na njenom odgovarajućem okruženju/bazi.
+Firma, radnici, gradilišta, dobavljači, podizvođači, mašine i veze šefova
+upisuju se zajedno u transakciji. Greška poništava sve upise iz tog uvoza.
+Lozinke se hash-uju. ID-jevi se generišu i veze se razrešavaju preko šifara.
+Za bager se total_work_hours postavlja na initial_work_hours kao u POST akciji.
+Ako firma sa navedenim PIB-om već postoji, uvoz se odbija.
+
+PONOVNO POKRETANJE
+--key je stalna oznaka tog početnog uvoza, npr. tosa ili paki.
+Isti ključ i isti sadržaj: uspešan izlaz bez novih upisa i bez izmena.
+Isti ključ i izmenjen sadržaj: greška, ništa se ne menja.
+Isti sadržaj pod drugim ključem: greška.
+Nakon uspešnog uvoza podatke menjajte kroz aplikaciju.
+Uvoz ne vraća obrisane podatke, ne resetuje lozinke i ne dopunjava već
+uvezen komplet novim redovima. Šifre imaju značenje unutar tog kompleta.
+Pre prvog uspešnog uvoza možete slobodno popravljati CSV i ponavljati proveru.
+Završni kod: 0 = uspešna provera/uvoz ili već završen uvoz; 1 = greška.
+Oznaka uvoza: do 64 mala latinična slova, cifre, - ili _; počinje slovom/cifrom.
+
+LOKALNI TESTOVI
+Na ovom računaru sistemski PHP 7.4 nije dovoljan. Za PHP 8.4:
+source ./activate-php.sh
+php vendor/bin/phpunit tests/Feature/InitialDataImportTest.php --do-not-cache-result
+
+Test koristi isključivo izdvojenu SQLite bazu u memoriji.
+Provereni su svi tipovi vlasnika, veze, duplikati, pogrešni podaci,
+ponavljanje uvoza, odvojene firme, rollback i odsustvo upisa tokom provere.
+Produkcijska/MySQL baza nije menjana niti je na njoj izvršen probni uvoz.

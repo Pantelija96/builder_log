@@ -1,0 +1,140 @@
+CSV ZA POČETNI UNOS — FORMAT
+Provereno prema trenutnim seederima, POST validatorima, DTO klasama i enumima.
+Laravel komanda za uvoz je implementirana. Pokretanje: UPUTSTVO.txt.
+Baza nije menjana.
+
+ŠTA SE ŠALJE
+Za Tošu i Pakija pripremiti odvojene komplete.
+sabloni/ sadrži prazne tabele sa kolonama; primeri/ prikazuje popunjavanje.
+Primeri su izmišljeni, uključujući korisničke naloge; ne predstavljaju podatke klijenata.
+Jedan red = jedan zapis. Prvi red su nazivi kolona i ne menja se.
+Fajl bez zapisa ostaviti samo sa zaglavljem.
+
+FORMAT
+CSV UTF-8, separator tačka-zarez (;), oznaka teksta dvostruki navodnik (").
+U Excelu uvesti kao UTF-8 sa separatorom ;. Telefoni, PIB, korisnička imena,
+lozinke, registracije i šifre neka budu tekst, da ostanu nule i znak +.
+Decimalni brojevi: 1000,50 ili 1000.50. Bez grupisanja hiljada i bez RSD/h/km.
+Novac i početna stanja: do 2 decimale. Koordinate: do 7 decimala.
+Satnica i sati: najviše 99999999.99; kilometraža: najviše 9999999999.99.
+Aktivan = 1; neaktivan = 0.
+
+ZNAČENJE CRTICE
+Tačno '-' ili prazno polje znači da podatak nije dostavljen.
+Uvoz to pretvara u null za neobavezna polja; u API se ne šalje
+doslovna crtica. Nula je poznata vrednost 0 i nije isto što i nedostajući podatak.
+Za is_active '-' znači podrazumevano 1; za status mašine podrazumevano active.
+Obavezna polja moraju biti popunjena. Njih ne preskačemo i ne izmišljamo.
+Uvoz prijavljuje nepopunjeno obavezno polje pre upisa.
+Lozinka '-' nije važeća lozinka niti zahtev za automatsko generisanje naloga.
+
+ŠIFRE I ID-JEVI
+sifra je vaša jedinstvena oznaka zapisa u tom fajlu: R1, G1, D1, P1, M1...
+To nije ID iz baze. Šifre i reference su obavezne i moraju se tačno poklapati.
+Uvoz pravi prave ID-jeve i povezuje ih preko šifara (veličina slova je bitna).
+Ne povezujemo po nazivu: dva gradilišta mogu imati isti naziv.
+company_id, id, created_at, updated_at i slična sistemska polja se ne unose.
+Svi zapisi iz jednog kompleta pripadaju firmi iz njegovog firma.csv.
+
+1. firma.csv — JEDAN RED PO KLIJENTU
+Obavezno: sifra, name.
+Opciono: pib, email, phone, address.
+name = naziv firme (do 250 znakova); pib = PIB (do 20); phone do 30.
+Ovo je podešavanje firme prema CompanySeeder-u i tabeli companies.
+Nema POST /companies za ovaj početni korak: firma i početni admin moraju
+da se pripreme kroz seeder/serverski uvoz pre korišćenja autentifikovanog API-ja.
+
+2. radnici.csv — SVI ZAPOSLENI I NALOZI
+Obavezno: sifra, first_name, last_name, role, username, password.
+Opciono: phone, email, hourly_rate. is_active = 1 ili 0, '-' podrazumeva 1.
+first_name = ime; last_name = prezime (svako do 100 znakova).
+username = jedinstveno korisničko ime u ciljnoj bazi, do 100 znakova.
+password = početna lozinka, najmanje 8 znakova; unosi se obična lozinka,
+a uvoz je čuva kao hash. Za bcrypt lozinka sme imati najviše 72 UTF-8 bajta.
+hourly_rate = cena radnog sata u RSD, broj >= 0; '-' znači nepoznato, ne 0.
+Uloge:
+  admin        administrator
+  site_manager šef gradilišta
+  worker       radnik
+  operator     bagerista
+  driver       vozač kamiona
+Backend zahteva username i password i za običnog radnika.
+Ako ih klijent ne priprema, mi ih moramo dopuniti pre uvoza.
+Za potpuno prazno okruženje pripremiti bar jednog aktivnog admina.
+construction_site_ids iz POST /workers zamenjen je posebnim fajlom veza;
+njime se gradilišta dodeljuju samo šefovima. is_available nije POST polje
+za početni unos i nije deo ovog šablona.
+
+3. gradilista.csv
+Obavezno: sifra, name, status.
+Opciono: description, address, latitude, longitude.
+name = naziv (do 150 znakova); description = opis; address = adresa (do 255).
+Ovo su granice kolona baze, uže od trenutnih POST validatora.
+latitude = geografska širina od -90 do 90;
+longitude = geografska dužina od -180 do 180.
+status: active (aktivno), paused (pauzirano), finished (završeno),
+cancelled (otkazano).
+site_manager_ids iz POST /construction-sites zamenjen je fajlom veza.
+
+4. dobavljaci.csv
+Obavezno: sifra, name (do 150 znakova).
+is_active = 1 ili 0, '-' podrazumeva 1.
+Opciono: phone, email, pib, address, contact_first_name, contact_last_name,
+contact_email, contact_phone.
+phone/email = kontakt firme; pib = PIB (do 20 znakova); address = adresa.
+contact_first_name/contact_last_name = ime/prezime kontakt osobe;
+contact_email/contact_phone = njen email/telefon.
+Telefoni do 30 znakova; ime/prezime kontakta do 100; email do 255.
+Dostavljeni PIB mora biti jedinstven među dobavljačima te firme.
+
+5. podizvodjaci.csv
+Isto kao dobavljaci.csv, uz opciono description = opis delatnosti.
+Obavezno: sifra, name (do 150 znakova).
+Ostali podaci su opcioni; is_active '-' podrazumeva 1.
+Dostavljeni PIB mora biti jedinstven među podizvođačima te firme.
+
+6. masine.csv
+Obavezno: sifra, name, type, owner_type, owner_sifra i odgovarajuće početno stanje.
+name = naziv/model (do 150 znakova).
+type: excavator (bager) ili truck (kamion).
+owner_type i owner_sifra zajedno određuju vlasnika:
+  company       šifra firme iz firma.csv
+  supplier      šifra dobavljača iz dobavljaci.csv
+  subcontractor šifra podizvođača iz podizvodjaci.csv
+  worker        šifra zaposlenog iz radnici.csv
+owner_sifra se pri uvozu pretvara u owner_id za POST /machines.
+status: active (aktivna), service (servis), broken (pokvarena),
+inactive (neaktivna); '-' podrazumeva active.
+license_plate = registracija (do 30 znakova), opciono; ako je navedena,
+mora biti jedinstvena u ciljnoj bazi.
+initial_work_hours = početni radni sati, obavezno za excavator, broj >= 0.
+initial_mileage = početna kilometraža, obavezno za truck, broj >= 0.
+Za neprimenljivo stanje staviti '-': bager nema initial_mileage,
+a kamion nema initial_work_hours. Nepoznato obavezno stanje ne pretvaramo u 0.
+image_path = postojeća serverska putanja slike (opciono, do 255 znakova);
+staviti '-' ako nije pripremljena. CSV ne učitava sliku sa računara.
+
+7. sefovi_gradilista.csv — OPCIONE POČETNE VEZE
+Kolone: gradiliste_sifra;sef_sifra — obe obavezne za svaki navedeni red.
+gradiliste_sifra mora postojati u gradilista.csv.
+sef_sifra mora postojati u radnici.csv i imati role=site_manager.
+Jedan red = jedno dodeljivanje; isti šef može imati više gradilišta.
+Ne ponavljati isti par. Ako još ne znaju raspored, ostaviti samo zaglavlje.
+Ovo pokriva ConstructionSiteManagerSeeder i API veze šefova i gradilišta.
+
+OBUHVAT
+Uključena su polja za kreiranje ovih početnih entiteta.
+Nisu uključene dnevne evidencije, dugovanja, isplate, akontacije, zadaci,
+dokumenta, otpremnice, dnevnici rada i istorijske dodele mašina.
+Njih unosimo kroz aplikaciju ili poseban dogovoreni uvoz.
+Ovi fajlovi nisu direktna POST tela: komanda obrađuje '-', booleane,
+decimalni zarez i šifre pre upisa preko Laravel modela.
+
+OSNOVA U KODU
+database/seeders/DatabaseSeeder.php i svih 9 seedera koje poziva.
+app/Http/Requests/Worker/CreateWorkerRequest.php
+app/Http/Requests/ConstructionSite/CreateConstructionSiteRequest.php
+app/Http/Requests/Supplier/CreateSupplierRequest.php
+app/Http/Requests/Subcontractor/CreateSubcontractorRequest.php
+app/Http/Requests/Machine/CreateMachineRequest.php
+app/DTO/*/Create*Data.php i app/Enums/.
