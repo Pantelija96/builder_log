@@ -6,6 +6,7 @@ use App\Actions\BaseAction;
 use App\Enums\LogEvent;
 use App\Models\TruckLog;
 use App\Models\Worker;
+use App\Models\WorkerAttendance;
 use App\Services\Logging\LoggingService;
 
 class DeleteTruckLogAction extends BaseAction
@@ -42,7 +43,17 @@ class DeleteTruckLogAction extends BaseAction
 
             $machineAssignment = $truckLog->machineAssignment;
 
+            if ($machineAssignment) {
+                WorkerAttendance::query()
+                    ->where(
+                        'machine_assignment_id',
+                        $machineAssignment->id,
+                    )
+                    ->delete();
+            }
+
             $truckLog->delete();
+
             $machineAssignment?->delete();
         });
     }

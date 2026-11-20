@@ -6,6 +6,7 @@ use App\Actions\BaseAction;
 use App\Enums\LogEvent;
 use App\Models\ExcavatorLog;
 use App\Models\Worker;
+use App\Models\WorkerAttendance;
 use App\Services\Logging\LoggingService;
 
 class DeleteExcavatorLogAction extends BaseAction
@@ -14,8 +15,11 @@ class DeleteExcavatorLogAction extends BaseAction
         private readonly LoggingService $logging,
     ) {}
 
-    public function execute(ExcavatorLog $excavatorLog, Worker $currentWorker, string $reason): void
-    {
+    public function execute(
+        ExcavatorLog $excavatorLog,
+        Worker $currentWorker,
+        string $reason,
+    ): void {
         $this->transaction(function () use (
             $excavatorLog,
             $currentWorker,
@@ -39,7 +43,17 @@ class DeleteExcavatorLogAction extends BaseAction
 
             $machineAssignment = $excavatorLog->machineAssignment;
 
+            if ($machineAssignment) {
+                WorkerAttendance::query()
+                    ->where(
+                        'machine_assignment_id',
+                        $machineAssignment->id,
+                    )
+                    ->delete();
+            }
+
             $excavatorLog->delete();
+
             $machineAssignment?->delete();
         });
     }
