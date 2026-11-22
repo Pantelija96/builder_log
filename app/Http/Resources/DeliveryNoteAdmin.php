@@ -2,12 +2,15 @@
 
 namespace App\Http\Resources;
 
+use App\Models\DeliveryNote;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @mixin DeliveryNote
+ */
 class DeliveryNoteAdmin extends JsonResource
 {
-
     public function toArray(Request $request): array
     {
         return [

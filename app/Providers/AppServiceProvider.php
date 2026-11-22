@@ -21,8 +21,12 @@ use App\Models\Task;
 use App\Models\TruckLog;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\Tag;
+use Dedoc\Scramble\Support\RouteInfo;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -60,5 +64,58 @@ class AppServiceProvider extends ServiceProvider
             'worker' => Worker::class,
             'worker_attendance' => WorkerAttendance::class,
         ]);
+
+        $this->configureApiDocumentation();
+    }
+
+    private function configureApiDocumentation(): void
+    {
+        // The order here is also the order of the OpenAPI tags.
+        $groups = [
+            'Authentication' => ['AuthController'],
+            'Companies' => ['CompanyController'],
+            'Workers' => ['WorkerController'],
+            'Construction Sites' => ['ConstructionSiteController'],
+            'Construction Site Assignments' => ['ConstructionSiteAssignmentController', 'SiteManagerController'],
+            'Daily Logs' => ['DailyLogController'],
+            'Worker Attendance' => ['WorkerAttendanceController'],
+            'Machines' => ['MachineController'],
+            'Machine Assignments' => ['MachineAssignmentController'],
+            'Excavators' => ['ExcavatorLogController'],
+            'Trucks' => ['TruckLogController'],
+            'Expenses' => ['ExpenseController'],
+            'Financial Reports' => ['ConstructionFinancialSummaryController', 'FinancialSummaryController'],
+            'Worker Salaries' => ['WorkerSalaryController'],
+            'Worker Payments' => ['WorkerPaymentController'],
+            'Cash Advances' => ['CashAdvanceController'],
+            'Suppliers' => ['SupplierController'],
+            'Subcontractors' => ['SubcontractorController'],
+            'Subcontractor Logs' => ['SubcontractorLogController'],
+            'Documents' => ['DocumentController'],
+            'Attachments' => ['AttachmentController'],
+            'Delivery Notes' => ['DeliveryNoteController'],
+            'Notes' => ['NoteController'],
+            'Tasks' => ['TaskController'],
+            'Notifications' => ['NotificationController'],
+            'Push Notifications' => ['PushNotificationController'],
+        ];
+
+        $controllerTags = [];
+        foreach ($groups as $tag => $controllers) {
+            foreach ($controllers as $controller) {
+                $controllerTags[$controller] = $tag;
+            }
+        }
+
+        Scramble::resolveTagsUsing(static function (RouteInfo $routeInfo) use ($controllerTags): array {
+            $controller = class_basename($routeInfo->className() ?? '');
+
+            return [$controllerTags[$controller] ?? Str::headline(Str::beforeLast($controller, 'Controller'))];
+        });
+
+        Scramble::configure()->withTags(array_map(
+            static fn (string $name): Tag => new Tag($name),
+            array_keys($groups),
+        ));
     }
 }

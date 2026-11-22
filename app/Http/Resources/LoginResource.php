@@ -2,9 +2,13 @@
 
 namespace App\Http\Resources;
 
+use App\DTO\Requests\Auth\LoginResponseData;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @property-read LoginResponseData $resource
+ */
 class LoginResource extends JsonResource
 {
     /**

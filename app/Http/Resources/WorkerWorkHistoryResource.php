@@ -6,6 +6,9 @@ use App\DTO\Worker\WorkerWorkHistoryData;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
+/**
+ * @property-read WorkerWorkHistoryData $resource
+ */
 class WorkerWorkHistoryResource extends JsonResource
 {
     public function toArray(Request $request): array
