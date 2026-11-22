@@ -34,10 +34,7 @@ class WorkerAttendanceController extends ApiController
 
         return $this->success(
             WorkerAttendanceResource::make(
-                $attendance->load([
-                    'worker',
-                    'creator',
-                ])
+                $attendance
             ),
             'Worker attendance created successfully.'
         );

@@ -46,7 +46,7 @@ class WorkerController extends ApiController
     public function store(CreateWorkerRequest $request,): JsonResponse
     {
         /** @var Worker $currentWorker */
-        $currentWorker = auth()->user();
+        $currentWorker = $request->user();
 
         $worker = $this->workerService->create(
             data: CreateWorkerData::fromRequest($request),
@@ -62,7 +62,7 @@ class WorkerController extends ApiController
     public function update(Worker $worker, UpdateWorkerRequest $request,): JsonResponse
     {
         /** @var Worker $currentWorker */
-        $currentWorker = auth()->user();
+        $currentWorker = $request->user();
 
         $worker = $this->workerService->update(
             worker: $worker,
@@ -80,7 +80,7 @@ class WorkerController extends ApiController
     public function destroy(Worker $worker, DeleteWorkerRequest $request,): JsonResponse
     {
         /** @var Worker $currentWorker */
-        $currentWorker = auth()->user();
+        $currentWorker = $request->user();
 
         $this->workerService->delete(
             worker: $worker,

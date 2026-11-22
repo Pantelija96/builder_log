@@ -28,21 +28,13 @@ readonly class UpdateTruckLogData
     public static function fromRequest(Request $request): self
     {
         return new self(
-            siteManagerStartedAt: $request->filled('site_manager_started_at')
-                ? Carbon::parse($request->input('site_manager_started_at'))
-                : null,
+            siteManagerStartedAt: self::parseFilledTime($request, 'site_manager_started_at'),
 
-            siteManagerFinishedAt: $request->filled('site_manager_finished_at')
-                ? Carbon::parse($request->input('site_manager_finished_at'))
-                : null,
+            siteManagerFinishedAt: self::parseFilledTime($request, 'site_manager_finished_at'),
 
-            operatorStartedAt: $request->filled('operator_started_at')
-                ? Carbon::parse($request->input('operator_started_at'))
-                : null,
+            operatorStartedAt: self::parseFilledTime($request, 'operator_started_at'),
 
-            operatorFinishedAt: $request->filled('operator_finished_at')
-                ? Carbon::parse($request->input('operator_finished_at'))
-                : null,
+            operatorFinishedAt: self::parseFilledTime($request, 'operator_finished_at'),
 
             startMileage: $request->filled('start_mileage')
                 ? (float) $request->input('start_mileage')
@@ -73,5 +65,10 @@ readonly class UpdateTruckLogData
 
             providedFields: $request->keys(),
         );
+    }
+
+    private static function parseFilledTime(Request $request, string $field): ?Carbon
+    {
+        return $request->filled($field) ? Carbon::parse($request->input($field)) : null;
     }
 }

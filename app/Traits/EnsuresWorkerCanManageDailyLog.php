@@ -10,15 +10,7 @@ use App\Models\Worker;
 trait EnsuresWorkerCanManageDailyLog
 {
     protected function ensureCanLock(DailyLog $dailyLog, ?Worker $worker,): void {
-        if ($worker === null) {
-            return;
-        }
-
-        if ($worker->role === WorkerRole::ADMIN) {
-            return;
-        }
-
-        if ($dailyLog->site_manager_id === $worker->id) {
+        if ($this->canManageAsSystemOrAdmin($worker) || $this->isDailyLogOwner($dailyLog, $worker)) {
             return;
         }
 
@@ -28,11 +20,7 @@ trait EnsuresWorkerCanManageDailyLog
     }
 
     protected function ensureCanUnlock(DailyLog $dailyLog, ?Worker $worker,): void {
-        if ($worker === null) {
-            return;
-        }
-
-        if ($worker->role === WorkerRole::ADMIN) {
+        if ($this->canManageAsSystemOrAdmin($worker)) {
             return;
         }
 
@@ -42,20 +30,22 @@ trait EnsuresWorkerCanManageDailyLog
     }
 
     protected function ensureCanModify(DailyLog $dailyLog, ?Worker $worker,): void {
-        if ($worker === null) {
-            return;
-        }
-
-        if ($worker->role === WorkerRole::ADMIN) {
-            return;
-        }
-
-        if ($dailyLog->site_manager_id === $worker->id) {
+        if ($this->canManageAsSystemOrAdmin($worker) || $this->isDailyLogOwner($dailyLog, $worker)) {
             return;
         }
 
         throw new BusinessException(
             'You are not allowed to modify this daily log.'
         );
+    }
+
+    private function canManageAsSystemOrAdmin(?Worker $worker): bool
+    {
+        return $worker === null || $worker->role === WorkerRole::ADMIN;
+    }
+
+    private function isDailyLogOwner(DailyLog $dailyLog, Worker $worker): bool
+    {
+        return $dailyLog->site_manager_id === $worker->id;
     }
 }

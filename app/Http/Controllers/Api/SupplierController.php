@@ -27,7 +27,7 @@ class SupplierController extends ApiController
         GetSuppliersRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         return $this->success(
             SupplierResource::collection(
@@ -66,7 +66,7 @@ class SupplierController extends ApiController
         CreateSupplierRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         $supplier = $this->supplierService->create(
             data: CreateSupplierData::fromRequest($request),
@@ -84,7 +84,7 @@ class SupplierController extends ApiController
         UpdateSupplierRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         $supplier = $this->supplierService->update(
             supplier: $supplier,
@@ -103,7 +103,7 @@ class SupplierController extends ApiController
         DeleteSupplierRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         $this->supplierService->delete(
             supplier: $supplier,

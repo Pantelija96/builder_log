@@ -3,7 +3,10 @@
 namespace App\Services;
 
 use App\Actions\Notification\CreateNotificationAction;
+use App\Actions\Notification\DeleteTaskNotificationsAction;
+use App\Actions\Notification\MarkAllTaskNotificationsAsReadAction;
 use App\Actions\Notification\MarkNotificationAsReadAction;
+use App\Actions\Notification\MarkTaskNotificationAsReadAction;
 use App\DTO\Notification\GetNotificationsData;
 use App\Enums\NotificationType;
 use App\Models\DailyLog;
@@ -23,6 +26,9 @@ class NotificationService
     public function __construct(
         private readonly CreateNotificationAction $createNotificationAction,
         private readonly MarkNotificationAsReadAction $markNotificationAsReadAction,
+        private readonly MarkAllTaskNotificationsAsReadAction $markAllTaskNotificationsAsReadAction,
+        private readonly MarkTaskNotificationAsReadAction $markTaskNotificationAsReadAction,
+        private readonly DeleteTaskNotificationsAction $deleteTaskNotificationsAction,
     ) {
     }
 
@@ -154,35 +160,20 @@ class NotificationService
 
     public function deleteTaskNotifications(Task $task): void
     {
-        Notification::query()
-            ->where('type', NotificationType::TASK)
-            ->where('task_id', $task->id)
-            ->forceDelete();
+        $this->deleteTaskNotificationsAction->execute($task);
     }
 
     public function markTaskNotificationAsRead(
         Worker $worker,
         Task $task,
     ): void {
-        Notification::query()
-            ->where('worker_id', $worker->id)
-            ->where('task_id', $task->id)
-            ->whereNull('read_at')
-            ->update([
-                'read_at' => now(),
-            ]);
+        $this->markTaskNotificationAsReadAction->execute($worker, $task);
     }
 
     public function markAllTaskNotificationsAsRead(
         Task $task,
     ): void {
-        Notification::query()
-            ->where('type', NotificationType::TASK)
-            ->where('task_id', $task->id)
-            ->whereNull('read_at')
-            ->update([
-                'read_at' => now(),
-            ]);
+        $this->markAllTaskNotificationsAsReadAction->execute($task);
     }
 
     public function documentCreated(

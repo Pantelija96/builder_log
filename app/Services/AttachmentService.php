@@ -3,11 +3,8 @@
 namespace App\Services;
 
 use App\Actions\Attachment\DeleteAttachmentAction;
-use App\Actions\Attachment\UploadAttachmentAction;
 use App\Actions\Attachment\UploadAttachmentsAction;
 use App\Contracts\HasAttachments;
-use App\DTO\Attachment\StoredAttachmentData;
-use App\Exceptions\BusinessException;
 use App\Models\Attachment;
 use App\Models\Worker;
 use App\Services\Storage\AttachmentStorageService;
@@ -21,7 +18,16 @@ class AttachmentService
     public function __construct(
         private readonly AttachmentStorageService $storage,
         private readonly DeleteAttachmentAction $deleteAttachmentAction,
+        private readonly UploadAttachmentsAction $uploadAttachmentsAction,
     ) {
+    }
+
+    /**
+     * @param  iterable<UploadedFile>  $files
+     */
+    public function uploadMany(HasAttachments&Model $attachable, iterable $files, Worker $worker): Collection
+    {
+        return $this->uploadAttachmentsAction->execute($attachable, $files, $worker);
     }
 
     public function download(Attachment $attachment,): StreamedResponse

@@ -26,7 +26,7 @@ class MachineController extends ApiController
         GetMachinesRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         return $this->success(
             MachineResource::collection(
@@ -65,7 +65,7 @@ class MachineController extends ApiController
         CreateMachineRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         $machine = $this->machineService->create(
             data: CreateMachineData::fromRequest($request),
@@ -83,7 +83,7 @@ class MachineController extends ApiController
         UpdateMachineRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         $machine = $this->machineService->update(
             machine: $machine,
@@ -102,7 +102,7 @@ class MachineController extends ApiController
         DeleteMachineRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         $this->machineService->delete(
             machine: $machine,

@@ -50,7 +50,8 @@ class WorkerAttendanceService
     }
 
     public function create(DailyLog $dailyLog, CreateWorkerAttendanceData $data, Worker $currentWorker,): WorkerAttendance {
-        return $this->createWorkerAttendanceAction->execute($dailyLog, $data, $currentWorker,);
+        return $this->createWorkerAttendanceAction->execute($dailyLog, $data, $currentWorker,)
+            ->load(['worker', 'creator']);
     }
 
     public function findById(int $id,){

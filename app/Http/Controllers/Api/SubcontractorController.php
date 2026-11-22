@@ -27,7 +27,7 @@ class SubcontractorController extends ApiController
         GetSubcontractorsRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         return $this->success(
             SubcontractorResource::collection(
@@ -66,7 +66,7 @@ class SubcontractorController extends ApiController
         CreateSubcontractorRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         $subcontractor = $this->subcontractorService->create(
             data: CreateSubcontractorData::fromRequest($request),
@@ -84,7 +84,7 @@ class SubcontractorController extends ApiController
         UpdateSubcontractorRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         $subcontractor = $this->subcontractorService->update(
             subcontractor: $subcontractor,
@@ -103,7 +103,7 @@ class SubcontractorController extends ApiController
         DeleteSubcontractorRequest $request,
     ): JsonResponse {
         /** @var Worker $worker */
-        $worker = auth()->user();
+        $worker = $request->user();
 
         $this->subcontractorService->delete(
             subcontractor: $subcontractor,

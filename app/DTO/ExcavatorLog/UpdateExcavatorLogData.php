@@ -36,10 +36,10 @@ readonly class UpdateExcavatorLogData
         UpdateExcavatorLogRequest $request,
     ): self {
         return new self(
-            siteManagerStartedAt: $request->filled('site_manager_started_at') ? Carbon::parse($request->input('site_manager_started_at')) : null,
-            siteManagerFinishedAt: $request->filled('site_manager_finished_at') ? Carbon::parse($request->input('site_manager_finished_at')) : null,
-            operatorStartedAt: $request->filled('operator_started_at') ? Carbon::parse($request->input('operator_started_at')) : null,
-            operatorFinishedAt: $request->filled('operator_finished_at') ? Carbon::parse($request->input('operator_finished_at')) : null,
+            siteManagerStartedAt: self::parseFilledTime($request, 'site_manager_started_at'),
+            siteManagerFinishedAt: self::parseFilledTime($request, 'site_manager_finished_at'),
+            operatorStartedAt: self::parseFilledTime($request, 'operator_started_at'),
+            operatorFinishedAt: self::parseFilledTime($request, 'operator_finished_at'),
             workHours: $request->has('work_hours') ? $request->float('work_hours') : null,
             startWorkHours: $request->input('start_work_hours') !== null ? (float) $request->input('start_work_hours') : null,
             finishWorkHours: $request->input('finish_work_hours') !== null ? (float) $request->input('finish_work_hours') : null,
@@ -52,5 +52,10 @@ readonly class UpdateExcavatorLogData
             finished: $request->has('finished') ? $request->boolean('finished') : null,
             providedFields: $request->keys(),
         );
+    }
+
+    private static function parseFilledTime(UpdateExcavatorLogRequest $request, string $field): ?Carbon
+    {
+        return $request->filled($field) ? Carbon::parse($request->input($field)) : null;
     }
 }

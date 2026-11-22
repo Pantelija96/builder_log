@@ -46,10 +46,7 @@ class AuthController extends ApiController
 
     public function logout(Request $request)
     {
-        $request
-            ->user()
-            ->currentAccessToken()
-            ->delete();
+        $this->authenticationService->logout($request->user());
 
         return $this->success(
             message: 'Logout successful.'
@@ -58,7 +55,7 @@ class AuthController extends ApiController
 
     public function logoutAll(Request $request)
     {
-        $request->user()->tokens()->delete();
+        $this->authenticationService->logoutAll($request->user());
 
         return $this->success(
             message: 'Logged out from all devices.'

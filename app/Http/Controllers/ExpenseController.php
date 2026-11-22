@@ -20,13 +20,11 @@ use App\Services\ExpenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use App\Http\Resources\FinancialSummaryResource;
-use App\Services\FinancialSummaryService;
 
 class ExpenseController extends ApiController
 {
     public function __construct(
         private readonly ExpenseService $expenseService,
-        private readonly FinancialSummaryService $financialSummaryService,
     ) {
     }
 
@@ -63,23 +61,14 @@ class ExpenseController extends ApiController
 
     public function index(DailyLog $dailyLog, GetExpensesRequest $request,): JsonResponse
     {
-        $expenses = $this->expenseService->get(
+        $result = $this->expenseService->getDailyReport(
             $dailyLog,
             GetExpensesData::fromRequest($request),
         );
 
-        $summary = $this->financialSummaryService
-            ->summaryForSiteManager(
-                $dailyLog->siteManager
-            );
-
         return $this->success([
-            'expenses' => ExpenseResource::collection(
-                $expenses
-            ),
-            'summary' => FinancialSummaryResource::make(
-                $summary
-            ),
+            'expenses' => ExpenseResource::collection($result['expenses']),
+            'summary' => FinancialSummaryResource::make($result['summary']),
         ]);
     }
 
@@ -113,33 +102,15 @@ class ExpenseController extends ApiController
         GetExpensesRequest $request,
     ): JsonResponse {
 
-        $expenses = $this->expenseService->getHistory(
+        $result = $this->expenseService->getHistoryReport(
             $dailyLog,
             GetExpensesData::fromRequest($request),
         );
 
-        $summary = $this->financialSummaryService
-            ->summaryForSiteManager(
-                $dailyLog->siteManager,
-            );
-
-        $cashAdvances = $this->financialSummaryService
-            ->cashAdvancesForSiteManager(
-                $dailyLog->siteManager,
-            );
-
         return $this->success([
-            'expenses' => ExpenseResource::collection(
-                $expenses,
-            ),
-
-            'summary' => FinancialSummaryResource::make(
-                $summary,
-            ),
-
-            'cash_advances' => CashAdvanceResource::collection(
-                $cashAdvances,
-            ),
+            'expenses' => ExpenseResource::collection($result['expenses']),
+            'summary' => FinancialSummaryResource::make($result['summary']),
+            'cash_advances' => CashAdvanceResource::collection($result['cash_advances']),
         ]);
     }
 

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Attachment\UploadAttachmentsAction;
 use App\Http\Requests\Attachment\DeleteAttachmentRequest;
 use App\Http\Requests\Attachment\UploadAttachmentRequest;
 use App\Http\Resources\AttachmentResource;
@@ -18,7 +17,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class AttachmentController extends ApiController
 {
     public function __construct(
-        private readonly UploadAttachmentsAction $uploadAttachmentsAction,
         private readonly AttachmentService $attachmentService,
     ) {
     }
@@ -27,7 +25,7 @@ class AttachmentController extends ApiController
         /** @var Worker $worker */
         $worker = $request->user();
 
-        $attachments = $this->uploadAttachmentsAction->execute(
+        $attachments = $this->attachmentService->uploadMany(
             attachable: $dailyLog,
             files: $request->file('attachments', []),
             worker: $worker,
@@ -40,7 +38,7 @@ class AttachmentController extends ApiController
         /** @var Worker $worker */
         $worker = $request->user();
 
-        $attachments = $this->uploadAttachmentsAction->execute(
+        $attachments = $this->attachmentService->uploadMany(
             attachable: $expense,
             files: $request->file('attachments', []),
             worker: $worker,

@@ -5,9 +5,7 @@ namespace App\Services\Authentication;
 use App\DTO\Requests\Auth\LoginData;
 use App\DTO\Requests\Auth\LoginResponseData;
 use App\Exceptions\BusinessException;
-use App\Http\Resources\WorkerResource;
 use App\Models\Worker;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class AuthenticationService
@@ -36,5 +34,15 @@ class AuthenticationService
             worker: $worker,
             token: $token,
         );
+    }
+
+    public function logout(Worker $worker): void
+    {
+        $worker->currentAccessToken()->delete();
+    }
+
+    public function logoutAll(Worker $worker): void
+    {
+        $worker->tokens()->delete();
     }
 }

@@ -46,6 +46,7 @@ class ExpenseService
         private readonly CreateAdminExpenseAction $createAdminExpenseAction,
         private readonly UpdateExpenseAction $updateExpenseAction,
         private readonly DeleteExpenseAction $deleteExpenseAction,
+        private readonly FinancialSummaryService $financialSummaryService,
     ) {
     }
 
@@ -139,6 +140,29 @@ class ExpenseService
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
+    }
+
+    public function getDailyReport(DailyLog $dailyLog, GetExpensesData $data): array
+    {
+        $expenses = $this->get($dailyLog, $data);
+
+        return [
+            'expenses' => $expenses,
+            'summary' => $this->financialSummaryService->summaryForSiteManager($dailyLog->siteManager),
+        ];
+    }
+
+    public function getHistoryReport(DailyLog $dailyLog, GetExpensesData $data): array
+    {
+        $expenses = $this->getHistory($dailyLog, $data);
+        $summary = $this->financialSummaryService->summaryForSiteManager($dailyLog->siteManager);
+        $cashAdvances = $this->financialSummaryService->cashAdvancesForSiteManager($dailyLog->siteManager);
+
+        return [
+            'expenses' => $expenses,
+            'summary' => $summary,
+            'cash_advances' => $cashAdvances,
+        ];
     }
 
     public function getAdminExpenses(GetExpensesData $data, Worker $currentWorker,): array {

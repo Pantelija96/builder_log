@@ -33,13 +33,7 @@ class UpdateWorkerAttendanceAction extends BaseAction
             );
         }
 
-        if ($data->startedAt !== null && !$data->startedAt->isSameDay($workerAttendance->date)) {
-            throw new BusinessException('Started time must belong to the daily log date.');
-        }
-
-        if ($data->finishedAt !== null && !$data->finishedAt->isSameDay($workerAttendance->date)) {
-            throw new BusinessException('Finished time must belong to the daily log date.');
-        }
+        $this->ensureTimesMatchAttendanceDate($workerAttendance, $data);
 
         return $this->transaction(function () use ($workerAttendance, $data, $currentWorker) {
 
@@ -57,5 +51,16 @@ class UpdateWorkerAttendanceAction extends BaseAction
 
             return $workerAttendance->refresh();
         });
+    }
+
+    private function ensureTimesMatchAttendanceDate(WorkerAttendance $attendance, UpdateWorkerAttendanceData $data): void
+    {
+        if ($data->startedAt !== null && ! $data->startedAt->isSameDay($attendance->date)) {
+            throw new BusinessException('Started time must belong to the daily log date.');
+        }
+
+        if ($data->finishedAt !== null && ! $data->finishedAt->isSameDay($attendance->date)) {
+            throw new BusinessException('Finished time must belong to the daily log date.');
+        }
     }
 }
