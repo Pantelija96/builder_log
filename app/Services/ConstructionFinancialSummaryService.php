@@ -8,13 +8,13 @@ use App\Models\Expense;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
 use App\Models\WorkerPayment;
+use Carbon\CarbonInterface;
 
 class ConstructionFinancialSummaryService
 {
     public function __construct(
         private readonly WorkerSalaryService $workerSalaryService,
-    ) {
-    }
+    ) {}
 
     public function get(
         Worker $currentWorker,
@@ -124,6 +124,7 @@ class ConstructionFinancialSummaryService
                 '=',
                 'expenses.construction_site_id'
             )
+            ->where('construction_sites.company_id', $companyId)
             ->groupBy(
                 'expenses.construction_site_id',
                 'construction_sites.name'
@@ -192,6 +193,7 @@ class ConstructionFinancialSummaryService
                 '=',
                 'expenses.site_manager_id'
             )
+            ->where('workers.company_id', $companyId)
             ->groupBy(
                 'expenses.site_manager_id',
                 'workers.first_name',
@@ -284,8 +286,7 @@ class ConstructionFinancialSummaryService
 
         $attendancesByDate = $attendances
             ->groupBy(
-                fn ($attendance) =>
-                $attendance->date->toDateString()
+                fn ($attendance) => $attendance->date->toDateString()
             );
 
         /*
@@ -323,66 +324,49 @@ class ConstructionFinancialSummaryService
                 return [
                     'construction_site_id' => (int) $siteId,
 
-                    'construction_site_name' =>
-                        $siteNames->get($siteId),
+                    'construction_site_name' => $siteNames->get($siteId),
 
                     'expenses' => [
-                        'total' =>
-                            (float) ($expense?->expenses ?? 0),
+                        'total' => (float) ($expense?->expenses ?? 0),
 
-                        'admin' =>
-                            (float) ($expense?->admin_expenses ?? 0),
+                        'admin' => (float) ($expense?->admin_expenses ?? 0),
 
-                        'site_managers' =>
-                            (float) ($expense?->site_manager_expenses ?? 0),
+                        'site_managers' => (float) ($expense?->site_manager_expenses ?? 0),
 
-                        'count' =>
-                            (int) ($expense?->expenses_count ?? 0),
+                        'count' => (int) ($expense?->expenses_count ?? 0),
 
-                        'admin_count' =>
-                            (int) ($expense?->admin_expenses_count ?? 0),
+                        'admin_count' => (int) ($expense?->admin_expenses_count ?? 0),
 
-                        'site_managers_count' =>
-                            (int) ($expense?->site_manager_expenses_count ?? 0),
+                        'site_managers_count' => (int) ($expense?->site_manager_expenses_count ?? 0),
                     ],
 
                     'worker_advances' => [
-                        'amount' =>
-                            (float) $salary['advances'],
+                        'amount' => (float) $salary['advances'],
 
-                        'count' =>
-                            $siteAttendances
-                                ->filter(
-                                    fn ($attendance) =>
-                                        (float) $attendance->advance_payment > 0
-                                )
-                                ->count(),
+                        'count' => $siteAttendances
+                            ->filter(
+                                fn ($attendance) => (float) $attendance->advance_payment > 0
+                            )
+                            ->count(),
                     ],
 
                     'worker_salaries' => [
-                        'earned' =>
-                            (float) $salary['earned'],
+                        'earned' => (float) $salary['earned'],
 
-                        'worked_hours' =>
-                            (float) $salary['worked_hours'],
+                        'worked_hours' => (float) $salary['worked_hours'],
 
-                        'workers_count' =>
-                            $siteAttendances
-                                ->pluck('worker_id')
-                                ->unique()
-                                ->count(),
+                        'workers_count' => $siteAttendances
+                            ->pluck('worker_id')
+                            ->unique()
+                            ->count(),
 
-                        'has_estimated_hours' =>
-                            $salary['has_estimated_hours'],
+                        'has_estimated_hours' => $salary['has_estimated_hours'],
 
-                        'estimated_attendances' =>
-                            $salary['estimated_attendances'],
+                        'estimated_attendances' => $salary['estimated_attendances'],
 
-                        'has_missing_hourly_rates' =>
-                            $salary['has_missing_hourly_rates'],
+                        'has_missing_hourly_rates' => $salary['has_missing_hourly_rates'],
 
-                        'missing_hourly_rate_attendances' =>
-                            $salary['missing_hourly_rate_attendances'],
+                        'missing_hourly_rate_attendances' => $salary['missing_hourly_rate_attendances'],
                     ],
                 ];
             })
@@ -428,66 +412,50 @@ class ConstructionFinancialSummaryService
                     ->calculateAttendances($managerAttendances);
 
                 return [
-                    'site_manager_id' =>
-                        (int) $managerId,
+                    'site_manager_id' => (int) $managerId,
 
-                    'first_name' =>
-                        $manager?->first_name,
+                    'first_name' => $manager?->first_name,
 
-                    'last_name' =>
-                        $manager?->last_name,
+                    'last_name' => $manager?->last_name,
 
                     'expenses' => [
-                        'site_manager' =>
-                            (float) ($expense?->expenses ?? 0),
+                        'site_manager' => (float) ($expense?->expenses ?? 0),
 
-                        'count' =>
-                            (int) ($expense?->expenses_count ?? 0),
+                        'count' => (int) ($expense?->expenses_count ?? 0),
                     ],
 
                     'worker_advances' => [
-                        'amount' =>
-                            (float) $salary['advances'],
+                        'amount' => (float) $salary['advances'],
 
-                        'count' =>
-                            $managerAttendances
-                                ->filter(
-                                    fn ($attendance) =>
-                                        (float) $attendance->advance_payment > 0
-                                )
-                                ->count(),
+                        'count' => $managerAttendances
+                            ->filter(
+                                fn ($attendance) => (float) $attendance->advance_payment > 0
+                            )
+                            ->count(),
                     ],
 
                     'worker_salaries' => [
-                        'earned' =>
-                            (float) $salary['earned'],
+                        'earned' => (float) $salary['earned'],
 
-                        'worked_hours' =>
-                            (float) $salary['worked_hours'],
+                        'worked_hours' => (float) $salary['worked_hours'],
 
-                        'workers_count' =>
-                            $managerAttendances
-                                ->pluck('worker_id')
-                                ->unique()
-                                ->count(),
+                        'workers_count' => $managerAttendances
+                            ->pluck('worker_id')
+                            ->unique()
+                            ->count(),
 
-                        'has_estimated_hours' =>
-                            $salary['has_estimated_hours'],
+                        'has_estimated_hours' => $salary['has_estimated_hours'],
 
-                        'estimated_attendances' =>
-                            $salary['estimated_attendances'],
+                        'estimated_attendances' => $salary['estimated_attendances'],
 
-                        'has_missing_hourly_rates' =>
-                            $salary['has_missing_hourly_rates'],
+                        'has_missing_hourly_rates' => $salary['has_missing_hourly_rates'],
 
-                        'missing_hourly_rate_attendances' =>
-                            $salary['missing_hourly_rate_attendances'],
+                        'missing_hourly_rate_attendances' => $salary['missing_hourly_rate_attendances'],
                     ],
                 ];
             })
             ->sortByDesc(
-                fn ($manager) =>
-                $manager['expenses']['site_manager']
+                fn ($manager) => $manager['expenses']['site_manager']
             )
             ->values();
 
@@ -525,35 +493,27 @@ class ConstructionFinancialSummaryService
                     'date' => $date,
 
                     'expenses' => [
-                        'total' =>
-                            (float) ($expense?->expenses ?? 0),
+                        'total' => (float) ($expense?->expenses ?? 0),
 
-                        'admin' =>
-                            (float) ($expense?->admin_expenses ?? 0),
+                        'admin' => (float) ($expense?->admin_expenses ?? 0),
 
-                        'site_managers' =>
-                            (float) ($expense?->site_manager_expenses ?? 0),
+                        'site_managers' => (float) ($expense?->site_manager_expenses ?? 0),
                     ],
 
                     'worker_advances' => [
-                        'amount' =>
-                            (float) $salary['advances'],
+                        'amount' => (float) $salary['advances'],
                     ],
 
                     'worker_salaries' => [
-                        'earned' =>
-                            (float) $salary['earned'],
+                        'earned' => (float) $salary['earned'],
 
-                        'worked_hours' =>
-                            (float) $salary['worked_hours'],
+                        'worked_hours' => (float) $salary['worked_hours'],
                     ],
 
                     'worker_payments' => [
-                        'amount' =>
-                            (float) ($payment?->payments ?? 0),
+                        'amount' => (float) ($payment?->payments ?? 0),
 
-                        'count' =>
-                            (int) ($payment?->payments_count ?? 0),
+                        'count' => (int) ($payment?->payments_count ?? 0),
                     ],
                 ];
             })
@@ -573,98 +533,74 @@ class ConstructionFinancialSummaryService
 
             'summary' => [
                 'expenses' => [
-                    'total' =>
-                        (float) ($expenseSummary?->expenses ?? 0),
+                    'total' => (float) ($expenseSummary?->expenses ?? 0),
 
-                    'admin' =>
-                        (float) ($expenseSummary?->admin_expenses ?? 0),
+                    'admin' => (float) ($expenseSummary?->admin_expenses ?? 0),
 
-                    'site_managers' =>
-                        (float) ($expenseSummary?->site_manager_expenses ?? 0),
+                    'site_managers' => (float) ($expenseSummary?->site_manager_expenses ?? 0),
 
-                    'count' =>
-                        (int) ($expenseSummary?->expenses_count ?? 0),
+                    'count' => (int) ($expenseSummary?->expenses_count ?? 0),
 
-                    'admin_count' =>
-                        (int) ($expenseSummary?->admin_expenses_count ?? 0),
+                    'admin_count' => (int) ($expenseSummary?->admin_expenses_count ?? 0),
 
-                    'site_managers_count' =>
-                        (int) ($expenseSummary?->site_manager_expenses_count ?? 0),
+                    'site_managers_count' => (int) ($expenseSummary?->site_manager_expenses_count ?? 0),
 
-                    'average' =>
-                        (float) ($expenseSummary?->average_expense ?? 0),
+                    'average' => (float) ($expenseSummary?->average_expense ?? 0),
 
-                    'highest' =>
-                        (float) ($expenseSummary?->highest_expense ?? 0),
+                    'highest' => (float) ($expenseSummary?->highest_expense ?? 0),
                 ],
 
                 'worker_advances' => [
-                    'amount' =>
-                        (float) $salarySummary['advances'],
+                    'amount' => (float) $salarySummary['advances'],
 
-                    'count' =>
-                        $attendances
-                            ->filter(
-                                fn ($attendance) =>
-                                    (float) $attendance->advance_payment > 0
-                            )
-                            ->count(),
+                    'count' => $attendances
+                        ->filter(
+                            fn ($attendance) => (float) $attendance->advance_payment > 0
+                        )
+                        ->count(),
                 ],
 
                 'worker_salaries' => [
-                    'earned' =>
-                        (float) $salarySummary['earned'],
+                    'earned' => (float) $salarySummary['earned'],
 
-                    'worked_hours' =>
-                        (float) $salarySummary['worked_hours'],
+                    'worked_hours' => (float) $salarySummary['worked_hours'],
 
-                    'workers_count' =>
-                        $attendances
-                            ->pluck('worker_id')
-                            ->unique()
-                            ->count(),
+                    'workers_count' => $attendances
+                        ->pluck('worker_id')
+                        ->unique()
+                        ->count(),
 
-                    'has_estimated_hours' =>
-                        $salarySummary['has_estimated_hours'],
+                    'has_estimated_hours' => $salarySummary['has_estimated_hours'],
 
-                    'estimated_attendances' =>
-                        $salarySummary['estimated_attendances'],
+                    'estimated_attendances' => $salarySummary['estimated_attendances'],
 
-                    'has_missing_hourly_rates' =>
-                        $salarySummary['has_missing_hourly_rates'],
+                    'has_missing_hourly_rates' => $salarySummary['has_missing_hourly_rates'],
 
-                    'missing_hourly_rate_attendances' =>
-                        $salarySummary[
+                    'missing_hourly_rate_attendances' => $salarySummary[
                         'missing_hourly_rate_attendances'
                         ],
                 ],
 
                 'worker_payments' => [
-                    'amount' =>
-                        (float) ($paymentSummary?->payments ?? 0),
+                    'amount' => (float) ($paymentSummary?->payments ?? 0),
 
-                    'count' =>
-                        (int) ($paymentSummary?->payments_count ?? 0),
+                    'count' => (int) ($paymentSummary?->payments_count ?? 0),
                 ],
 
-                'construction_sites_count' =>
-                    $siteIds->count(),
+                'construction_sites_count' => $siteIds->count(),
             ],
 
-            'by_construction_site' =>
-                $byConstructionSite,
+            'by_construction_site' => $byConstructionSite,
 
-            'by_site_manager' =>
-                $bySiteManager,
+            'by_site_manager' => $bySiteManager,
 
-            'by_date' =>
-                $byDate,
+            'by_date' => $byDate,
         ];
     }
 
     private function dateKey(mixed $date): string
     {
-        if ($date instanceof \Carbon\CarbonInterface) {
+        if ($date instanceof CarbonInterface) {
             return $date->toDateString();
         }
 

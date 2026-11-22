@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use App\DTO\Financial\FinancialSummaryData;
-use App\Models\CashAdvance;
-use App\Models\Expense;
 use App\Models\Worker;
 use Illuminate\Support\Collection;
 
@@ -19,14 +17,13 @@ class FinancialSummaryService
         );
     }
 
-    public function summaryForAllSiteManagers(): Collection
+    public function summaryForAllSiteManagers(Worker $actor): Collection
     {
         return Worker::query()
+            ->where('company_id', $actor->company_id)
             ->siteManagers()
             ->get()
-            ->map(fn (Worker $worker) =>
-
-            $this->calculateSummary(
+            ->map(fn (Worker $worker) => $this->calculateSummary(
                 $worker
             )
 
@@ -39,10 +36,12 @@ class FinancialSummaryService
 
         $advanced = $siteManager
             ->cashAdvances()
+            ->where('company_id', $siteManager->company_id)
             ->sum('amount');
 
         $spent = $siteManager
             ->expenses()
+            ->where('company_id', $siteManager->company_id)
             ->sum('amount');
 
         $remaining = $advanced - $spent;
@@ -65,10 +64,10 @@ class FinancialSummaryService
 
     public function cashAdvancesForSiteManager(
         Worker $siteManager,
-    ): Collection
-    {
+    ): Collection {
         return $siteManager
             ->cashAdvances()
+            ->where('company_id', $siteManager->company_id)
             ->with('creator')
             ->latest('date')
             ->get();

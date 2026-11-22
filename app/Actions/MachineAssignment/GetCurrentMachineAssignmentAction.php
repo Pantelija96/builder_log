@@ -5,7 +5,6 @@ namespace App\Actions\MachineAssignment;
 use App\Actions\BaseAction;
 use App\Models\MachineAssignment;
 use App\Models\Worker;
-use Illuminate\Database\Eloquent\Builder;
 
 class GetCurrentMachineAssignmentAction extends BaseAction
 {
@@ -18,40 +17,21 @@ class GetCurrentMachineAssignmentAction extends BaseAction
         $targetWorkerId =
             $workerId ?? $currentWorker->id;
 
+        if ($workerId !== null) {
+            abort_unless(Worker::query()->where('company_id', $currentWorker->company_id)->whereKey($workerId)->exists(), 404);
+        }
+
         return MachineAssignment::query()
-            ->where(
-                'company_id',
-                $currentWorker->company_id,
-            )
+            ->visibleTo($currentWorker)
             ->where(
                 'worker_id',
                 $targetWorkerId,
             )
             ->whereDate(
                 'date',
-                today(),
+                $now->toDateString(),
             )
-            ->where(
-                function (Builder $query) use ($now) {
-                    $query
-                        ->whereHas(
-                            'excavatorLog',
-                            fn (Builder $query) =>
-                            $this->activeLog(
-                                $query,
-                                $now,
-                            )
-                        )
-                        ->orWhereHas(
-                            'truckLog',
-                            fn (Builder $query) =>
-                            $this->activeLog(
-                                $query,
-                                $now,
-                            )
-                        );
-                }
-            )
+            ->occupiedAt($now)
             ->with([
                 'machine',
                 'machine.excavator',
@@ -65,40 +45,5 @@ class GetCurrentMachineAssignmentAction extends BaseAction
             ])
             ->latest('id')
             ->first();
-    }
-
-    private function activeLog(
-        Builder $query,
-        mixed $now,
-    ): void {
-        $query->where(
-            function (Builder $query) use ($now) {
-                /*
-                 * Ako Site Manager nije uneo kompletan period,
-                 * assignment ostaje current/occupied.
-                 *
-                 * Tek kada postoje oba manager vremena gledamo
-                 * da li je "now" unutar potvrđenog perioda.
-                 */
-                $query
-                    ->whereNull('site_manager_started_at')
-                    ->orWhereNull('site_manager_finished_at')
-                    ->orWhere(
-                        function (Builder $query) use ($now) {
-                            $query
-                                ->where(
-                                    'site_manager_started_at',
-                                    '<=',
-                                    $now,
-                                )
-                                ->where(
-                                    'site_manager_finished_at',
-                                    '>',
-                                    $now,
-                                );
-                        }
-                    );
-            }
-        );
     }
 }

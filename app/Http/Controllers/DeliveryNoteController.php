@@ -15,6 +15,7 @@ use App\Models\DailyLog;
 use App\Models\DeliveryNote;
 use App\Models\Worker;
 use App\Services\DeliveryNoteService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,17 +32,20 @@ class DeliveryNoteController extends ApiController
             DeliveryNoteAdmin::collection(
                 $this->service->getAllAdmin(
                     GetDeliveryNotesData::fromRequest($request),
+                    $request->user(),
                 )
             )
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
     public function index(DailyLog $dailyLog, GetDeliveryNotesRequest $request,): JsonResponse {
         $data = GetDeliveryNotesData::fromRequest($request);
 
         $deliveryNotes = $this->service->getAll(
             $dailyLog,
             $data,
+            $request->user(),
         );
 
         return $this->success(
@@ -49,6 +53,9 @@ class DeliveryNoteController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 422, description: 'Invalid request or no manager attribution available for an administrator.', type: 'array{message: string, errors?: array<string, list<string>>}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function store(DailyLog $dailyLog, CreateDeliveryNoteRequest $request,): JsonResponse {
         /** @var Worker $worker */
         $worker = $request->user();
@@ -64,6 +71,8 @@ class DeliveryNoteController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function update(
         DailyLog $dailyLog,
         DeliveryNote $deliveryNote,
@@ -87,6 +96,8 @@ class DeliveryNoteController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function destroy(
         DailyLog $dailyLog,
         DeliveryNote $deliveryNote,

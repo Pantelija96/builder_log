@@ -14,6 +14,7 @@ use App\Models\DailyLog;
 use App\Models\Note;
 use App\Models\Worker;
 use App\Services\NoteService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
@@ -24,6 +25,7 @@ class NoteController extends ApiController
     ) {
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
     public function index(DailyLog $dailyLog, GetNotesRequest $request,): JsonResponse
     {
         return $this->success(
@@ -31,6 +33,7 @@ class NoteController extends ApiController
                 $this->noteService->get(
                     dailyLog: $dailyLog,
                     data: GetNotesData::fromRequest($request),
+                    worker: $request->user(),
                 )
             )
         );
@@ -42,11 +45,15 @@ class NoteController extends ApiController
             NoteResource::collection(
                 $this->noteService->getAll(
                     data: GetNotesData::fromRequest($request),
+                    worker: $request->user(),
                 )
             )
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 422, description: 'Invalid request or no manager attribution available for an administrator.', type: 'array{message: string, errors?: array<string, list<string>>}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function store(
         DailyLog $dailyLog,
         CreateNoteRequest $request,
@@ -67,6 +74,8 @@ class NoteController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function update(
         DailyLog $dailyLog,
         Note $note,
@@ -90,6 +99,8 @@ class NoteController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function destroy(
         DailyLog $dailyLog,
         Note $note,

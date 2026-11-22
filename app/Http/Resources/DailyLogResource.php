@@ -16,7 +16,6 @@ class DailyLogResource extends JsonResource
             'id' => $this->id,
             'company_id' => $this->company_id,
             'construction_site_id' => $this->construction_site_id,
-            'site_manager_id' => $this->site_manager_id,
             'date' => $this->date,
             'is_locked' => $this->is_locked,
             'locked_at' => $this->locked_at,
@@ -29,9 +28,7 @@ class DailyLogResource extends JsonResource
             'construction_site' => ConstructionSiteResource::make(
                 $this->whenLoaded('constructionSite')
             ),
-            'site_manager' => WorkerResource::make(
-                $this->whenLoaded('siteManager')
-            ),
+            'site_managers' => DailyLogSiteManagerResource::collection($this->whenLoaded('siteManagers')),
             'locked_by' => WorkerResource::make(
                 $this->whenLoaded('lockedBy')
             ),

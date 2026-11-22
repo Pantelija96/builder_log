@@ -4,7 +4,6 @@ namespace App\Actions\Expense;
 
 use App\Actions\BaseAction;
 use App\Enums\LogEvent;
-use App\Exceptions\BusinessException;
 use App\Models\DailyLog;
 use App\Models\Expense;
 use App\Models\Worker;
@@ -24,14 +23,9 @@ class DeleteExpenseAction extends BaseAction
 
     public function execute(DailyLog $dailyLog, Expense $expense, Worker $currentWorker, string $reason,): void {
 
-        if ($expense->daily_log_id !== $dailyLog->id) {
-            throw new BusinessException(
-                'Expense does not belong to the specified daily log.'
-            );
-        }
-
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureDailyLogChild($dailyLog, $expense);
+        $this->ensureEditable($dailyLog);
 
         $this->transaction(function () use ($expense, $currentWorker, $reason) {
 

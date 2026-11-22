@@ -10,14 +10,17 @@ use App\Enums\WorkerRole;
 use App\Exceptions\BusinessException;
 use App\Models\TruckLog;
 use App\Models\Worker;
+use App\QueryFilters\MachinePeriod;
 use App\Services\Logging\LoggingService;
 use App\Services\NotificationService;
 use App\Services\WorkerPushNotificationService;
-use Illuminate\Database\Eloquent\Builder;
+use App\Traits\ManagesMachineAssignments;
 use Illuminate\Support\Facades\Log;
 
 class UpdateTruckLogAction extends BaseAction
 {
+    use ManagesMachineAssignments;
+
     public function __construct(
         private readonly LoggingService $logging,
         private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
@@ -37,6 +40,16 @@ class UpdateTruckLogAction extends BaseAction
             $currentWorker,
             $reason,
         ) {
+            $this->lockMachineAssignments($currentWorker);
+            $truckLog = TruckLog::query()->findOrFail($truckLog->id);
+            $assignment = $truckLog->machineAssignment;
+            abort_unless($assignment, 404);
+            $ownUpdate = $currentWorker->isDriver() && $truckLog->worker_id === $currentWorker->id;
+            $dailyLog = $this->editableMachineDailyLog($assignment, $currentWorker, $ownUpdate);
+            abort_if($ownUpdate && array_intersect(
+                $data->providedFields,
+                ['site_manager_started_at', 'site_manager_finished_at', 'note_site_manager', 'advance_payment'],
+            ), 403);
             $oldValues =
                 $truckLog->getAttributes();
 
@@ -45,24 +58,21 @@ class UpdateTruckLogAction extends BaseAction
             Log::info(
                 'UpdateTruckLogAction received',
                 [
-                    'TruckLog' =>
-                        $truckLog->toArray(),
+                    'TruckLog' => $truckLog->toArray(),
                 ],
             );
 
             Log::info(
                 'UpdateTruckLogData received',
                 [
-                    'UpdateTruckLogData' =>
-                        $data,
+                    'UpdateTruckLogData' => $data,
                 ],
             );
 
             Log::info(
                 'Worker received',
                 [
-                    'Worker' =>
-                        $currentWorker->toArray(),
+                    'Worker' => $currentWorker->toArray(),
                 ],
             );
 
@@ -222,7 +232,7 @@ class UpdateTruckLogAction extends BaseAction
                     )
                         ? $values['site_manager_started_at']
                         : $truckLog
-                        ->site_manager_started_at;
+                            ->site_manager_started_at;
 
                 $siteManagerFinishedAt =
                     array_key_exists(
@@ -231,32 +241,34 @@ class UpdateTruckLogAction extends BaseAction
                     )
                         ? $values['site_manager_finished_at']
                         : $truckLog
-                        ->site_manager_finished_at;
+                            ->site_manager_finished_at;
 
-                $this->ensureTruckIsAvailable(
-                    machineId:
-                    $assignment->machine_id,
-                    startedAt:
-                    $siteManagerStartedAt,
-                    finishedAt:
-                    $siteManagerFinishedAt,
-                    date:
-                    $assignment->date->toDateString(),
-                    exceptAssignmentId:
-                    $assignment->id,
+                MachinePeriod::ensureAvailable(
+                    companyId: $currentWorker->company_id,
+                    machineId: $assignment->machine_id,
+                    workerId: $assignment->worker_id,
+                    date: $assignment->date->toDateString(),
+                    start: $siteManagerStartedAt,
+                    finish: $siteManagerFinishedAt,
+                    exceptAssignmentId: $assignment->id,
+                    machineMessage: 'Truck is already in use during the selected period.',
+                    workerMessage: 'Driver is already assigned to another truck during the selected period.',
                 );
+            }
 
-                $this->ensureDriverIsAvailable(
-                    workerId:
-                    $assignment->worker_id,
-                    startedAt:
-                    $siteManagerStartedAt,
-                    finishedAt:
-                    $siteManagerFinishedAt,
-                    date:
-                    $assignment->date->toDateString(),
-                    exceptAssignmentId:
-                    $assignment->id,
+            if ($managerTimeFieldsChanged && $siteManagerStartedAt !== null && $dailyLog !== null
+                && $truckLog->site_manager_started_at === null && $assignment->isPendingSelfAssignment()) {
+                $this->ensureManagerAttribution($currentWorker);
+                $oldAssignment = $assignment->getAttributes();
+                $assignment->update([
+                    'daily_log_id' => $dailyLog->id,
+                    'site_manager_id' => $currentWorker->id,
+                ]);
+                $this->logging->audit(
+                    actor: $currentWorker,
+                    subject: $assignment,
+                    event: LogEvent::MACHINE_ASSIGNMENT_TAKEN_OVER,
+                    oldValues: $oldAssignment,
                 );
             }
 
@@ -277,66 +289,52 @@ class UpdateTruckLogAction extends BaseAction
                 );
             }
 
-            $this->syncMachineWorkerAttendanceAction->execute(
-                assignment:
-                $assignment,
-                startedAt:
-                $truckLog
-                    ->site_manager_started_at,
-                finishedAt:
-                $truckLog
-                    ->site_manager_finished_at,
-                advancePayment:
-                in_array(
-                    'advance_payment',
-                    $data->providedFields,
-                    true,
-                )
-                    ? $data->advancePayment
-                    : null,
-            );
+            if (! $ownUpdate) {
+                $this->syncMachineWorkerAttendanceAction->execute(
+                    assignment: $assignment,
+                    startedAt: $truckLog
+                        ->site_manager_started_at,
+                    finishedAt: $truckLog
+                        ->site_manager_finished_at,
+                    advancePayment: in_array(
+                        'advance_payment',
+                        $data->providedFields,
+                        true,
+                    )
+                        ? $data->advancePayment
+                        : null,
+                    actor: $currentWorker,
+                );
+            }
 
             $this->logging->activity(
-                actor:
-                $currentWorker,
-                subject:
-                $truckLog,
-                event:
-                LogEvent::TRUCK_LOG_UPDATED,
+                actor: $currentWorker,
+                subject: $truckLog,
+                event: LogEvent::TRUCK_LOG_UPDATED,
             );
 
             $this->logging->audit(
-                actor:
-                $currentWorker,
-                subject:
-                $truckLog,
-                event:
-                LogEvent::TRUCK_LOG_UPDATED,
-                oldValues:
-                $oldValues,
-                newValues:
-                $truckLog
+                actor: $currentWorker,
+                subject: $truckLog,
+                event: LogEvent::TRUCK_LOG_UPDATED,
+                oldValues: $oldValues,
+                newValues: $truckLog
                     ->fresh()
                     ->getAttributes(),
-                reason:
-                $reason,
+                reason: $reason,
             );
 
             if ($driverStartedDay) {
                 $this->notifyAdminsWorkerStartedDay(
-                    truckLog:
-                    $truckLog,
-                    worker:
-                    $currentWorker,
+                    truckLog: $truckLog,
+                    worker: $currentWorker,
                 );
             }
 
             if ($driverFinishedDay) {
                 $this->notifyAdminsWorkerFinishedDay(
-                    truckLog:
-                    $truckLog,
-                    worker:
-                    $currentWorker,
+                    truckLog: $truckLog,
+                    worker: $currentWorker,
                 );
             }
 
@@ -346,152 +344,6 @@ class UpdateTruckLogAction extends BaseAction
                 'creator',
             ]);
         });
-    }
-
-    private function ensureTruckIsAvailable(
-        int $machineId,
-        mixed $startedAt,
-        mixed $finishedAt = null,
-        ?string $date = null,
-        ?int $exceptAssignmentId = null,
-    ): void {
-        $query = TruckLog::query()
-            ->whereHas(
-                'machineAssignment',
-                function (Builder $query) use (
-                    $machineId,
-                    $date,
-                    $exceptAssignmentId,
-                ) {
-                    $query->where(
-                        'machine_id',
-                        $machineId,
-                    );
-
-                    if ($date !== null) {
-                        $query->whereDate(
-                            'date',
-                            $date,
-                        );
-                    }
-
-                    if ($exceptAssignmentId !== null) {
-                        $query->where(
-                            'id',
-                            '!=',
-                            $exceptAssignmentId,
-                        );
-                    }
-                }
-            );
-
-        $this->applyManagerConflictCondition(
-            query: $query,
-            startedAt: $startedAt,
-            finishedAt: $finishedAt,
-        );
-
-        if ($query->exists()) {
-            throw new BusinessException(
-                'Truck is already in use during the selected period.'
-            );
-        }
-    }
-
-    private function ensureDriverIsAvailable(
-        int $workerId,
-        mixed $startedAt,
-        mixed $finishedAt = null,
-        ?string $date = null,
-        ?int $exceptAssignmentId = null,
-    ): void {
-        $query = TruckLog::query()
-            ->where(
-                'worker_id',
-                $workerId,
-            )
-            ->whereHas(
-                'machineAssignment',
-                function (Builder $query) use (
-                    $date,
-                    $exceptAssignmentId,
-                ) {
-                    if ($date !== null) {
-                        $query->whereDate(
-                            'date',
-                            $date,
-                        );
-                    }
-
-                    if ($exceptAssignmentId !== null) {
-                        $query->where(
-                            'id',
-                            '!=',
-                            $exceptAssignmentId,
-                        );
-                    }
-                }
-            );
-
-        $this->applyManagerConflictCondition(
-            query:
-            $query,
-            startedAt:
-            $startedAt,
-            finishedAt:
-            $finishedAt,
-        );
-
-        if ($query->exists()) {
-            throw new BusinessException(
-                'Driver is already assigned to another truck during the selected period.'
-            );
-        }
-    }
-
-    private function applyManagerConflictCondition(
-        Builder $query,
-        mixed $startedAt,
-        mixed $finishedAt,
-    ): void {
-        if ($startedAt === null) {
-            return;
-        }
-
-        $query->where(
-            function (Builder $query) use (
-                $startedAt,
-                $finishedAt,
-            ) {
-                $query
-                    ->whereNull(
-                        'site_manager_started_at'
-                    )
-                    ->orWhereNull(
-                        'site_manager_finished_at'
-                    )
-                    ->orWhere(
-                        function (Builder $query) use (
-                            $startedAt,
-                            $finishedAt,
-                        ) {
-                            if ($finishedAt !== null) {
-                                $query->where(
-                                    'site_manager_started_at',
-                                    '<',
-                                    $finishedAt,
-                                );
-                            }
-
-                            $query->where(
-                                'site_manager_finished_at',
-                                '>',
-                                $startedAt,
-                            );
-                        }
-                    );
-            }
-        );
     }
 
     private function notifyAdminsWorkerStartedDay(
@@ -519,42 +371,27 @@ class UpdateTruckLogAction extends BaseAction
                     $notification =
                         $this->notifications
                             ->workerStartedDay(
-                                worker:
-                                $admin,
-                                startedBy:
-                                $worker,
-                                machineAssignmentId:
-                                $truckLog
+                                worker: $admin,
+                                startedBy: $worker,
+                                machineAssignmentId: $truckLog
                                     ->machine_assignment_id,
-                                logType:
-                                'truck',
-                                logId:
-                                $truckLog->id,
+                                logType: 'truck',
+                                logId: $truckLog->id,
                             );
 
                     $this->pushNotifications->send(
-                        worker:
-                        $admin,
-                        title:
-                        $notification->title,
-                        body:
-                        $notification->message,
+                        worker: $admin,
+                        title: $notification->title,
+                        body: $notification->message,
                         data: [
-                            'type' =>
-                                'worker_day_started',
-                            'worker_id' =>
-                                $worker->id,
-                            'log_type' =>
-                                'truck',
-                            'truck_log_id' =>
-                                $truckLog->id,
-                            'worker_type' =>
-                                'driver',
-                            'machine_assignment_id' =>
-                                $truckLog
-                                    ->machine_assignment_id,
-                            'notification_id' =>
-                                $notification->id,
+                            'type' => 'worker_day_started',
+                            'worker_id' => $worker->id,
+                            'log_type' => 'truck',
+                            'truck_log_id' => $truckLog->id,
+                            'worker_type' => 'driver',
+                            'machine_assignment_id' => $truckLog
+                                ->machine_assignment_id,
+                            'notification_id' => $notification->id,
                         ],
                     );
                 }
@@ -586,42 +423,27 @@ class UpdateTruckLogAction extends BaseAction
                     $notification =
                         $this->notifications
                             ->workerFinishedDay(
-                                worker:
-                                $admin,
-                                finishedBy:
-                                $worker,
-                                machineAssignmentId:
-                                $truckLog
+                                worker: $admin,
+                                finishedBy: $worker,
+                                machineAssignmentId: $truckLog
                                     ->machine_assignment_id,
-                                logType:
-                                'truck',
-                                logId:
-                                $truckLog->id,
+                                logType: 'truck',
+                                logId: $truckLog->id,
                             );
 
                     $this->pushNotifications->send(
-                        worker:
-                        $admin,
-                        title:
-                        $notification->title,
-                        body:
-                        $notification->message,
+                        worker: $admin,
+                        title: $notification->title,
+                        body: $notification->message,
                         data: [
-                            'type' =>
-                                'worker_day_finished',
-                            'worker_id' =>
-                                $worker->id,
-                            'log_type' =>
-                                'truck',
-                            'truck_log_id' =>
-                                $truckLog->id,
-                            'worker_type' =>
-                                'driver',
-                            'machine_assignment_id' =>
-                                $truckLog
-                                    ->machine_assignment_id,
-                            'notification_id' =>
-                                $notification->id,
+                            'type' => 'worker_day_finished',
+                            'worker_id' => $worker->id,
+                            'log_type' => 'truck',
+                            'truck_log_id' => $truckLog->id,
+                            'worker_type' => 'driver',
+                            'machine_assignment_id' => $truckLog
+                                ->machine_assignment_id,
+                            'notification_id' => $notification->id,
                         ],
                     );
                 }

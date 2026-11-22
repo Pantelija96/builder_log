@@ -16,10 +16,12 @@ class UnlockDailyLogAction extends BaseAction
 
     public function __construct(
         private readonly LoggingService $logging,
-    ) {
-    }
+    ) {}
 
-    public function execute(DailyLog $dailyLog, ?string $reason, ?Worker $worker = null): DailyLog {
+    public function execute(DailyLog $dailyLog, ?string $reason, ?Worker $worker = null): DailyLog
+    {
+        abort_if($worker !== null && $dailyLog->company_id !== $worker->company_id, 404);
+
         if (! $dailyLog->isLocked()) {
             throw new BusinessException(
                 'Daily log is not locked.'

@@ -14,6 +14,7 @@ use App\Models\DailyLog;
 use App\Models\SubcontractorLog;
 use App\Models\Worker;
 use App\Services\SubcontractorLogService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -40,6 +41,9 @@ class SubcontractorLogController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 422, description: 'Invalid request or no manager attribution available for an administrator.', type: 'array{message: string, errors?: array<string, list<string>>}')]
+    #[Response(status: 500, description: 'The daily log is locked or already contains this entry.', type: 'array{message: string}')]
     public function store(DailyLog $dailyLog, CreateSubcontractorLogRequest $request,): \Illuminate\Http\JsonResponse
     {
 
@@ -65,6 +69,8 @@ class SubcontractorLogController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function update(
         DailyLog $dailyLog,
         SubcontractorLog $subcontractorLog,
@@ -74,6 +80,7 @@ class SubcontractorLogController extends ApiController
         $worker = auth()->user();
 
         $subcontractorLog = $this->service->update(
+            dailyLog: $dailyLog,
             subcontractorLog: $subcontractorLog,
             data: UpdateSubcontractorLogData::fromRequest($request),
             worker: $worker,
@@ -93,6 +100,8 @@ class SubcontractorLogController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function destroy(
         DailyLog $dailyLog,
         SubcontractorLog $subcontractorLog,
@@ -103,6 +112,7 @@ class SubcontractorLogController extends ApiController
         $worker = auth()->user();
 
         $this->service->delete(
+            dailyLog: $dailyLog,
             subcontractorLog: $subcontractorLog,
             worker: $worker,
             reason: $request->string('reason')->toString(),

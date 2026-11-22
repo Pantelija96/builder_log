@@ -8,9 +8,12 @@ use App\Models\TruckLog;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
 use App\Services\Logging\LoggingService;
+use App\Traits\ManagesMachineAssignments;
 
 class DeleteTruckLogAction extends BaseAction
 {
+    use ManagesMachineAssignments;
+
     public function __construct(
         private readonly LoggingService $logging,
     ) {}
@@ -25,6 +28,11 @@ class DeleteTruckLogAction extends BaseAction
             $currentWorker,
             $reason,
         ) {
+            $this->lockMachineAssignments($currentWorker);
+            $truckLog = TruckLog::query()->findOrFail($truckLog->id);
+            $assignment = $truckLog->machineAssignment;
+            abort_unless($assignment, 404);
+            $this->editableMachineDailyLog($assignment, $currentWorker);
             $oldValues = $truckLog->getAttributes();
 
             $this->logging->activity(

@@ -34,8 +34,9 @@ class CreateNoteAction extends BaseAction
         CreateNoteData $data,
         Worker $currentWorker,
     ): Note {
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureEditable($dailyLog);
+        $this->ensureManagerAttribution($currentWorker);
 
         return $this->transaction(function () use (
             $dailyLog,
@@ -46,7 +47,7 @@ class CreateNoteAction extends BaseAction
                 'company_id' => $dailyLog->company_id,
                 'daily_log_id' => $dailyLog->id,
                 'construction_site_id' => $dailyLog->construction_site_id,
-                'site_manager_id' => $dailyLog->site_manager_id,
+                'site_manager_id' => $currentWorker->id,
 
                 'note' => $data->note,
                 'worker_count' => $data->workerCount,

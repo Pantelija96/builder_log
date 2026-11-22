@@ -5,6 +5,7 @@ namespace App\Actions\SiteManager;
 use App\DTO\SiteManager\GetSiteManagerOverallData;
 use App\Models\CashAdvance;
 use App\Models\Expense;
+use App\Models\Worker;
 use App\Models\WorkerAttendance;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
@@ -12,47 +13,49 @@ use Illuminate\Support\Collection;
 
 class GetSiteManagerOverallAction
 {
-    public function execute(int $siteManagerId, GetSiteManagerOverallData $data,): Collection
+    public function execute(int $siteManagerId, GetSiteManagerOverallData $data, Worker $worker): Collection
     {
+        abort_unless(Worker::query()->where('company_id', $worker->company_id)->siteManagers()->whereKey($siteManagerId)->exists(), 404);
+
         $expenses = Expense::query()
+            ->when($worker->isSiteManager(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($worker)))
             ->where('site_manager_id', $siteManagerId)
+            ->where('company_id', $worker->company_id)
             ->when(
                 $data->dateCreatedFrom,
-                fn (Builder $query, Carbon $date) =>
-                $query->whereDate('date', '>=', $date)
+                fn (Builder $query, Carbon $date) => $query->whereDate('date', '>=', $date)
             )
             ->when(
                 $data->dateCreatedTo,
-                fn (Builder $query, Carbon $date) =>
-                $query->whereDate('date', '<=', $date)
+                fn (Builder $query, Carbon $date) => $query->whereDate('date', '<=', $date)
             )
             ->with([
                 'creator',
                 'siteManager',
                 'constructionSite',
-                'dailyLog',
+                'dailyLog.siteManagers',
                 'attachments',
             ])
             ->orderBy('date')
             ->get();
 
         $workerAttendances = WorkerAttendance::query()
+            ->when($worker->isSiteManager(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($worker)))
             ->where('site_manager_id', $siteManagerId)
+            ->where('company_id', $worker->company_id)
             ->when(
                 $data->dateCreatedFrom,
-                fn (Builder $query, Carbon $date) =>
-                $query->whereDate('date', '>=', $date)
+                fn (Builder $query, Carbon $date) => $query->whereDate('date', '>=', $date)
             )
             ->when(
                 $data->dateCreatedTo,
-                fn (Builder $query, Carbon $date) =>
-                $query->whereDate('date', '<=', $date)
+                fn (Builder $query, Carbon $date) => $query->whereDate('date', '<=', $date)
             )
             ->with([
                 'worker',
                 'siteManager',
                 'constructionSite',
-                'dailyLog',
+                'dailyLog.siteManagers',
                 'creator',
             ])
             ->orderBy('date')
@@ -60,15 +63,14 @@ class GetSiteManagerOverallAction
 
         $cashAdvancesTotal = CashAdvance::query()
             ->where('site_manager_id', $siteManagerId)
+            ->where('company_id', $worker->company_id)
             ->when(
                 $data->dateCreatedFrom,
-                fn (Builder $query, Carbon $date) =>
-                $query->whereDate('date', '>=', $date)
+                fn (Builder $query, Carbon $date) => $query->whereDate('date', '>=', $date)
             )
             ->when(
                 $data->dateCreatedTo,
-                fn (Builder $query, Carbon $date) =>
-                $query->whereDate('date', '<=', $date)
+                fn (Builder $query, Carbon $date) => $query->whereDate('date', '<=', $date)
             )
             ->sum('amount');
 
@@ -86,16 +88,15 @@ class GetSiteManagerOverallAction
         /*
          * Grupisanje po construction_site_id.
          */
-        return $siteIds->map(function (int $siteId) use ($expenses, $workerAttendances, $cashAdvancesTotal)
-        {
+        return $siteIds->map(function (int $siteId) use ($expenses, $workerAttendances, $cashAdvancesTotal) {
             return [
                 'cash_advance_total' => $cashAdvancesTotal,
 
                 'construction_site_id' => $siteId,
 
                 'construction_site' => $expenses
-                        ->firstWhere('construction_site_id', $siteId)
-                        ?->constructionSite
+                    ->firstWhere('construction_site_id', $siteId)
+                    ?->constructionSite
                     ?? $workerAttendances
                         ->firstWhere('construction_site_id', $siteId)
                         ?->constructionSite,

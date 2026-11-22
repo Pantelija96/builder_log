@@ -6,7 +6,6 @@ use App\Actions\Attachment\SynchronizeAttachmentsAction;
 use App\Actions\BaseAction;
 use App\DTO\Expense\UpdateExpenseData;
 use App\Enums\LogEvent;
-use App\Exceptions\BusinessException;
 use App\Models\DailyLog;
 use App\Models\Expense;
 use App\Models\Worker;
@@ -27,14 +26,9 @@ class UpdateExpenseAction extends BaseAction
 
     public function execute(DailyLog $dailyLog, Expense $expense, UpdateExpenseData $data, Worker $currentWorker, ?string $reason): Expense {
 
-        if ($expense->daily_log_id !== $dailyLog->id) {
-            throw new BusinessException(
-                'Expense does not belong to the specified daily log.'
-            );
-        }
-
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureDailyLogChild($dailyLog, $expense);
+        $this->ensureEditable($dailyLog);
 
         return $this->transaction(function () use ($expense, $data, $currentWorker, $reason) {
 

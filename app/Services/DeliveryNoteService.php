@@ -12,43 +12,51 @@ use App\Models\DailyLog;
 use App\Models\DeliveryNote;
 use App\Models\Worker;
 use App\QueryFilters\DeliveryNoteFilter;
+use App\Traits\EnsuresWorkerCanManageDailyLog;
 use Illuminate\Database\Eloquent\Collection;
 
 class DeliveryNoteService
 {
+    use EnsuresWorkerCanManageDailyLog;
+
     public function __construct(
         private readonly CreateDeliveryNoteAction $createAction,
         private readonly UpdateDeliveryNoteAction $updateDeliveryNoteAction,
         private readonly DeleteDeliveryNoteAction $deleteDeliveryNoteAction,
-    ) {
-    }
+    ) {}
 
-    private function queryAll()
+    private function queryAll(Worker $worker)
     {
         return DeliveryNote::query()
+            ->where('delivery_notes.company_id', $worker->company_id)
+            ->when($worker->isSiteManager(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($worker)))
             ->with([
                 'supplier',
                 'creator',
                 'siteManager',
                 'constructionSite',
-                'dailyLog',
+                'dailyLog.siteManagers',
                 'attachments',
             ]);
     }
 
     public function getAllAdmin(
         GetDeliveryNotesData $data,
+        Worker $worker,
     ): Collection {
         return (new DeliveryNoteFilter($data))
-            ->apply($this->queryAll())
+            ->apply($this->queryAll($worker))
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
     }
 
-    public function getAll(DailyLog $dailyLog, GetDeliveryNotesData $data,): Collection {
+    public function getAll(DailyLog $dailyLog, GetDeliveryNotesData $data, Worker $worker): Collection
+    {
+        $this->ensureCanRead($dailyLog, $worker);
         $query = DeliveryNote::query()
-            ->where('daily_log_id', $dailyLog->id)
+            ->whereBelongsTo($dailyLog)
+            ->where('company_id', $dailyLog->company_id)
             ->with([
                 'supplier',
                 'attachments',
@@ -63,7 +71,8 @@ class DeliveryNoteService
             ->get();
     }
 
-    public function create(DailyLog $dailyLog, CreateDeliveryNoteData $data, Worker $worker,): DeliveryNote {
+    public function create(DailyLog $dailyLog, CreateDeliveryNoteData $data, Worker $worker): DeliveryNote
+    {
         return $this->createAction->execute(
             $dailyLog,
             $data,

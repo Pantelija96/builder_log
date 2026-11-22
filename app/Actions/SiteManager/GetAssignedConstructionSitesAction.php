@@ -11,6 +11,7 @@ class GetAssignedConstructionSitesAction
     {
         return $siteManager
             ->constructionSites()
+            ->where('construction_sites.company_id', $siteManager->company_id)
             ->orderBy('name')
             ->get();
     }

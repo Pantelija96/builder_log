@@ -28,8 +28,9 @@ class DeleteNoteAction extends BaseAction
         string $reason,
     ): void {
 
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureDailyLogChild($dailyLog, $note);
+        $this->ensureEditable($dailyLog);
 
         $this->transaction(function () use (
             $note,

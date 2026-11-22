@@ -8,30 +8,33 @@ use App\Http\Resources\ConstructionSiteResource;
 use App\Http\Resources\SiteManagerOverallResource;
 use App\Models\Worker;
 use App\Services\SiteManagerService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 
 class SiteManagerController extends ApiController
 {
     public function __construct(
         private readonly SiteManagerService $siteManagerService,
-    )
-    {}
+    ) {}
 
-    public function overall(int $siteManager, GetSiteManagerOverallRequest $request,): JsonResponse
+    #[Response(status: 404, description: 'The resource is missing or belongs to a different company.', type: 'array{message: string}')]
+    public function overall(int $siteManager, GetSiteManagerOverallRequest $request): JsonResponse
     {
         return $this->success(
             SiteManagerOverallResource::collection(
                 $this->siteManagerService->getOverall(
                     siteManagerId: $siteManager,
                     data: GetSiteManagerOverallData::fromRequest($request),
+                    worker: $request->user(),
                 )
             )
         );
     }
 
-    public function assignedSites(Worker $siteManager,): JsonResponse
+    #[Response(status: 404, description: 'The resource is missing or belongs to a different company.', type: 'array{message: string}')]
+    public function assignedSites(Worker $siteManager): JsonResponse
     {
-        if (! $siteManager->isSiteManager()) {
+        if ($siteManager->company_id !== request()->user()->company_id || ! $siteManager->isSiteManager()) {
             abort(404);
         }
 

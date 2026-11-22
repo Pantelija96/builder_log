@@ -26,8 +26,9 @@ class CreateExpenseAction extends BaseAction
 
     public function execute(DailyLog $dailyLog, CreateExpenseData $data, Worker $currentWorker,): Expense {
 
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureEditable($dailyLog);
+        $this->ensureManagerAttribution($currentWorker);
 
         return $this->transaction(function () use ($dailyLog, $data, $currentWorker) {
 
@@ -35,7 +36,7 @@ class CreateExpenseAction extends BaseAction
                 'company_id' => $dailyLog->company_id,
                 'daily_log_id' => $dailyLog->id,
                 'construction_site_id' => $dailyLog->construction_site_id,
-                'site_manager_id' => $dailyLog->site_manager_id,
+                'site_manager_id' => $currentWorker->id,
                 'title' => $data->title,
                 'description' => $data->description,
                 'amount' => $data->amount,

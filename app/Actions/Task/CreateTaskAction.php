@@ -7,6 +7,7 @@ use App\DTO\Task\CreateTaskData;
 use App\Enums\LogEvent;
 use App\Enums\WorkerRole;
 use App\Exceptions\BusinessException;
+use App\Models\ConstructionSite;
 use App\Models\Task;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
@@ -19,13 +20,17 @@ class CreateTaskAction extends BaseAction
         private readonly LoggingService $logging,
         private readonly NotificationService $notifications,
         private readonly WorkerPushNotificationService $pushNotifications,
-    ) {
-    }
+    ) {}
 
     public function execute(
         CreateTaskData $data,
         Worker $currentWorker,
     ): Task {
+        if ($data->constructionSiteId !== null) {
+            abort_unless(ConstructionSite::query()->where('company_id', $currentWorker->company_id)
+                ->whereKey($data->constructionSiteId)->exists(), 404);
+        }
+
         $this->ensureValidTargetWorker(
             workerId: $data->workerId,
             currentWorker: $currentWorker,
@@ -70,7 +75,7 @@ class CreateTaskAction extends BaseAction
 
         // Construction site -> site managers assigned to that site
         if ($task->construction_site_id !== null) {
-            foreach ($task->constructionSite->siteManagers as $manager) {
+            foreach ($task->constructionSite->siteManagers()->where('workers.company_id', $task->company_id)->get() as $manager) {
                 $this->notifyWorker(
                     worker: $manager,
                     task: $task,

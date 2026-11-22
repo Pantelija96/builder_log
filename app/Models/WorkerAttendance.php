@@ -28,6 +28,7 @@ class WorkerAttendance extends Model
         'created_by',
         'hourly_rate',
         'machine_assignment_id',
+        'ordinary_worker_day',
     ];
 
     protected function casts(): array

@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\ConstructionSite;
-use App\Models\Expense;
 use App\Models\ExcavatorLog;
+use App\Models\Expense;
 use App\Models\SubcontractorLog;
 use App\Models\WorkerAttendance;
 use Carbon\Carbon;
@@ -50,19 +50,17 @@ class ConstructionSiteStatisticsService
         Carbon $dateTo,
     ): float {
         $expenses = Expense::query()
+            ->where('company_id', $constructionSite->company_id)
             ->where('construction_site_id', $constructionSite->id)
-            ->whereBetween('date', [
-                $dateFrom->toDateString(),
-                $dateTo->toDateString(),
-            ])
+            ->whereDate('date', '>=', $dateFrom)
+            ->whereDate('date', '<=', $dateTo)
             ->sum('amount');
 
         $workerAdvances = WorkerAttendance::query()
+            ->where('company_id', $constructionSite->company_id)
             ->where('construction_site_id', $constructionSite->id)
-            ->whereBetween('date', [
-                $dateFrom->toDateString(),
-                $dateTo->toDateString(),
-            ])
+            ->whereDate('date', '>=', $dateFrom)
+            ->whereDate('date', '<=', $dateTo)
             ->sum('advance_payment');
 
         return (float) $expenses + (float) $workerAdvances;
@@ -74,18 +72,13 @@ class ConstructionSiteStatisticsService
         Carbon $dateTo,
     ): float {
         $minutes = WorkerAttendance::query()
+            ->where('company_id', $constructionSite->company_id)
             ->where('construction_site_id', $constructionSite->id)
-            ->whereBetween('date', [
-                $dateFrom->toDateString(),
-                $dateTo->toDateString(),
-            ])
+            ->whereDate('date', '>=', $dateFrom)
+            ->whereDate('date', '<=', $dateTo)
             ->whereNotNull('started_at')
             ->whereNotNull('finished_at')
-            ->sum(
-                DB::raw(
-                    'TIMESTAMPDIFF(MINUTE, started_at, finished_at)'
-                )
-            );
+            ->sum(DB::raw($this->durationInMinutes()));
 
         return round($minutes / 60, 2);
     }
@@ -96,18 +89,13 @@ class ConstructionSiteStatisticsService
         Carbon $dateTo,
     ): float {
         $minutes = SubcontractorLog::query()
+            ->where('company_id', $constructionSite->company_id)
             ->where('construction_site_id', $constructionSite->id)
-            ->whereBetween('date', [
-                $dateFrom->toDateString(),
-                $dateTo->toDateString(),
-            ])
+            ->whereDate('date', '>=', $dateFrom)
+            ->whereDate('date', '<=', $dateTo)
             ->whereNotNull('started_at')
             ->whereNotNull('finished_at')
-            ->sum(
-                DB::raw(
-                    'TIMESTAMPDIFF(MINUTE, started_at, finished_at)'
-                )
-            );
+            ->sum(DB::raw($this->durationInMinutes()));
 
         return round($minutes / 60, 2);
     }
@@ -128,17 +116,26 @@ class ConstructionSiteStatisticsService
                     ) {
                         $query
                             ->where(
+                                'company_id',
+                                $constructionSite->company_id,
+                            )
+                            ->where(
                                 'construction_site_id',
                                 $constructionSite->id,
                             )
-                            ->whereBetween('date', [
-                                $dateFrom->toDateString(),
-                                $dateTo->toDateString(),
-                            ]);
+                            ->whereDate('date', '>=', $dateFrom)
+                            ->whereDate('date', '<=', $dateTo);
                     }
                 )
                 ->sum('work_hours'),
             2
         );
+    }
+
+    private function durationInMinutes(): string
+    {
+        return DB::getDriverName() === 'sqlite'
+            ? "CAST((strftime('%s', finished_at) - strftime('%s', started_at)) / 60 AS INTEGER)"
+            : 'TIMESTAMPDIFF(MINUTE, started_at, finished_at)';
     }
 }

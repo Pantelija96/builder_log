@@ -16,11 +16,11 @@ use Laravel\Sanctum\HasApiTokens;
 
 class Worker extends Authenticatable
 {
+    use HasApiTokens;
     use HasFactory;
+    use Loggable;
     use Notifiable;
     use SoftDeletes;
-    use HasApiTokens;
-    use Loggable;
 
     protected $fillable = [
         'company_id',
@@ -51,7 +51,7 @@ class Worker extends Authenticatable
         ];
     }
 
-    public function scopeSiteManagers(Builder $query,): Builder
+    public function scopeSiteManagers(Builder $query): Builder
     {
         return $query->where(
             'role',
@@ -89,12 +89,10 @@ class Worker extends Authenticatable
         return $this->role === WorkerRole::WORKER;
     }
 
-    public function managedDailyLogs(): HasMany
+    public function participatedDailyLogs(): BelongsToMany
     {
-        return $this->hasMany(
-            DailyLog::class,
-            'site_manager_id'
-        );
+        return $this->belongsToMany(DailyLog::class, 'daily_log_site_managers', 'site_manager_id', 'daily_log_id')
+            ->withTimestamps();
     }
 
     public function machineAssignments(): HasMany

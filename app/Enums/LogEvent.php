@@ -62,6 +62,8 @@ enum LogEvent: string
 
     case MACHINE_ASSIGNMENT_UPDATED = 'machine.assignment.updated';
 
+    case MACHINE_ASSIGNMENT_TAKEN_OVER = 'machine.assignment.taken_over';
+
     /*
     |--------------------------------------------------------------------------
     | Delivery Notes
@@ -90,7 +92,6 @@ enum LogEvent: string
 
     case ATTACHMENT_UPLOADED = 'attachment.uploaded';
     case ATTACHMENT_DELETED = 'attachment.deleted';
-
 
     /*
     |--------------------------------------------------------------------------

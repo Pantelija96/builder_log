@@ -32,7 +32,7 @@ class WorkerAttendanceContractTest extends TestCase
         config(['app.debug' => false]);
         $log = DailyLog::factory()->create(['date' => '2026-01-15']);
         $worker = Worker::factory()->for($log->company)->create(['hourly_rate' => 125.5, 'is_available' => true]);
-        Sanctum::actingAs($log->siteManager);
+        Sanctum::actingAs($log->siteManagers()->firstOrFail());
 
         $url = "/api/v1/daily-logs/{$log->id}/worker-attendances";
         $payload = [
@@ -44,7 +44,7 @@ class WorkerAttendanceContractTest extends TestCase
         $created = $this->postJson($url, $payload)->assertOk()
             ->assertJsonPath('data.worker.id', $worker->id)
             ->assertJsonPath('data.worker.is_available', false)
-            ->assertJsonPath('data.creator.id', $log->site_manager_id)
+            ->assertJsonPath('data.creator.id', $log->siteManagers()->firstOrFail()->id)
             ->assertJsonPath('data.hourly_rate', '125.50')
             ->assertJsonPath('data.machine', null);
         $id = $created->json('data.id');
@@ -81,7 +81,7 @@ class WorkerAttendanceContractTest extends TestCase
         $this->assertDatabaseCount('audit_logs', 1);
         $this->assertDatabaseHas('audit_logs', [
             'event' => LogEvent::WORKER_ATTENDANCE_DELETED->value,
-            'actor_id' => $log->site_manager_id,
+            'actor_id' => $log->siteManagers()->firstOrFail()->id,
             'reason' => 'Duplicate shift',
         ]);
     }
@@ -98,9 +98,9 @@ class WorkerAttendanceContractTest extends TestCase
             'company_id' => $log->company_id,
             'construction_site_id' => $log->construction_site_id,
             'daily_log_id' => $log->id,
-            'site_manager_id' => $log->site_manager_id,
+            'site_manager_id' => $log->siteManagers()->firstOrFail()->id,
             'worker_id' => $worker->id,
-            'created_by' => $log->site_manager_id,
+            'created_by' => $log->siteManagers()->firstOrFail()->id,
             'date' => '2026-01-15',
         ];
         $assignment = MachineAssignment::create($attributes + ['machine_id' => $machine->id]);
@@ -108,7 +108,7 @@ class WorkerAttendanceContractTest extends TestCase
             'machine_assignment_id' => $assignment->id,
             'started_at' => '2026-01-15 08:00:00',
         ]);
-        Sanctum::actingAs($log->siteManager);
+        Sanctum::actingAs($log->siteManagers()->firstOrFail());
 
         $url = "/api/v1/daily-logs/{$log->id}/worker-attendances";
         $this->getJson($url)->assertOk()

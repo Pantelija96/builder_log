@@ -15,8 +15,8 @@ use App\Enums\NotificationType;
 use App\Models\Task;
 use App\Models\Worker;
 use App\QueryFilters\TaskFilter;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 
 class TaskService
 {
@@ -35,14 +35,15 @@ class TaskService
      * Used for admin/backoffice endpoints where we are not
      * filtering tasks for one specific worker.
      */
-    private function query(): Builder
+    private function query(Worker $worker): Builder
     {
         return Task::query()
+            ->where('company_id', $worker->company_id)
             ->with([
-                'creator',
-                'worker',
-                'constructionSite',
-                'completedBy',
+                'creator' => fn ($creator) => $creator->where('company_id', $worker->company_id),
+                'worker' => fn ($target) => $target->where('company_id', $worker->company_id),
+                'constructionSite' => fn ($site) => $site->where('company_id', $worker->company_id),
+                'completedBy' => fn ($actor) => $actor->where('company_id', $worker->company_id),
             ]);
     }
 
@@ -119,8 +120,7 @@ class TaskService
                             ->whereNotNull('construction_site_id')
                             ->whereHas(
                                 'constructionSite.siteManagers',
-                                fn (Builder $query) =>
-                                $query->whereKey($worker->id)
+                                fn (Builder $query) => $query->whereKey($worker->id)
                             );
                     });
                 }
@@ -142,10 +142,11 @@ class TaskService
      */
     public function get(
         GetTasksData $data,
+        Worker $worker,
     ): Collection {
         return (new TaskFilter($data))
             ->apply(
-                $this->query()
+                $this->query($worker)
             )
             ->offset($data->list->offset)
             ->limit($data->list->limit)
@@ -173,8 +174,9 @@ class TaskService
      */
     public function findById(
         int $id,
+        Worker $worker,
     ): ?Task {
-        return $this->query()
+        return $this->query($worker)
             ->find($id);
     }
 
@@ -202,6 +204,8 @@ class TaskService
         Worker $worker,
         ?string $reason,
     ): Task {
+        abort_unless($task->company_id === $worker->company_id, 404);
+
         return $this->update->execute(
             $task,
             $data,
@@ -215,6 +219,8 @@ class TaskService
         Worker $worker,
         string $reason,
     ): void {
+        abort_unless($task->company_id === $worker->company_id, 404);
+
         $this->delete->execute(
             $task,
             $worker,

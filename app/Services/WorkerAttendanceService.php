@@ -14,14 +14,18 @@ use App\Models\WorkerAttendance;
 use App\QueryFilters\WorkerAttendanceFilter;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use App\Traits\EnsuresWorkerCanManageDailyLog;
 use Illuminate\Database\Eloquent\Collection;
 
 class WorkerAttendanceService
 {
+    use EnsuresWorkerCanManageDailyLog;
+
     private function query(DailyLog $dailyLog)
     {
         return WorkerAttendance::query()
             ->whereBelongsTo($dailyLog)
+            ->where('company_id', $dailyLog->company_id)
             ->with([
                 'worker',
                 'creator',
@@ -32,7 +36,8 @@ class WorkerAttendanceService
     private function globalQuery(Worker $currentWorker)
     {
         return WorkerAttendance::query()
-            ->where('company_id', $currentWorker->company_id)
+            ->where('worker_attendances.company_id', $currentWorker->company_id)
+            ->when($currentWorker->isSiteManager(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($currentWorker)))
             ->with([
                 'worker',
                 'creator',
@@ -58,7 +63,9 @@ class WorkerAttendanceService
         return WorkerAttendance::find($id);
     }
 
-    public function get(DailyLog $dailyLog, GetWorkerAttendancesData $data,): Collection {
+    public function get(DailyLog $dailyLog, GetWorkerAttendancesData $data, Worker $worker): Collection {
+        $this->ensureCanRead($dailyLog, $worker);
+
         return (new WorkerAttendanceFilter($data))
             ->apply($this->query($dailyLog))
             ->offset($data->list->offset)

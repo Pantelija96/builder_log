@@ -2,18 +2,22 @@
 
 namespace App\Models;
 
+use App\Enums\LogEvent;
+use App\QueryFilters\MachinePeriod;
 use App\Traits\Loggable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 
 class MachineAssignment extends Model
 {
     use HasFactory;
-    use SoftDeletes;
     use Loggable;
+    use SoftDeletes;
 
     protected $fillable = [
         'company_id',
@@ -31,6 +35,66 @@ class MachineAssignment extends Model
         return [
             'date' => 'date',
         ];
+    }
+
+    public function scopeWithinCompany(Builder $query, int $companyId): Builder
+    {
+        return $query->where('machine_assignments.company_id', $companyId)
+            ->whereHas('machine', fn (Builder $machine) => $machine->where('company_id', $companyId))
+            ->whereHas('worker', fn (Builder $worker) => $worker->withTrashed()->where('company_id', $companyId))
+            ->whereHas('constructionSite', fn (Builder $site) => $site->withTrashed()->where('company_id', $companyId));
+    }
+
+    public function scopeVisibleTo(Builder $query, Worker $actor): Builder
+    {
+        $query->withinCompany($actor->company_id);
+        $dailyLogs = DailyLog::query()->visibleTo($actor)
+            ->whereColumn('daily_logs.construction_site_id', 'machine_assignments.construction_site_id')
+            ->whereDate('daily_logs.date', DB::raw('date(machine_assignments.date)'));
+
+        if ($actor->isSiteManager()) {
+            return $query->whereExists($dailyLogs
+                ->where(fn (Builder $logs) => $logs
+                    ->whereColumn('daily_logs.id', 'machine_assignments.daily_log_id')
+                    ->orWhereNull('machine_assignments.daily_log_id'))
+                ->selectRaw('1')
+                ->toBase());
+        }
+
+        $query->where(fn (Builder $assignments) => $assignments
+            ->whereNull('machine_assignments.daily_log_id')
+            ->orWhereExists($dailyLogs->whereColumn('daily_logs.id', 'machine_assignments.daily_log_id')->selectRaw('1')->toBase()));
+
+        if (! $actor->isAdmin()) {
+            $query->where('machine_assignments.worker_id', $actor->id);
+        }
+
+        return $query;
+    }
+
+    public function scopeOccupiedAt(Builder $query, mixed $now): Builder
+    {
+        return $query->where(fn (Builder $assignments) => $assignments
+            ->whereHas('excavatorLog', fn (Builder $log) => MachinePeriod::occupiedAt($log, $now))
+            ->orWhereHas('truckLog', fn (Builder $log) => MachinePeriod::occupiedAt($log, $now)));
+    }
+
+    public function isPendingSelfAssignment(): bool
+    {
+        return $this->created_by === $this->worker_id
+            && ! $this->hasManagerTakeover()
+            && ! $this->workerAttendance()->withTrashed()->exists();
+    }
+
+    private function hasManagerTakeover(): bool
+    {
+        // Older pending self-assignments may already have a legacy manager ID.
+        return AuditLog::query()
+            ->where('company_id', $this->company_id)
+            ->where('auditable_type', $this->getMorphClass())
+            ->where('auditable_id', $this->id)
+            ->where('event', LogEvent::MACHINE_ASSIGNMENT_TAKEN_OVER)
+            ->exists();
     }
 
     public function company(): BelongsTo

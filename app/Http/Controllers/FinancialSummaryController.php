@@ -13,11 +13,11 @@ class FinancialSummaryController extends ApiController
         private readonly FinancialSummaryService $service,
     ) {}
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         return $this->success(
             FinancialSummaryResource::collection(
-                $this->service->summaryForAllSiteManagers()
+                $this->service->summaryForAllSiteManagers($request->user())
             )
         );
     }

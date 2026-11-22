@@ -5,6 +5,7 @@ namespace App\Actions\SubcontractorLog;
 use App\Actions\BaseAction;
 use App\DTO\SubcontractorLog\UpdateSubcontractorLogData;
 use App\Enums\LogEvent;
+use App\Models\DailyLog;
 use App\Models\SubcontractorLog;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
@@ -19,12 +20,11 @@ class UpdateSubcontractorLogAction extends BaseAction
     public function __construct(private readonly LoggingService $logging,) {
     }
 
-    public function execute(SubcontractorLog $subcontractorLog, UpdateSubcontractorLogData $data, Worker $currentWorker, string $reason,): SubcontractorLog {
+    public function execute(DailyLog $dailyLog, SubcontractorLog $subcontractorLog, UpdateSubcontractorLogData $data, Worker $currentWorker, string $reason,): SubcontractorLog {
 
-        $dailyLog = $subcontractorLog->dailyLog;
-
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureDailyLogChild($dailyLog, $subcontractorLog);
+        $this->ensureEditable($dailyLog);
 
         return $this->transaction(function () use ($subcontractorLog, $data, $currentWorker, $reason) {
 

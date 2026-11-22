@@ -8,6 +8,7 @@ use App\DTO\DeliveryNote\CreateDeliveryNoteData;
 use App\Enums\LogEvent;
 use App\Models\DailyLog;
 use App\Models\DeliveryNote;
+use App\Models\Supplier;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
 use App\Traits\EnsuresDailyLogIsEditable;
@@ -30,8 +31,10 @@ class CreateDeliveryNoteAction extends BaseAction
         Worker $currentWorker,
     ): DeliveryNote {
 
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureEditable($dailyLog);
+        $this->ensureManagerAttribution($currentWorker);
+        Supplier::query()->where('company_id', $dailyLog->company_id)->findOrFail($data->supplierId);
 
         return $this->transaction(function () use (
             $dailyLog,
@@ -43,7 +46,7 @@ class CreateDeliveryNoteAction extends BaseAction
                 'company_id' => $dailyLog->company_id,
                 'daily_log_id' => $dailyLog->id,
                 'construction_site_id' => $dailyLog->construction_site_id,
-                'site_manager_id' => $dailyLog->site_manager_id,
+                'site_manager_id' => $currentWorker->id,
                 'supplier_id' => $data->supplierId,
                 'name' => $data->name,
                 'description' => $data->description,

@@ -4,6 +4,7 @@ namespace App\Actions\SubcontractorLog;
 
 use App\Actions\BaseAction;
 use App\Enums\LogEvent;
+use App\Models\DailyLog;
 use App\Models\SubcontractorLog;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
@@ -20,12 +21,11 @@ class DeleteSubcontractorLogAction extends BaseAction
     ) {
     }
 
-    public function execute(SubcontractorLog $subcontractorLog, Worker $currentWorker, string $reason,): void {
+    public function execute(DailyLog $dailyLog, SubcontractorLog $subcontractorLog, Worker $currentWorker, string $reason,): void {
 
-        $dailyLog = $subcontractorLog->dailyLog;
-
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureDailyLogChild($dailyLog, $subcontractorLog);
+        $this->ensureEditable($dailyLog);
 
         $this->transaction(function () use (
             $subcontractorLog,

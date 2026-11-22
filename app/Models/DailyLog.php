@@ -2,27 +2,28 @@
 
 namespace App\Models;
 
+use App\Contracts\HasAttachments;
+use App\Traits\InteractsWithAttachments;
 use App\Traits\Loggable;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Contracts\HasAttachments;
-use App\Traits\InteractsWithAttachments;
 
 class DailyLog extends Model implements HasAttachments
 {
     use HasFactory;
-    use SoftDeletes;
-    use Loggable;
     use InteractsWithAttachments;
+    use Loggable;
+    use SoftDeletes;
 
     protected $fillable = [
         'company_id',
         'construction_site_id',
-        'site_manager_id',
         'date',
         'is_locked',
         'locked_at',
@@ -48,12 +49,21 @@ class DailyLog extends Model implements HasAttachments
         return $this->belongsTo(ConstructionSite::class);
     }
 
-    public function siteManager(): BelongsTo
+    public function siteManagers(): BelongsToMany
     {
-        return $this->belongsTo(
-            Worker::class,
-            'site_manager_id'
-        );
+        return $this->belongsToMany(Worker::class, 'daily_log_site_managers', 'daily_log_id', 'site_manager_id')
+            ->withTrashed()
+            ->withTimestamps()
+            ->orderByPivot('id');
+    }
+
+    public function scopeVisibleTo(Builder $query, Worker $worker): Builder
+    {
+        return $query->where('daily_logs.company_id', $worker->company_id)
+            ->when($worker->isSiteManager(), fn (Builder $logs) => $logs->whereHas(
+                'siteManagers',
+                fn (Builder $members) => $members->whereKey($worker->id),
+            ));
     }
 
     public function isLocked(): bool

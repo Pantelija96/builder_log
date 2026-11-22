@@ -17,6 +17,7 @@ use App\Models\DailyLog;
 use App\Models\Expense;
 use App\Models\Worker;
 use App\Services\ExpenseService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use App\Http\Resources\FinancialSummaryResource;
@@ -33,12 +34,16 @@ class ExpenseController extends ApiController
         return $this->success(
             ExpenseResource::collection(
                 $this->expenseService->getAll(
-                    GetExpensesData::fromRequest($request)
+                    GetExpensesData::fromRequest($request),
+                    $request->user(),
                 )
             )
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 422, description: 'Invalid request or no manager attribution available for an administrator.', type: 'array{message: string, errors?: array<string, list<string>>}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function store(DailyLog $dailyLog, CreateExpenseRequest $request): JsonResponse {
 
         /** @var Worker $worker */
@@ -59,11 +64,13 @@ class ExpenseController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
     public function index(DailyLog $dailyLog, GetExpensesRequest $request,): JsonResponse
     {
         $result = $this->expenseService->getDailyReport(
             $dailyLog,
             GetExpensesData::fromRequest($request),
+            $request->user(),
         );
 
         return $this->success([
@@ -72,6 +79,8 @@ class ExpenseController extends ApiController
         ]);
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function update(DailyLog $dailyLog, Expense $expense, UpdateExpenseRequest $request): JsonResponse {
 
         /** @var Worker $worker */
@@ -85,6 +94,8 @@ class ExpenseController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function destroy(DailyLog $dailyLog, Expense $expense, DeleteExpenseRequest $request): JsonResponse {
 
         /** @var Worker $worker */
@@ -97,6 +108,7 @@ class ExpenseController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
     public function history(
         DailyLog $dailyLog,
         GetExpensesRequest $request,
@@ -105,6 +117,7 @@ class ExpenseController extends ApiController
         $result = $this->expenseService->getHistoryReport(
             $dailyLog,
             GetExpensesData::fromRequest($request),
+            $request->user(),
         );
 
         return $this->success([

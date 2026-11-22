@@ -16,6 +16,7 @@ use App\Models\DailyLog;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
 use App\Services\WorkerAttendanceService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 
 class WorkerAttendanceController extends ApiController
@@ -25,6 +26,10 @@ class WorkerAttendanceController extends ApiController
     ) {
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 422, description: 'Invalid request or no manager attribution available for an administrator.', type: 'array{message: string, errors?: array<string, list<string>>}')]
+    #[Response(status: 409, description: 'The ordinary worker already has attendance on this date at another site.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked or already contains this entry.', type: 'array{message: string}')]
     public function store(DailyLog $dailyLog, CreateWorkerAttendanceRequest $request,): JsonResponse {
 
         /** @var Worker $worker */
@@ -40,14 +45,17 @@ class WorkerAttendanceController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
     public function index(DailyLog $dailyLog, GetWorkerAttendancesRequest $request,): JsonResponse {
         return $this->success(
             WorkerAttendanceResource::collection(
-                $this->workerAttendanceService->get($dailyLog, GetWorkerAttendancesData::fromRequest($request),)
+                $this->workerAttendanceService->get($dailyLog, GetWorkerAttendancesData::fromRequest($request), $request->user())
             )
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function update(DailyLog $dailyLog, WorkerAttendance $workerAttendance, UpdateWorkerAttendanceRequest $request,): JsonResponse {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -60,6 +68,8 @@ class WorkerAttendanceController extends ApiController
         );
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function destroy(DailyLog $dailyLog, WorkerAttendance $workerAttendance, DeleteWorkerAttendanceRequest $request): JsonResponse {
         /** @var Worker $worker */
         $worker = auth()->user();

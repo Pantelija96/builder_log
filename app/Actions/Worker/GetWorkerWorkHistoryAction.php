@@ -14,23 +14,25 @@ use Illuminate\Database\Eloquent\Collection;
 
 class GetWorkerWorkHistoryAction
 {
-    public function execute(Worker $worker, GetWorkerWorkHistoryData $data,): WorkerWorkHistoryData
+    public function execute(Worker $worker, GetWorkerWorkHistoryData $data, Worker $currentWorker): WorkerWorkHistoryData
     {
+        abort_unless($worker->company_id === $currentWorker->company_id, 404);
+
         [$type, $history] = match ($worker->role) {
 
             WorkerRole::WORKER => [
                 'attendance',
-                $this->getAttendance($worker, $data),
+                $this->getAttendance($worker, $data, $currentWorker),
             ],
 
             WorkerRole::OPERATOR => [
                 'excavator_log',
-                $this->getExcavatorLogs($worker, $data),
+                $this->getExcavatorLogs($worker, $data, $currentWorker),
             ],
 
             WorkerRole::DRIVER => [
                 'truck_log',
-                $this->getTruckLogs($worker, $data),
+                $this->getTruckLogs($worker, $data, $currentWorker),
             ],
 
             default => throw new BusinessException(
@@ -45,46 +47,44 @@ class GetWorkerWorkHistoryAction
         );
     }
 
-    private function getAttendance(Worker $worker, GetWorkerWorkHistoryData $data,): Collection
+    private function getAttendance(Worker $worker, GetWorkerWorkHistoryData $data, Worker $currentWorker): Collection
     {
         return WorkerAttendance::query()
+            ->where('company_id', $currentWorker->company_id)
+            ->when($currentWorker->isSiteManager(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($currentWorker)))
             ->where('worker_id', $worker->id)
             ->when(
                 $data->dateFrom,
-                fn ($query, $date) =>
-                $query->whereDate('date', '>=', $date)
+                fn ($query, $date) => $query->whereDate('date', '>=', $date)
             )
             ->when(
                 $data->dateTo,
-                fn ($query, $date) =>
-                $query->whereDate('date', '<=', $date)
+                fn ($query, $date) => $query->whereDate('date', '<=', $date)
             )
             ->with([
                 'worker',
                 'creator',
-                'constructionSite'
+                'constructionSite',
             ])
             ->orderBy('date')
             ->get();
     }
 
-    private function getExcavatorLogs(Worker $worker, GetWorkerWorkHistoryData $data,): Collection
+    private function getExcavatorLogs(Worker $worker, GetWorkerWorkHistoryData $data, Worker $currentWorker): Collection
     {
         return ExcavatorLog::query()
             ->where('worker_id', $worker->id)
             ->whereHas(
                 'machineAssignment',
-                function ($query) use ($data) {
-                    $query
+                function ($query) use ($data, $currentWorker) {
+                    $query->visibleTo($currentWorker)
                         ->when(
                             $data->dateFrom,
-                            fn ($query, $date) =>
-                            $query->whereDate('date', '>=', $date)
+                            fn ($query, $date) => $query->whereDate('date', '>=', $date)
                         )
                         ->when(
                             $data->dateTo,
-                            fn ($query, $date) =>
-                            $query->whereDate('date', '<=', $date)
+                            fn ($query, $date) => $query->whereDate('date', '<=', $date)
                         );
                 }
             )
@@ -99,22 +99,21 @@ class GetWorkerWorkHistoryAction
             ->get();
     }
 
-    private function getTruckLogs(Worker $worker, GetWorkerWorkHistoryData $data,): Collection {
+    private function getTruckLogs(Worker $worker, GetWorkerWorkHistoryData $data, Worker $currentWorker): Collection
+    {
         return TruckLog::query()
             ->where('worker_id', $worker->id)
             ->whereHas(
                 'machineAssignment',
-                function ($query) use ($data) {
-                    $query
+                function ($query) use ($data, $currentWorker) {
+                    $query->visibleTo($currentWorker)
                         ->when(
                             $data->dateFrom,
-                            fn ($query, $date) =>
-                            $query->whereDate('date', '>=', $date)
+                            fn ($query, $date) => $query->whereDate('date', '>=', $date)
                         )
                         ->when(
                             $data->dateTo,
-                            fn ($query, $date) =>
-                            $query->whereDate('date', '<=', $date)
+                            fn ($query, $date) => $query->whereDate('date', '<=', $date)
                         );
                 }
             )

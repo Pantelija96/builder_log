@@ -7,6 +7,7 @@ use App\Enums\MachineStatus;
 use App\Enums\MachineType;
 use App\Models\MachineAssignment;
 use App\Models\Worker;
+use App\QueryFilters\MachinePeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -18,13 +19,10 @@ class GetOccupiedTrucksAction extends BaseAction
         $now = now();
 
         return MachineAssignment::query()
-            ->where(
-                'company_id',
-                $currentWorker->company_id,
-            )
+            ->visibleTo($currentWorker)
             ->whereDate(
                 'date',
-                today(),
+                $now->toDateString(),
             )
             ->whereHas(
                 'machine',
@@ -42,12 +40,7 @@ class GetOccupiedTrucksAction extends BaseAction
             )
             ->whereHas(
                 'truckLog',
-                function (Builder $query) use ($now) {
-                    $this->applyOccupiedNowCondition(
-                        $query,
-                        $now,
-                    );
-                }
+                fn (Builder $query) => MachinePeriod::occupiedAt($query, $now)
             )
             ->with([
                 'machine',
@@ -58,33 +51,5 @@ class GetOccupiedTrucksAction extends BaseAction
                 'machine.truck',
             ])
             ->get();
-    }
-
-    private function applyOccupiedNowCondition(
-        Builder $query,
-        mixed $now,
-    ): void {
-        $query->where(
-            function (Builder $query) use ($now) {
-                $query
-                    ->whereNull('site_manager_started_at')
-                    ->orWhereNull('site_manager_finished_at')
-                    ->orWhere(
-                        function (Builder $query) use ($now) {
-                            $query
-                                ->where(
-                                    'site_manager_started_at',
-                                    '<=',
-                                    $now,
-                                )
-                                ->where(
-                                    'site_manager_finished_at',
-                                    '>',
-                                    $now,
-                                );
-                        }
-                    );
-            }
-        );
     }
 }

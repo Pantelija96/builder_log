@@ -12,26 +12,29 @@ use App\Models\DailyLog;
 use App\Models\Note;
 use App\Models\Worker;
 use App\QueryFilters\NoteFilter;
+use App\Traits\EnsuresWorkerCanManageDailyLog;
 use Illuminate\Database\Eloquent\Collection;
 
 class NoteService
 {
+    use EnsuresWorkerCanManageDailyLog;
+
     public function __construct(
         private readonly CreateNoteAction $createNoteAction,
         private readonly UpdateNoteAction $updateNoteAction,
         private readonly DeleteNoteAction $deleteNoteAction,
-    ) {
-    }
+    ) {}
 
     private function query(DailyLog $dailyLog)
     {
         return Note::query()
             ->whereBelongsTo($dailyLog)
+            ->where('company_id', $dailyLog->company_id)
             ->with([
                 'creator',
                 'siteManager',
                 'constructionSite',
-                'dailyLog',
+                'dailyLog.siteManagers',
                 'attachments',
             ]);
     }
@@ -39,7 +42,9 @@ class NoteService
     public function get(
         DailyLog $dailyLog,
         GetNotesData $data,
+        Worker $worker,
     ): Collection {
+        $this->ensureCanRead($dailyLog, $worker);
 
         return (new NoteFilter($data))
             ->apply($this->query($dailyLog))
@@ -48,14 +53,16 @@ class NoteService
             ->get();
     }
 
-    public function getAll(GetNotesData $data,): Collection
+    public function getAll(GetNotesData $data, Worker $worker): Collection
     {
         $query = Note::query()
+            ->where('notes.company_id', $worker->company_id)
+            ->when($worker->isSiteManager(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($worker)))
             ->with([
                 'creator',
                 'siteManager',
                 'constructionSite',
-                'dailyLog',
+                'dailyLog.siteManagers',
                 'attachments',
             ]);
 
@@ -78,7 +85,6 @@ class NoteService
             currentWorker: $worker,
         );
     }
-
 
     public function findById(
         DailyLog $dailyLog,

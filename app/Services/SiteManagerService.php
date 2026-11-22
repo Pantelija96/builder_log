@@ -16,11 +16,12 @@ class SiteManagerService
     )
     {}
 
-    public function getOverall(int $siteManagerId, GetSiteManagerOverallData $data,): Collection
+    public function getOverall(int $siteManagerId, GetSiteManagerOverallData $data, Worker $worker): Collection
     {
         return $this->getSiteManagerOverallAction->execute(
             siteManagerId: $siteManagerId,
             data: $data,
+            worker: $worker,
         );
     }
 

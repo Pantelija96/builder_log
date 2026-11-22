@@ -28,8 +28,9 @@ class DeleteDeliveryNoteAction extends BaseAction
         string $reason,
     ): void {
 
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureDailyLogChild($dailyLog, $deliveryNote);
+        $this->ensureEditable($dailyLog);
 
         $this->transaction(function () use (
             $deliveryNote,

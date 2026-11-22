@@ -49,14 +49,14 @@ class ApiContractBaselineTest extends TestCase
     public function test_daily_log_detail_and_list_keep_the_current_nested_shapes(): void
     {
         $log = DailyLog::factory()->create();
-        Sanctum::actingAs($log->siteManager);
+        Sanctum::actingAs($log->siteManagers()->firstOrFail());
 
         $this->getJson("/api/v1/daily-logs/{$log->id}")
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.id', $log->id)
             ->assertJsonPath('data.construction_site.id', $log->construction_site_id)
-            ->assertJsonPath('data.site_manager.id', $log->site_manager_id)
+            ->assertJsonMissingPath('data.site_manager')
             ->assertJsonPath('data.company.id', $log->company_id)
             ->assertJsonPath('data.is_locked', false)
             ->assertJsonPath('data.locked_by', null)
@@ -141,7 +141,7 @@ class ApiContractBaselineTest extends TestCase
     {
         config(['app.debug' => false]);
         $log = DailyLog::factory()->locked()->create();
-        Sanctum::actingAs($log->siteManager);
+        Sanctum::actingAs($log->siteManagers()->firstOrFail());
 
         $this->postJson("/api/v1/daily-logs/{$log->id}/lock")
             ->assertStatus(500)
@@ -181,9 +181,9 @@ class ApiContractBaselineTest extends TestCase
             'path' => 'contract/sample.txt',
             'mime_type' => 'text/plain',
             'size' => 17,
-            'created_by' => $log->site_manager_id,
+            'created_by' => $log->siteManagers()->firstOrFail()->id,
         ]);
-        Sanctum::actingAs($log->siteManager);
+        Sanctum::actingAs($log->siteManagers()->firstOrFail());
 
         $response = $this->get("/api/v1/attachments/{$attachment->id}");
         $response->assertOk()->assertDownload('baseline.txt');

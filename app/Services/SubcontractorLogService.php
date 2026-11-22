@@ -41,10 +41,8 @@ class SubcontractorLogService
         GetSubcontractorLogsData $data,
     ): Collection {
         $query = SubcontractorLog::query()
-            ->where(
-                'company_id',
-                $currentWorker->company_id,
-            )
+            ->where('subcontractor_logs.company_id', $currentWorker->company_id)
+            ->when($currentWorker->isSiteManager(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($currentWorker)))
             ->with([
                 'subcontractor',
                 'creator',
@@ -67,8 +65,9 @@ class SubcontractorLogService
         );
     }
 
-    public function update(SubcontractorLog $subcontractorLog, UpdateSubcontractorLogData $data, Worker $worker, string $reason,): SubcontractorLog {
+    public function update(DailyLog $dailyLog, SubcontractorLog $subcontractorLog, UpdateSubcontractorLogData $data, Worker $worker, string $reason,): SubcontractorLog {
         return $this->updateAction->execute(
+            $dailyLog,
             $subcontractorLog,
             $data,
             $worker,
@@ -77,12 +76,14 @@ class SubcontractorLogService
     }
 
     public function delete(
+        DailyLog $dailyLog,
         SubcontractorLog $subcontractorLog,
         Worker $worker,
         string $reason,
     ): void {
 
         $this->deleteAction->execute(
+            dailyLog: $dailyLog,
             subcontractorLog: $subcontractorLog,
             currentWorker: $worker,
             reason: $reason,

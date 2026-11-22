@@ -12,7 +12,6 @@ use App\Models\WorkerAttendance;
 use App\Services\Logging\LoggingService;
 use App\Traits\EnsuresDailyLogIsEditable;
 use App\Traits\EnsuresWorkerCanManageDailyLog;
-use Illuminate\Support\Facades\DB;
 
 class UpdateWorkerAttendanceAction extends BaseAction
 {
@@ -24,19 +23,15 @@ class UpdateWorkerAttendanceAction extends BaseAction
     ) {}
 
     public function execute(DailyLog $dailyLog, WorkerAttendance $workerAttendance, UpdateWorkerAttendanceData $data, Worker $currentWorker,): WorkerAttendance {
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
-
-        if ($workerAttendance->daily_log_id !== $dailyLog->id) {
-            throw new BusinessException(
-                'Worker attendance does not belong to the specified daily log.'
-            );
-        }
+        $this->ensureDailyLogChild($dailyLog, $workerAttendance);
+        $this->ensureEditable($dailyLog);
 
         $this->ensureTimesMatchAttendanceDate($workerAttendance, $data);
 
         return $this->transaction(function () use ($workerAttendance, $data, $currentWorker) {
 
+            $oldValues = $workerAttendance->getAttributes();
             $updateData = $data->toUpdateArray();
 
             if (!empty($updateData)) {
@@ -48,6 +43,16 @@ class UpdateWorkerAttendanceAction extends BaseAction
                 subject: $workerAttendance,
                 event: LogEvent::WORKER_ATTENDANCE_UPDATED,
             );
+
+            if ($workerAttendance->machine_assignment_id === null
+                && $currentWorker->id !== $workerAttendance->created_by) {
+                $this->logging->audit(
+                    actor: $currentWorker,
+                    subject: $workerAttendance,
+                    event: LogEvent::WORKER_ATTENDANCE_UPDATED,
+                    oldValues: $oldValues,
+                );
+            }
 
             return $workerAttendance->refresh();
         });

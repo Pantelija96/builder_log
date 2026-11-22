@@ -14,8 +14,7 @@ class UpdateCashAdvanceAction extends BaseAction
 {
     public function __construct(
         private readonly LoggingService $logging,
-    ) {
-    }
+    ) {}
 
     public function execute(
         CashAdvance $cashAdvance,
@@ -31,9 +30,7 @@ class UpdateCashAdvanceAction extends BaseAction
             $reason,
         ) {
 
-            $siteManager = Worker::findOrFail(
-                $data->siteManagerId
-            );
+            $siteManager = Worker::query()->where('company_id', $currentWorker->company_id)->findOrFail($data->siteManagerId);
 
             if (! $siteManager->isSiteManager()) {
                 throw new BusinessException(

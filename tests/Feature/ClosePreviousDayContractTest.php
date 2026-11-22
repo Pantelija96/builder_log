@@ -57,7 +57,10 @@ class ClosePreviousDayContractTest extends TestCase
         $this->attendance($newer, $working);
         $this->attendance($today, $working);
 
+        $secondManager = Worker::factory()->for($older->company)->siteManager()->create();
+        $older->siteManagers()->attach($secondManager);
         $excavatorAssignment = $this->assignment($older, 'excavator');
+        $excavatorAssignment->update(['site_manager_id' => $secondManager->id]);
         $excavator = Excavator::create(['machine_id' => $excavatorAssignment->machine_id, 'total_work_hours' => 100]);
         $excavatorLog = ExcavatorLog::create([
             'machine_assignment_id' => $excavatorAssignment->id,
@@ -110,9 +113,9 @@ class ClosePreviousDayContractTest extends TestCase
             'company_id' => $log->company_id,
             'construction_site_id' => $log->construction_site_id,
             'daily_log_id' => $log->id,
-            'site_manager_id' => $log->site_manager_id,
+            'site_manager_id' => $log->siteManagers()->firstOrFail()->id,
             'worker_id' => $worker->id,
-            'created_by' => $log->site_manager_id,
+            'created_by' => $log->siteManagers()->firstOrFail()->id,
             'date' => $log->date,
             'started_at' => $log->date->copy()->addHours(8),
         ]);
@@ -130,9 +133,9 @@ class ClosePreviousDayContractTest extends TestCase
             'company_id' => $log->company_id,
             'construction_site_id' => $log->construction_site_id,
             'daily_log_id' => $log->id,
-            'site_manager_id' => $log->site_manager_id,
-            'worker_id' => $log->site_manager_id,
-            'created_by' => $log->site_manager_id,
+            'site_manager_id' => $log->siteManagers()->firstOrFail()->id,
+            'worker_id' => $log->siteManagers()->firstOrFail()->id,
+            'created_by' => $log->siteManagers()->firstOrFail()->id,
             'date' => $log->date,
             'machine_id' => $machine->id,
         ]);

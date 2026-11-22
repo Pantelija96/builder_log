@@ -26,8 +26,9 @@ class UpdateNoteAction extends BaseAction
 
     public function execute(DailyLog $dailyLog, Note $note, UpdateNoteData $data, Worker $currentWorker, ?string $reason,): Note {
 
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureDailyLogChild($dailyLog, $note);
+        $this->ensureEditable($dailyLog);
 
         return $this->transaction(function () use (
             $note,

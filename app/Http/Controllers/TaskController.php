@@ -13,8 +13,8 @@ use App\Http\Resources\TaskResource;
 use App\Models\Task;
 use App\Models\Worker;
 use App\Services\TaskService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class TaskController extends ApiController
 {
@@ -27,13 +27,15 @@ class TaskController extends ApiController
         return $this->success(
             TaskResource::collection(
                 $this->taskService->get(
-                    GetTasksData::fromRequest($request)
+                    GetTasksData::fromRequest($request),
+                    $request->user(),
                 )
             )
         );
     }
 
-    public function store(CreateTaskRequest $request,): JsonResponse
+    #[Response(status: 404, description: 'The resource is missing or belongs to a different company.', type: 'array{message: string}')]
+    public function store(CreateTaskRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -50,14 +52,15 @@ class TaskController extends ApiController
                     'worker',
                     'constructionSite',
                     'completedBy',
-                    //'attachments',
+                    // 'attachments',
                 ])
             ),
             'Task created successfully.',
         );
     }
 
-    public function update(Task $task, UpdateTaskRequest $request,): JsonResponse
+    #[Response(status: 404, description: 'The resource is missing or belongs to a different company.', type: 'array{message: string}')]
+    public function update(Task $task, UpdateTaskRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -75,7 +78,8 @@ class TaskController extends ApiController
         );
     }
 
-    public function destroy(Task $task, DeleteTaskRequest $request,): JsonResponse
+    #[Response(status: 404, description: 'The resource is missing or belongs to a different company.', type: 'array{message: string}')]
+    public function destroy(Task $task, DeleteTaskRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -91,7 +95,7 @@ class TaskController extends ApiController
         );
     }
 
-    public function myTasks(GetTasksRequest $request,): JsonResponse
+    public function myTasks(GetTasksRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -106,7 +110,7 @@ class TaskController extends ApiController
         );
     }
 
-    public function read(Task $task,): JsonResponse
+    public function read(Task $task): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -122,7 +126,7 @@ class TaskController extends ApiController
         );
     }
 
-    public function complete(Task $task,): JsonResponse
+    public function complete(Task $task): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -138,7 +142,7 @@ class TaskController extends ApiController
         );
     }
 
-    public function reopen(Task $task,): JsonResponse
+    public function reopen(Task $task): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();

@@ -39,10 +39,10 @@ class DailyLogLockContractTest extends TestCase
         $this->assertFalse($log->fresh()->is_locked);
         $this->assertDatabaseCount('activity_logs', 0);
 
-        Sanctum::actingAs($log->siteManager);
+        Sanctum::actingAs($log->siteManagers()->firstOrFail());
         $this->postJson("$url/lock")->assertOk()
             ->assertJsonPath('data.is_locked', true)
-            ->assertJsonPath('data.locked_by_id', $log->site_manager_id);
+            ->assertJsonPath('data.locked_by_id', $log->siteManagers()->firstOrFail()->id);
         $this->postJson("$url/lock")->assertStatus(500)->assertExactJson(['message' => 'Server Error']);
         $this->postJson("$url/unlock", ['reason' => 'Review'])->assertStatus(500);
         $this->assertDatabaseCount('activity_logs', 1);

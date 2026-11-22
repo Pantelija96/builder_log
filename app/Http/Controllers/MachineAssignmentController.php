@@ -8,6 +8,7 @@ use App\Http\Requests\MachineAssignment\GetMachineAssignmentsRequest;
 use App\Http\Resources\MachineAssignmentResource;
 use App\Models\Worker;
 use App\Services\MachineAssignmentService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 
 class MachineAssignmentController extends ApiController
@@ -16,7 +17,7 @@ class MachineAssignmentController extends ApiController
         private readonly MachineAssignmentService $machineAssignmentService,
     ) {}
 
-    public function index(GetMachineAssignmentsRequest $request,): JsonResponse
+    public function index(GetMachineAssignmentsRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -31,7 +32,9 @@ class MachineAssignmentController extends ApiController
         );
     }
 
-    public function current(GetCurrentMachineAssignmentRequest $request,): JsonResponse {
+    #[Response(status: 404, description: 'The target worker is outside the company.', type: 'array{message: string}')]
+    public function current(GetCurrentMachineAssignmentRequest $request): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 

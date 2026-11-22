@@ -27,6 +27,8 @@ class SynchronizeAttachmentsAction
 
             $attachments = $attachable
                 ->attachments()
+                ->where('company_id', $attachable->attachmentCompanyId())
+                ->where('daily_log_id', $attachable->attachmentDailyLogId())
                 ->whereKey($deleteAttachmentIds)
                 ->get();
 

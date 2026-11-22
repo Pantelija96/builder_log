@@ -10,14 +10,18 @@ use App\DTO\Expense\CreateAdminExpenseData;
 use App\DTO\Expense\CreateExpenseData;
 use App\DTO\Expense\GetExpensesData;
 use App\DTO\Expense\UpdateExpenseData;
+use App\Enums\WorkerRole;
 use App\Models\DailyLog;
 use App\Models\Expense;
 use App\Models\Worker;
 use App\QueryFilters\ExpenseFilter;
+use App\Traits\EnsuresWorkerCanManageDailyLog;
 use Illuminate\Database\Eloquent\Collection;
 
 class ExpenseService
 {
+    use EnsuresWorkerCanManageDailyLog;
+
     private function query(DailyLog $dailyLog)
     {
         return Expense::query()
@@ -36,7 +40,7 @@ class ExpenseService
                 'creator',
                 'siteManager',
                 'constructionSite',
-                'dailyLog',
+                'dailyLog.siteManagers',
                 'attachments',
             ]);
     }
@@ -47,10 +51,10 @@ class ExpenseService
         private readonly UpdateExpenseAction $updateExpenseAction,
         private readonly DeleteExpenseAction $deleteExpenseAction,
         private readonly FinancialSummaryService $financialSummaryService,
-    ) {
-    }
+    ) {}
 
-    public function create(DailyLog $dailyLog, CreateExpenseData $data, Worker $currentWorker,): Expense {
+    public function create(DailyLog $dailyLog, CreateExpenseData $data, Worker $currentWorker): Expense
+    {
         return $this->createExpenseAction->execute(
             $dailyLog,
             $data,
@@ -58,43 +62,40 @@ class ExpenseService
         );
     }
 
-    public function createByAdmin(CreateAdminExpenseData $data, Worker $currentWorker,): Expense {
+    public function createByAdmin(CreateAdminExpenseData $data, Worker $currentWorker): Expense
+    {
         return $this->createAdminExpenseAction->execute(
             $data,
             $currentWorker,
         );
     }
 
-    public function findById(DailyLog $dailyLog, int $id,): ?Expense {
+    public function findById(DailyLog $dailyLog, int $id): ?Expense
+    {
         return $this->query($dailyLog)->find($id);
     }
 
-    public function get(DailyLog $dailyLog, GetExpensesData $data,): Collection {
+    public function get(DailyLog $dailyLog, GetExpensesData $data, Worker $worker): Collection
+    {
+        $this->ensureCanRead($dailyLog, $worker);
+
         return (new ExpenseFilter($data))
-            ->apply(
-                Expense::query()
-                    ->where(
-                        'site_manager_id',
-                        $dailyLog->site_manager_id,
-                    )
-                    ->where(
-                        'construction_site_id',
-                        $dailyLog->construction_site_id,
-                    )
-            )
+            ->apply(Expense::query()->whereBelongsTo($dailyLog)->where('company_id', $dailyLog->company_id))
             ->get();
     }
 
-    public function getAll(GetExpensesData $data): Collection
+    public function getAll(GetExpensesData $data, Worker $worker): Collection
     {
         return (new ExpenseFilter($data))
-            ->apply($this->queryAll())
+            ->apply($this->queryAll()->where('company_id', $worker->company_id)
+                ->when(! $worker->isAdmin(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($worker))))
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
     }
 
-    public function update(DailyLog $dailyLog, Expense $expense, UpdateExpenseData $data, Worker $currentWorker, ?string $reason = null,): Expense {
+    public function update(DailyLog $dailyLog, Expense $expense, UpdateExpenseData $data, Worker $currentWorker, ?string $reason = null): Expense
+    {
         return $this->updateExpenseAction->execute(
             $dailyLog,
             $expense,
@@ -104,7 +105,8 @@ class ExpenseService
         );
     }
 
-    public function delete(DailyLog $dailyLog, Expense $expense, Worker $currentWorker, string $reason,): void {
+    public function delete(DailyLog $dailyLog, Expense $expense, Worker $currentWorker, string $reason): void
+    {
         $this->deleteExpenseAction->execute(
             $dailyLog,
             $expense,
@@ -113,63 +115,46 @@ class ExpenseService
         );
     }
 
-    public function getHistory(
-        DailyLog $dailyLog,
-        GetExpensesData $data,
-    ): Collection {
+    public function getHistory(DailyLog $dailyLog, GetExpensesData $data, Worker $worker): Collection
+    {
+        $this->ensureCanRead($dailyLog, $worker);
+
+        $query = $this->queryAll()
+            ->where('company_id', $dailyLog->company_id)
+            ->where('construction_site_id', $dailyLog->construction_site_id)
+            ->when(! $worker->isAdmin(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($worker)))
+            ->when($worker->isSiteManager(), fn ($query) => $query->where('site_manager_id', $worker->id));
 
         return (new ExpenseFilter($data))
-            ->apply(
-                Expense::query()
-                    ->where(
-                        'site_manager_id',
-                        $dailyLog->site_manager_id,
-                    )
-                    ->where(
-                        'construction_site_id',
-                        $dailyLog->construction_site_id,
-                    )
-                    ->with([
-                        'creator',
-                        'siteManager',
-                        'constructionSite',
-                        'dailyLog',
-                        'attachments',
-                    ])
-            )
+            ->apply($query)
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
     }
 
-    public function getDailyReport(DailyLog $dailyLog, GetExpensesData $data): array
+    public function getDailyReport(DailyLog $dailyLog, GetExpensesData $data, Worker $worker): array
     {
-        $expenses = $this->get($dailyLog, $data);
-
         return [
-            'expenses' => $expenses,
-            'summary' => $this->financialSummaryService->summaryForSiteManager($dailyLog->siteManager),
+            'expenses' => $this->get($dailyLog, $data, $worker),
+            'summary' => $this->financialSummaryService->summaryForSiteManager($worker),
         ];
     }
 
-    public function getHistoryReport(DailyLog $dailyLog, GetExpensesData $data): array
+    public function getHistoryReport(DailyLog $dailyLog, GetExpensesData $data, Worker $worker): array
     {
-        $expenses = $this->getHistory($dailyLog, $data);
-        $summary = $this->financialSummaryService->summaryForSiteManager($dailyLog->siteManager);
-        $cashAdvances = $this->financialSummaryService->cashAdvancesForSiteManager($dailyLog->siteManager);
-
         return [
-            'expenses' => $expenses,
-            'summary' => $summary,
-            'cash_advances' => $cashAdvances,
+            'expenses' => $this->getHistory($dailyLog, $data, $worker),
+            'summary' => $this->financialSummaryService->summaryForSiteManager($worker),
+            'cash_advances' => $this->financialSummaryService->cashAdvancesForSiteManager($worker),
         ];
     }
 
-    public function getAdminExpenses(GetExpensesData $data, Worker $currentWorker,): array {
+    public function getAdminExpenses(GetExpensesData $data, Worker $currentWorker): array
+    {
         $query = $this->queryAll()
             ->where('company_id', $currentWorker->company_id)
             ->whereHas('creator', function ($query) {
-                $query->where('role', \App\Enums\WorkerRole::ADMIN);
+                $query->where('role', WorkerRole::ADMIN);
             });
 
         $query = (new ExpenseFilter($data))->apply($query);

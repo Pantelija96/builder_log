@@ -5,28 +5,34 @@ namespace App\Actions\Task;
 use App\Actions\BaseAction;
 use App\DTO\Task\UpdateTaskData;
 use App\Enums\LogEvent;
+use App\Enums\WorkerRole;
+use App\Exceptions\BusinessException;
+use App\Models\ConstructionSite;
 use App\Models\Task;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
 use App\Services\NotificationService;
-use App\Enums\WorkerRole;
-use App\Exceptions\BusinessException;
 
 class UpdateTaskAction extends BaseAction
 {
     public function __construct(
         private readonly LoggingService $logging,
         private readonly NotificationService $notifications,
-    ) {
-    }
+    ) {}
 
-    public function execute(Task $task, UpdateTaskData $data, Worker $currentWorker, ?string $reason = null,): Task {
+    public function execute(Task $task, UpdateTaskData $data, Worker $currentWorker, ?string $reason = null): Task
+    {
+        if ($data->constructionSiteId !== null) {
+            abort_unless(ConstructionSite::query()->where('company_id', $currentWorker->company_id)
+                ->whereKey($data->constructionSiteId)->exists(), 404);
+        }
+
         $this->ensureValidTargetWorker(
             workerId: $data->workerId,
             currentWorker: $currentWorker,
         );
 
-        return $this->transaction(function () use ($task, $data, $currentWorker, $reason) {
+        return $this->transaction(function () use ($task, $data, $currentWorker) {
             $assignmentChanged =
                 $task->worker_id !== $data->workerId
                 || $task->target_role !== $data->targetRole
@@ -71,7 +77,7 @@ class UpdateTaskAction extends BaseAction
         }
 
         if ($task->construction_site_id !== null) {
-            foreach ($task->constructionSite->siteManagers as $manager) {
+            foreach ($task->constructionSite->siteManagers()->where('workers.company_id', $task->company_id)->get() as $manager) {
                 $this->notifications->taskAssigned(
                     worker: $manager,
                     task: $task,

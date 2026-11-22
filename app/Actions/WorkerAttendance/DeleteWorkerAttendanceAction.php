@@ -4,14 +4,12 @@ namespace App\Actions\WorkerAttendance;
 
 use App\Actions\BaseAction;
 use App\Enums\LogEvent;
-use App\Exceptions\BusinessException;
 use App\Models\DailyLog;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
 use App\Services\Logging\LoggingService;
 use App\Traits\EnsuresDailyLogIsEditable;
 use App\Traits\EnsuresWorkerCanManageDailyLog;
-use Illuminate\Support\Facades\DB;
 
 class DeleteWorkerAttendanceAction extends BaseAction
 {
@@ -23,16 +21,13 @@ class DeleteWorkerAttendanceAction extends BaseAction
     ) {}
 
     public function execute(DailyLog $dailyLog, WorkerAttendance $workerAttendance, Worker $currentWorker, string $reason): void {
-        if ($workerAttendance->daily_log_id !== $dailyLog->id) {
-            throw new BusinessException(
-                'Worker attendance does not belong to the specified daily log.'
-            );
-        }
-
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureDailyLogChild($dailyLog, $workerAttendance);
         $this->ensureEditable($dailyLog);
 
-        $this->transaction(function () use ($workerAttendance, $currentWorker, $reason,) {
+        $this->transaction(function () use ($workerAttendance, $currentWorker, $reason) {
+            $worker = Worker::withTrashed()->where('company_id', $workerAttendance->company_id)
+                ->lockForUpdate()->findOrFail($workerAttendance->worker_id);
 
             $oldValues = $workerAttendance->getAttributes();
 
@@ -41,11 +36,15 @@ class DeleteWorkerAttendanceAction extends BaseAction
 
             $workerAttendance->forceDelete();
 
-            Worker::query()
-                ->whereKey($workerAttendance->worker_id)
-                ->update([
-                    'is_available' => true,
-                ]);
+            $hasRemainingAttendance = $workerAttendance->machine_assignment_id === null
+                && $worker->isWorker() && $worker->attendances()
+                ->where('company_id', $worker->company_id)
+                ->where(fn ($query) => $query->whereDate('date', $workerAttendance->date)->orWhereDate('date', today()))
+                ->exists();
+
+            if (! $worker->trashed() && ! $hasRemainingAttendance) {
+                $worker->update(['is_available' => true]);
+            }
         });
     }
 }

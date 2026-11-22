@@ -34,7 +34,7 @@ class WorkerSalaryJsonContractTest extends TestCase
             'company_id' => $log->company_id,
             'daily_log_id' => $log->id,
             'construction_site_id' => $log->construction_site_id,
-            'site_manager_id' => $log->site_manager_id,
+            'site_manager_id' => $log->siteManagers()->firstOrFail()->id,
             'worker_id' => $worker->id,
             'created_by' => $admin->id,
             'date' => '2026-02-01',

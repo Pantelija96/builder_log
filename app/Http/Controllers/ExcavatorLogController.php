@@ -16,6 +16,7 @@ use App\Models\DailyLog;
 use App\Models\ExcavatorLog;
 use App\Models\Worker;
 use App\Services\ExcavatorLogService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
@@ -25,14 +26,17 @@ class ExcavatorLogController extends ApiController
         private readonly ExcavatorLogService $excavatorLogService,
     ) {}
 
-    public function store(DailyLog $dailyLog, CreateExcavatorLogRequest $request,): JsonResponse
+    #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
+    #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked or a machine or worker period conflicts.', type: 'array{message: string}')]
+    #[Response(status: 422, description: 'Invalid request or a site manager is required for attribution.', type: 'array{message: string, errors?: array<string, list<string>>}')]
+    public function store(DailyLog $dailyLog, CreateExcavatorLogRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
 
-
-        Log::info('ExcavatorLog received', ['dailyLog' => $dailyLog->toArray(),]);
-        Log::info('UpdateExcavatorLogRequest received', ['Request' => $request->toArray(),]);
+        Log::info('ExcavatorLog received', ['dailyLog' => $dailyLog->toArray()]);
+        Log::info('UpdateExcavatorLogRequest received', ['Request' => $request->toArray()]);
 
         $excavatorLog = $this->excavatorLogService->create(
             dailyLog: $dailyLog,
@@ -46,12 +50,15 @@ class ExcavatorLogController extends ApiController
         );
     }
 
-    public function storeForOperator(CreateExcavatorLogForOperatorRequest $request,): JsonResponse
+    #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
+    #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked or a machine or worker period conflicts.', type: 'array{message: string}')]
+    public function storeForOperator(CreateExcavatorLogForOperatorRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
 
-        Log::info('storeForOperator received', ['Request' => $request->toArray(),]);
+        Log::info('storeForOperator received', ['Request' => $request->toArray()]);
 
         $excavatorLog = $this->excavatorLogService->createForOperator(
             data: CreateExcavatorLogForOperatorData::fromRequest($request),
@@ -64,13 +71,16 @@ class ExcavatorLogController extends ApiController
         );
     }
 
-    public function update(ExcavatorLog $excavatorLog, UpdateExcavatorLogRequest $request,): JsonResponse
+    #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
+    #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked or a machine or worker period conflicts.', type: 'array{message: string}')]
+    public function update(ExcavatorLog $excavatorLog, UpdateExcavatorLogRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
 
-        Log::info('ExcavatorLog received', ['excavatorLog' => $excavatorLog->toArray(),]);
-        Log::info('UpdateExcavatorLogRequest received', ['Request' => $request->toArray(),]);
+        Log::info('ExcavatorLog received', ['excavatorLog' => $excavatorLog->toArray()]);
+        Log::info('UpdateExcavatorLogRequest received', ['Request' => $request->toArray()]);
 
         $excavatorLog = $this->excavatorLogService->update(
             excavatorLog: $excavatorLog,
@@ -79,14 +89,16 @@ class ExcavatorLogController extends ApiController
             reason: $request->string('reason')->toString(),
         );
 
-        return $this->success(ExcavatorLogResource::make($excavatorLog), 'Excavator log updated successfully.',);
+        return $this->success(ExcavatorLogResource::make($excavatorLog), 'Excavator log updated successfully.');
     }
 
-    public function destroy(ExcavatorLog $excavatorLog, DeleteExcavatorLogRequest $request,): JsonResponse
+    #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
+    #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
+    public function destroy(ExcavatorLog $excavatorLog, DeleteExcavatorLogRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
-
 
         $this->excavatorLogService->delete(
             excavatorLog: $excavatorLog,

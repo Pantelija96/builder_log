@@ -10,14 +10,17 @@ use App\Enums\WorkerRole;
 use App\Exceptions\BusinessException;
 use App\Models\ExcavatorLog;
 use App\Models\Worker;
+use App\QueryFilters\MachinePeriod;
 use App\Services\Logging\LoggingService;
 use App\Services\NotificationService;
 use App\Services\WorkerPushNotificationService;
-use Illuminate\Database\Eloquent\Builder;
+use App\Traits\ManagesMachineAssignments;
 use Illuminate\Support\Facades\Log;
 
 class UpdateExcavatorLogAction extends BaseAction
 {
+    use ManagesMachineAssignments;
+
     public function __construct(
         private readonly LoggingService $logging,
         private readonly SyncMachineWorkerAttendanceAction $syncMachineWorkerAttendanceAction,
@@ -37,6 +40,16 @@ class UpdateExcavatorLogAction extends BaseAction
             $currentWorker,
             $reason,
         ) {
+            $this->lockMachineAssignments($currentWorker);
+            $excavatorLog = ExcavatorLog::query()->findOrFail($excavatorLog->id);
+            $assignment = $excavatorLog->machineAssignment;
+            abort_unless($assignment, 404);
+            $ownUpdate = $currentWorker->isOperator() && $excavatorLog->worker_id === $currentWorker->id;
+            $dailyLog = $this->editableMachineDailyLog($assignment, $currentWorker, $ownUpdate);
+            abort_if($ownUpdate && array_intersect(
+                $data->providedFields,
+                ['site_manager_started_at', 'site_manager_finished_at', 'note_site_manager', 'advance_payment'],
+            ), 403);
             $oldValues =
                 $excavatorLog->getAttributes();
 
@@ -45,24 +58,21 @@ class UpdateExcavatorLogAction extends BaseAction
             Log::info(
                 'UpdateExcavatorLogAction received',
                 [
-                    'ExcavatorLog' =>
-                        $excavatorLog->toArray(),
+                    'ExcavatorLog' => $excavatorLog->toArray(),
                 ],
             );
 
             Log::info(
                 'UpdateExcavatorLogData received',
                 [
-                    'UpdateExcavatorLogData' =>
-                        $data,
+                    'UpdateExcavatorLogData' => $data,
                 ],
             );
 
             Log::info(
                 'Worker received',
                 [
-                    'Worker' =>
-                        $currentWorker->toArray(),
+                    'Worker' => $currentWorker->toArray(),
                 ],
             );
 
@@ -208,7 +218,7 @@ class UpdateExcavatorLogAction extends BaseAction
                     )
                         ? $values['site_manager_started_at']
                         : $excavatorLog
-                        ->site_manager_started_at;
+                            ->site_manager_started_at;
 
                 $siteManagerFinishedAt =
                     array_key_exists(
@@ -217,32 +227,34 @@ class UpdateExcavatorLogAction extends BaseAction
                     )
                         ? $values['site_manager_finished_at']
                         : $excavatorLog
-                        ->site_manager_finished_at;
+                            ->site_manager_finished_at;
 
-                $this->ensureExcavatorIsAvailable(
-                    machineId:
-                    $assignment->machine_id,
-                    startedAt:
-                    $siteManagerStartedAt,
-                    finishedAt:
-                    $siteManagerFinishedAt,
-                    date:
-                    $assignment->date->toDateString(),
-                    exceptAssignmentId:
-                    $assignment->id,
+                MachinePeriod::ensureAvailable(
+                    companyId: $currentWorker->company_id,
+                    machineId: $assignment->machine_id,
+                    workerId: $assignment->worker_id,
+                    date: $assignment->date->toDateString(),
+                    start: $siteManagerStartedAt,
+                    finish: $siteManagerFinishedAt,
+                    exceptAssignmentId: $assignment->id,
+                    machineMessage: __('Excavator is already in use during the selected period.'),
+                    workerMessage: 'Operator is already assigned during the selected period.',
                 );
+            }
 
-                $this->ensureOperatorIsAvailable(
-                    workerId:
-                    $assignment->worker_id,
-                    startedAt:
-                    $siteManagerStartedAt,
-                    finishedAt:
-                    $siteManagerFinishedAt,
-                    date:
-                    $assignment->date->toDateString(),
-                    exceptAssignmentId:
-                    $assignment->id,
+            if ($managerTimeFieldsChanged && $siteManagerStartedAt !== null && $dailyLog !== null
+                && $excavatorLog->site_manager_started_at === null && $assignment->isPendingSelfAssignment()) {
+                $this->ensureManagerAttribution($currentWorker);
+                $oldAssignment = $assignment->getAttributes();
+                $assignment->update([
+                    'daily_log_id' => $dailyLog->id,
+                    'site_manager_id' => $currentWorker->id,
+                ]);
+                $this->logging->audit(
+                    actor: $currentWorker,
+                    subject: $assignment,
+                    event: LogEvent::MACHINE_ASSIGNMENT_TAKEN_OVER,
+                    oldValues: $oldAssignment,
                 );
             }
 
@@ -253,23 +265,18 @@ class UpdateExcavatorLogAction extends BaseAction
             $this->logging->activity(
                 actor: $currentWorker,
                 subject: $excavatorLog,
-                event:
-                LogEvent::EXCAVATOR_LOG_UPDATED,
+                event: LogEvent::EXCAVATOR_LOG_UPDATED,
             );
 
             $this->logging->audit(
                 actor: $currentWorker,
                 subject: $excavatorLog,
-                event:
-                LogEvent::EXCAVATOR_LOG_UPDATED,
-                oldValues:
-                $oldValues,
-                newValues:
-                $excavatorLog
+                event: LogEvent::EXCAVATOR_LOG_UPDATED,
+                oldValues: $oldValues,
+                newValues: $excavatorLog
                     ->fresh()
                     ->getAttributes(),
-                reason:
-                $reason,
+                reason: $reason,
             );
 
             $excavatorLog->load(
@@ -285,40 +292,35 @@ class UpdateExcavatorLogAction extends BaseAction
                 );
             }
 
-            $this->syncMachineWorkerAttendanceAction->execute(
-                assignment:
-                $assignment,
-                startedAt:
-                $excavatorLog
-                    ->site_manager_started_at,
-                finishedAt:
-                $excavatorLog
-                    ->site_manager_finished_at,
-                advancePayment:
-                in_array(
-                    'advance_payment',
-                    $data->providedFields,
-                    true,
-                )
-                    ? $data->advancePayment
-                    : null,
-            );
+            if (! $ownUpdate) {
+                $this->syncMachineWorkerAttendanceAction->execute(
+                    assignment: $assignment,
+                    startedAt: $excavatorLog
+                        ->site_manager_started_at,
+                    finishedAt: $excavatorLog
+                        ->site_manager_finished_at,
+                    advancePayment: in_array(
+                        'advance_payment',
+                        $data->providedFields,
+                        true,
+                    )
+                        ? $data->advancePayment
+                        : null,
+                    actor: $currentWorker,
+                );
+            }
 
             if ($operatorStartedDay) {
                 $this->notifyAdminsWorkerStartedDay(
-                    excavatorLog:
-                    $excavatorLog,
-                    worker:
-                    $currentWorker,
+                    excavatorLog: $excavatorLog,
+                    worker: $currentWorker,
                 );
             }
 
             if ($operatorFinishedDay) {
                 $this->notifyAdminsWorkerFinishedDay(
-                    excavatorLog:
-                    $excavatorLog,
-                    worker:
-                    $currentWorker,
+                    excavatorLog: $excavatorLog,
+                    worker: $currentWorker,
                 );
             }
 
@@ -328,149 +330,6 @@ class UpdateExcavatorLogAction extends BaseAction
                 'creator',
             ]);
         });
-    }
-
-    private function ensureExcavatorIsAvailable(
-        int $machineId,
-        mixed $startedAt,
-        mixed $finishedAt = null,
-        ?string $date = null,
-        ?int $exceptAssignmentId = null,
-    ): void {
-        $query = ExcavatorLog::query()
-            ->whereHas(
-                'machineAssignment',
-                function (Builder $query) use (
-                    $machineId,
-                    $date,
-                    $exceptAssignmentId,
-                ) {
-                    $query->where(
-                        'machine_id',
-                        $machineId,
-                    );
-
-                    if ($date !== null) {
-                        $query->whereDate(
-                            'date',
-                            $date,
-                        );
-                    }
-
-                    if ($exceptAssignmentId !== null) {
-                        $query->where(
-                            'id',
-                            '!=',
-                            $exceptAssignmentId,
-                        );
-                    }
-                }
-            );
-
-        $this->applyManagerConflictCondition(
-            query: $query,
-            startedAt: $startedAt,
-            finishedAt: $finishedAt,
-        );
-
-        if ($query->exists()) {
-            throw new BusinessException(
-                'Excavator is already in use during the selected period.'
-            );
-        }
-    }
-
-    private function ensureOperatorIsAvailable(
-        int $workerId,
-        mixed $startedAt,
-        mixed $finishedAt = null,
-        ?string $date = null,
-        ?int $exceptAssignmentId = null,
-    ): void {
-        $query = ExcavatorLog::query()
-            ->where(
-                'worker_id',
-                $workerId,
-            )
-            ->whereHas(
-                'machineAssignment',
-                function (Builder $query) use (
-                    $date,
-                    $exceptAssignmentId,
-                ) {
-                    if ($date !== null) {
-                        $query->whereDate(
-                            'date',
-                            $date,
-                        );
-                    }
-
-                    if ($exceptAssignmentId !== null) {
-                        $query->where(
-                            'id',
-                            '!=',
-                            $exceptAssignmentId,
-                        );
-                    }
-                }
-            );
-
-        $this->applyManagerConflictCondition(
-            query: $query,
-            startedAt: $startedAt,
-            finishedAt: $finishedAt,
-        );
-
-        if ($query->exists()) {
-            throw new BusinessException(
-                'Operator is already assigned during the selected period.'
-            );
-        }
-    }
-
-    private function applyManagerConflictCondition(
-        Builder $query,
-        mixed $startedAt,
-        mixed $finishedAt,
-    ): void {
-        if ($startedAt === null) {
-            return;
-        }
-
-        $query->where(
-            function (Builder $query) use (
-                $startedAt,
-                $finishedAt,
-            ) {
-                $query
-                    ->whereNull(
-                        'site_manager_started_at'
-                    )
-                    ->orWhereNull(
-                        'site_manager_finished_at'
-                    )
-                    ->orWhere(
-                        function (Builder $query) use (
-                            $startedAt,
-                            $finishedAt,
-                        ) {
-                            if ($finishedAt !== null) {
-                                $query->where(
-                                    'site_manager_started_at',
-                                    '<',
-                                    $finishedAt,
-                                );
-                            }
-
-                            $query->where(
-                                'site_manager_finished_at',
-                                '>',
-                                $startedAt,
-                            );
-                        }
-                    );
-            }
-        );
     }
 
     private function notifyAdminsWorkerStartedDay(
@@ -500,12 +359,10 @@ class UpdateExcavatorLogAction extends BaseAction
                             ->workerStartedDay(
                                 worker: $admin,
                                 startedBy: $worker,
-                                machineAssignmentId:
-                                $excavatorLog
+                                machineAssignmentId: $excavatorLog
                                     ->machine_assignment_id,
                                 logType: 'excavator',
-                                logId:
-                                $excavatorLog->id,
+                                logId: $excavatorLog->id,
                             );
 
                     $this->pushNotifications->send(
@@ -513,19 +370,13 @@ class UpdateExcavatorLogAction extends BaseAction
                         title: $notification->title,
                         body: $notification->message,
                         data: [
-                            'type' =>
-                                'worker_day_started',
-                            'worker_type' =>
-                                'operator',
-                            'worker_id' =>
-                                $worker->id,
-                            'excavator_log_id' =>
-                                $excavatorLog->id,
-                            'machine_assignment_id' =>
-                                $excavatorLog
-                                    ->machine_assignment_id,
-                            'notification_id' =>
-                                $notification->id,
+                            'type' => 'worker_day_started',
+                            'worker_type' => 'operator',
+                            'worker_id' => $worker->id,
+                            'excavator_log_id' => $excavatorLog->id,
+                            'machine_assignment_id' => $excavatorLog
+                                ->machine_assignment_id,
+                            'notification_id' => $notification->id,
                         ],
                     );
                 }
@@ -559,12 +410,10 @@ class UpdateExcavatorLogAction extends BaseAction
                             ->workerFinishedDay(
                                 worker: $admin,
                                 finishedBy: $worker,
-                                machineAssignmentId:
-                                $excavatorLog
+                                machineAssignmentId: $excavatorLog
                                     ->machine_assignment_id,
                                 logType: 'excavator',
-                                logId:
-                                $excavatorLog->id,
+                                logId: $excavatorLog->id,
                             );
 
                     $this->pushNotifications->send(
@@ -572,19 +421,13 @@ class UpdateExcavatorLogAction extends BaseAction
                         title: $notification->title,
                         body: $notification->message,
                         data: [
-                            'type' =>
-                                'worker_day_finished',
-                            'worker_type' =>
-                                'operator',
-                            'worker_id' =>
-                                $worker->id,
-                            'excavator_log_id' =>
-                                $excavatorLog->id,
-                            'machine_assignment_id' =>
-                                $excavatorLog
-                                    ->machine_assignment_id,
-                            'notification_id' =>
-                                $notification->id,
+                            'type' => 'worker_day_finished',
+                            'worker_type' => 'operator',
+                            'worker_id' => $worker->id,
+                            'excavator_log_id' => $excavatorLog->id,
+                            'machine_assignment_id' => $excavatorLog
+                                ->machine_assignment_id,
+                            'notification_id' => $notification->id,
                         ],
                     );
                 }

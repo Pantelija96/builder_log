@@ -3,11 +3,10 @@
 namespace App\Actions\DailyLog;
 
 use App\Actions\BaseAction;
-use App\Actions\MachineAssignment\CloseOpenMachineAssignmentsAction;
 use App\Enums\LogEvent;
+use App\Exceptions\BusinessException;
 use App\Models\DailyLog;
 use App\Models\Worker;
-use App\Exceptions\BusinessException;
 use App\Services\Logging\LoggingService;
 use App\Traits\EnsuresWorkerCanManageDailyLog;
 
@@ -17,10 +16,12 @@ class LockDailyLogAction extends BaseAction
 
     public function __construct(
         private readonly LoggingService $logging,
-    ) {
-    }
+    ) {}
 
-    public function execute(DailyLog $dailyLog, ?Worker $worker = null,): DailyLog {
+    public function execute(DailyLog $dailyLog, ?Worker $worker = null): DailyLog
+    {
+        abort_if($worker !== null && $dailyLog->company_id !== $worker->company_id, 404);
+
         if ($dailyLog->isLocked()) {
             throw new BusinessException(
                 'Daily log is already locked.'

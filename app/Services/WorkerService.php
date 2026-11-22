@@ -12,6 +12,7 @@ use App\DTO\Worker\GetWorkerWorkHistoryData;
 use App\DTO\Worker\UpdateWorkerData;
 use App\Models\Worker;
 use App\QueryFilters\WorkerFilter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 class WorkerService
@@ -23,29 +24,46 @@ class WorkerService
         private readonly GetWorkerWorkHistoryAction $getWorkerWorkHistoryAction,
     ) {}
 
-    private function query()
+    private function query(Worker $actor): Builder
     {
         return Worker::query()->with([
             'company',
-            'constructionSites',
+            'constructionSites' => fn ($sites) => $sites->where('construction_sites.company_id', $actor->company_id),
         ]);
     }
 
-    public function getAll(GetWorkersData $data): Collection
+    public function getAll(GetWorkersData $data, Worker $actor): Collection
     {
+        $now = now();
+        $query = $this->query($actor)
+            ->where('company_id', $actor->company_id)
+            ->withExists([
+                'machineAssignments as has_occupied_machine' => fn (Builder $assignments) => $assignments
+                    ->whereColumn('machine_assignments.company_id', 'workers.company_id')
+                    ->whereDate('machine_assignments.date', $now->toDateString())
+                    ->occupiedAt($now),
+                'attendances as has_current_attendance' => fn (Builder $attendances) => $attendances
+                    ->whereColumn('worker_attendances.company_id', 'workers.company_id')
+                    ->whereDate('worker_attendances.date', $now->toDateString())
+                    ->where('started_at', '<=', $now)
+                    ->where(fn (Builder $period) => $period
+                        ->whereNull('finished_at')
+                        ->orWhere('finished_at', '>', $now)),
+            ]);
+
         return (new WorkerFilter($data))
-            ->apply($this->query())
+            ->apply($query)
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
     }
 
-    public function findById(int $id): ?Worker
+    public function findById(int $id, Worker $actor): Worker
     {
-        return $this->query()->find($id);
+        return $this->query($actor)->where('company_id', $actor->company_id)->findOrFail($id);
     }
 
-    public function create(CreateWorkerData $data, Worker $currentWorker,): Worker
+    public function create(CreateWorkerData $data, Worker $currentWorker): Worker
     {
         $this->ensureAdmin($currentWorker);
 
@@ -55,7 +73,7 @@ class WorkerService
         );
     }
 
-    public function update(Worker $worker, UpdateWorkerData $data, Worker $currentWorker, ?string $reason = null,): Worker
+    public function update(Worker $worker, UpdateWorkerData $data, Worker $currentWorker, ?string $reason = null): Worker
     {
         $this->ensureAdmin($currentWorker);
         $this->ensureCompanyAccess($worker, $currentWorker);
@@ -68,7 +86,7 @@ class WorkerService
         );
     }
 
-    public function delete(Worker $worker, Worker $currentWorker, string $reason,): void
+    public function delete(Worker $worker, Worker $currentWorker, string $reason): void
     {
         $this->ensureAdmin($currentWorker);
         $this->ensureCompanyAccess($worker, $currentWorker);
@@ -80,11 +98,12 @@ class WorkerService
         );
     }
 
-    public function getWorkHistory(Worker $worker, GetWorkerWorkHistoryData $data,)
+    public function getWorkHistory(Worker $worker, GetWorkerWorkHistoryData $data, Worker $currentWorker)
     {
         return $this->getWorkerWorkHistoryAction->execute(
             worker: $worker,
             data: $data,
+            currentWorker: $currentWorker,
         );
     }
 
@@ -95,7 +114,7 @@ class WorkerService
         }
     }
 
-    private function ensureCompanyAccess(Worker $worker, Worker $currentWorker,): void
+    private function ensureCompanyAccess(Worker $worker, Worker $currentWorker): void
     {
         if ($worker->company_id !== $currentWorker->company_id) {
             abort(404);

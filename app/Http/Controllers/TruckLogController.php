@@ -9,23 +9,28 @@ use App\Http\Requests\TruckLog\CreateTruckLogForDriverRequest;
 use App\Http\Requests\TruckLog\CreateTruckLogRequest;
 use App\Http\Requests\TruckLog\DeleteTruckLogRequest;
 use App\Http\Requests\TruckLog\UpdateTruckLogRequest;
+use App\Http\Resources\MachineAssignmentResource;
 use App\Http\Resources\MachineResource;
 use App\Http\Resources\TruckLogResource;
 use App\Models\DailyLog;
 use App\Models\TruckLog;
 use App\Models\Worker;
 use App\Services\TruckLogService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
-use App\Http\Resources\MachineAssignmentResource;
 
 class TruckLogController extends ApiController
 {
     public function __construct(
         private readonly TruckLogService $truckLogService,
-    ) {
-    }
+    ) {}
 
-    public function store(DailyLog $dailyLog, CreateTruckLogRequest $request,): JsonResponse {
+    #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
+    #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked or a machine or worker period conflicts.', type: 'array{message: string}')]
+    #[Response(status: 422, description: 'Invalid request or a site manager is required for attribution.', type: 'array{message: string, errors?: array<string, list<string>>}')]
+    public function store(DailyLog $dailyLog, CreateTruckLogRequest $request): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -41,7 +46,11 @@ class TruckLogController extends ApiController
         );
     }
 
-    public function storeForDriver(CreateTruckLogForDriverRequest $request,): JsonResponse {
+    #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
+    #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked or a machine or worker period conflicts.', type: 'array{message: string}')]
+    public function storeForDriver(CreateTruckLogForDriverRequest $request): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -56,7 +65,10 @@ class TruckLogController extends ApiController
         );
     }
 
-    public function update(TruckLog $truckLog, UpdateTruckLogRequest $request,): JsonResponse
+    #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
+    #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked or a machine or worker period conflicts.', type: 'array{message: string}')]
+    public function update(TruckLog $truckLog, UpdateTruckLogRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -74,7 +86,10 @@ class TruckLogController extends ApiController
         );
     }
 
-    public function destroy(TruckLog $truckLog, DeleteTruckLogRequest $request,): JsonResponse
+    #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
+    #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
+    public function destroy(TruckLog $truckLog, DeleteTruckLogRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();

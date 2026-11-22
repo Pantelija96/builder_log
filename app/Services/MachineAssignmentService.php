@@ -18,12 +18,10 @@ class MachineAssignmentService
     /**
      * Get assignments for selected:
      */
-    public function get(Worker $currentWorker, GetMachineAssignmentsData $data,): Collection {
+    public function get(Worker $currentWorker, GetMachineAssignmentsData $data): Collection
+    {
         $query = MachineAssignment::query()
-            ->where(
-                'company_id',
-                $currentWorker->company_id,
-            )
+            ->visibleTo($currentWorker)
             ->with([
                 'machine',
                 'machine.owner',
@@ -46,7 +44,8 @@ class MachineAssignmentService
             ->get();
     }
 
-    public function getCurrentMachine(Worker $currentWorker, ?int $workerId = null,): ?MachineAssignment {
+    public function getCurrentMachine(Worker $currentWorker, ?int $workerId = null): ?MachineAssignment
+    {
         return $this->getCurrentMachineAssignmentAction->execute(
             currentWorker: $currentWorker,
             workerId: $workerId,

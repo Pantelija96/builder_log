@@ -103,6 +103,7 @@ Route::prefix('v1')->group(function () {
                 Route::post('/', 'store');
                 Route::patch('/{constructionSite}', 'update');
                 Route::delete('/{constructionSite}', 'destroy');
+                Route::post('/{constructionSite}/select', 'select');
                 Route::get('/{constructionSite}/financial-summary', 'financialSummary');
                 Route::get('/{constructionSite}/statistics', 'statistics');
             });

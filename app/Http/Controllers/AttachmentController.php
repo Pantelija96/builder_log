@@ -10,7 +10,8 @@ use App\Models\DailyLog;
 use App\Models\Expense;
 use App\Models\Worker;
 use App\Services\AttachmentService;
-use Illuminate\Http\JsonResponse;
+use Dedoc\Scramble\Attributes\Response;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -21,6 +22,8 @@ class AttachmentController extends ApiController
     ) {
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function uploadToDailyLog(UploadAttachmentRequest $request, DailyLog $dailyLog,): AnonymousResourceCollection {
         /** @var Worker $worker */
         $worker = $request->user();
@@ -34,6 +37,8 @@ class AttachmentController extends ApiController
         return AttachmentResource::collection($attachments);
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function uploadToExpense(UploadAttachmentRequest $request, Expense $expense,): AnonymousResourceCollection {
         /** @var Worker $worker */
         $worker = $request->user();
@@ -47,10 +52,13 @@ class AttachmentController extends ApiController
         return AttachmentResource::collection($attachments);
     }
 
-    public function download(Attachment $attachment,): StreamedResponse {
-        return $this->attachmentService->download($attachment);
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    public function download(Request $request, Attachment $attachment): StreamedResponse {
+        return $this->attachmentService->download($attachment, $request->user());
     }
 
+    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function destroy(DeleteAttachmentRequest $request, Attachment $attachment,): \Illuminate\Http\Response
     {
         /** @var Worker $worker */

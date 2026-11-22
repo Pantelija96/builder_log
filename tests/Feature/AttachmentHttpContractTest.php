@@ -41,10 +41,9 @@ class AttachmentHttpContractTest extends TestCase
         $this->fakeAttachmentDisk();
         $manager = Worker::factory()->siteManager()->create();
         $site = ConstructionSite::factory()->for($manager->company)->create();
-        $log = DailyLog::factory()->create([
+        $log = DailyLog::factory()->withManager($manager)->create([
             'company_id' => $manager->company_id,
             'construction_site_id' => $site->id,
-            'site_manager_id' => $manager->id,
         ]);
         Sanctum::actingAs($manager);
         $url = "/api/v1/daily-logs/{$log->id}/attachments";
@@ -72,7 +71,7 @@ class AttachmentHttpContractTest extends TestCase
         foreach ($rows as $row) {
             $this->assertTrue($row->attachable->is($log));
             $this->assertSame($log->id, $row->daily_log_id);
-            $this->assertSame($log->site_manager_id, $row->created_by);
+            $this->assertSame($log->siteManagers()->firstOrFail()->id, $row->created_by);
             $this->assertSame($log->company_id, $row->company_id);
             $this->assertSame('contract-attachments/'.$row->name, $row->path);
             Storage::disk($this->disk)->assertExists($row->path);
@@ -93,7 +92,7 @@ class AttachmentHttpContractTest extends TestCase
         $this->assertDatabaseCount('activity_logs', 4);
         $this->assertDatabaseCount('audit_logs', 1);
         $this->assertDatabaseHas('audit_logs', [
-            'actor_id' => $log->site_manager_id,
+            'actor_id' => $log->siteManagers()->firstOrFail()->id,
             'event' => LogEvent::ATTACHMENT_DELETED->value,
             'reason' => 'Wrong file',
         ]);
@@ -131,7 +130,7 @@ class AttachmentHttpContractTest extends TestCase
         config(['app.debug' => false]);
         Sanctum::actingAs(Worker::factory()->admin()->create());
         $this->deleteJson("/api/v1/attachments/{$row->id}", ['reason' => 'Wrong company'])
-            ->assertStatus(500)->assertExactJson(['message' => 'Server Error']);
+            ->assertNotFound();
         $this->assertNotSoftDeleted('attachments', ['id' => $row->id]);
         Storage::disk($this->disk)->assertExists($row->path);
         $this->assertDatabaseCount('audit_logs', 0);
@@ -145,7 +144,7 @@ class AttachmentHttpContractTest extends TestCase
         $url = "/api/v1/daily-logs/{$log->id}/attachments";
 
         $this->postJson($url, [])->assertUnauthorized();
-        Sanctum::actingAs($log->siteManager);
+        Sanctum::actingAs($log->siteManagers()->firstOrFail());
         $this->postJson($url, [])->assertUnprocessable()->assertJsonValidationErrors('attachments');
 
         $this->assertDatabaseCount('attachments', 0);
@@ -156,7 +155,7 @@ class AttachmentHttpContractTest extends TestCase
         $this->fakeAttachmentDisk();
         config(['app.debug' => false]);
         $log = DailyLog::factory()->create();
-        Sanctum::actingAs($log->siteManager);
+        Sanctum::actingAs($log->siteManagers()->firstOrFail());
         $url = "/api/v1/daily-logs/{$log->id}/attachments";
 
         $this->mock(AttachmentStorageService::class)

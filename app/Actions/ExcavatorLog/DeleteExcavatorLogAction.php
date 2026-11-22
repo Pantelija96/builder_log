@@ -8,9 +8,12 @@ use App\Models\ExcavatorLog;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
 use App\Services\Logging\LoggingService;
+use App\Traits\ManagesMachineAssignments;
 
 class DeleteExcavatorLogAction extends BaseAction
 {
+    use ManagesMachineAssignments;
+
     public function __construct(
         private readonly LoggingService $logging,
     ) {}
@@ -25,6 +28,11 @@ class DeleteExcavatorLogAction extends BaseAction
             $currentWorker,
             $reason,
         ) {
+            $this->lockMachineAssignments($currentWorker);
+            $excavatorLog = ExcavatorLog::query()->findOrFail($excavatorLog->id);
+            $assignment = $excavatorLog->machineAssignment;
+            abort_unless($assignment, 404);
+            $this->editableMachineDailyLog($assignment, $currentWorker);
             $oldValues = $excavatorLog->getAttributes();
 
             $this->logging->activity(

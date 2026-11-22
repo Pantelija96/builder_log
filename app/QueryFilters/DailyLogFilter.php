@@ -47,7 +47,7 @@ class DailyLogFilter extends BaseFilter
                             )
 
                             ->orWhereHas(
-                                'siteManager',
+                                'siteManagers',
                                 fn (Builder $builder) => $builder
                                     ->where('first_name', 'like', "%{$search}%")
                                     ->orWhere('last_name', 'like', "%{$search}%")
@@ -74,9 +74,9 @@ class DailyLogFilter extends BaseFilter
 
             ->when(
                 $this->data->siteManagerId,
-                fn (Builder $query) => $query->where(
-                    'site_manager_id',
-                    $this->data->siteManagerId
+                fn (Builder $query) => $query->whereHas(
+                    'siteManagers',
+                    fn (Builder $managers) => $managers->whereKey($this->data->siteManagerId)
                 )
             )
 

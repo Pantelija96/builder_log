@@ -13,14 +13,14 @@ use App\Http\Resources\CashAdvanceResource;
 use App\Models\CashAdvance;
 use App\Models\Worker;
 use App\Services\CashAdvanceService;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 
 class CashAdvanceController extends ApiController
 {
     public function __construct(
         private readonly CashAdvanceService $cashAdvanceService,
-    ) {
-    }
+    ) {}
 
     public function index(
         GetCashAdvancesRequest $request,
@@ -29,12 +29,14 @@ class CashAdvanceController extends ApiController
         return $this->success(
             CashAdvanceResource::collection(
                 $this->cashAdvanceService->get(
-                    GetCashAdvancesData::fromRequest($request)
+                    GetCashAdvancesData::fromRequest($request),
+                    $request->user(),
                 )
             )
         );
     }
 
+    #[Response(status: 404, description: 'The resource is missing or belongs to a different company.', type: 'array{message: string}')]
     public function store(
         CreateCashAdvanceRequest $request,
     ): JsonResponse {
@@ -58,6 +60,7 @@ class CashAdvanceController extends ApiController
         );
     }
 
+    #[Response(status: 404, description: 'The resource is missing or belongs to a different company.', type: 'array{message: string}')]
     public function update(
         CashAdvance $cashAdvance,
         UpdateCashAdvanceRequest $request,
@@ -84,6 +87,7 @@ class CashAdvanceController extends ApiController
         );
     }
 
+    #[Response(status: 404, description: 'The resource is missing or belongs to a different company.', type: 'array{message: string}')]
     public function destroy(
         CashAdvance $cashAdvance,
         DeleteCashAdvanceRequest $request,

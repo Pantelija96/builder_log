@@ -35,7 +35,8 @@ class SubcontractorService
                 'logs' => fn ($query) => $query->where(
                     'daily_log_id',
                     $data->dailyLogId,
-                ),
+                )->where('company_id', $currentWorker->company_id)
+                    ->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($currentWorker)),
             ]);
         }
 

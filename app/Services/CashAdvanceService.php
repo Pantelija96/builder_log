@@ -19,27 +19,27 @@ class CashAdvanceService
         private readonly CreateCashAdvanceAction $createAction,
         private readonly UpdateCashAdvanceAction $updateAction,
         private readonly DeleteCashAdvanceAction $deleteAction,
-    ) {
-    }
+    ) {}
 
-    private function query()
+    private function query(Worker $worker)
     {
         return CashAdvance::query()
             ->with([
-                'siteManager',
-                'creator',
+                'siteManager' => fn ($manager) => $manager->where('company_id', $worker->company_id),
+                'creator' => fn ($creator) => $creator->where('company_id', $worker->company_id),
             ]);
     }
 
-    public function findById(int $id): ?CashAdvance
+    public function findById(int $id, Worker $worker): ?CashAdvance
     {
-        return $this->query()->find($id);
+        return $this->query($worker)->where('company_id', $worker->company_id)->find($id);
     }
 
-    public function get(GetCashAdvancesData $data): Collection
+    public function get(GetCashAdvancesData $data, Worker $worker): Collection
     {
         return (new CashAdvanceFilter($data))
-            ->apply($this->query())
+            ->apply($this->query($worker)->where('company_id', $worker->company_id)
+                ->whereHas('siteManager', fn ($manager) => $manager->withTrashed()->where('company_id', $worker->company_id)))
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
@@ -63,6 +63,8 @@ class CashAdvanceService
         ?string $reason,
     ): CashAdvance {
 
+        abort_unless($cashAdvance->company_id === $worker->company_id, 404);
+
         return $this->updateAction->execute(
             $cashAdvance,
             $data,
@@ -76,6 +78,8 @@ class CashAdvanceService
         Worker $worker,
         string $reason,
     ): void {
+
+        abort_unless($cashAdvance->company_id === $worker->company_id, 404);
 
         $this->deleteAction->execute(
             $cashAdvance,

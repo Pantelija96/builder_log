@@ -9,6 +9,7 @@ use App\Actions\Document\UpdateDocumentAction;
 use App\DTO\Document\CreateDocumentData;
 use App\DTO\Document\GetDocumentsData;
 use App\DTO\Document\UpdateDocumentData;
+use App\Models\ConstructionSite;
 use App\Models\Document;
 use App\Models\Worker;
 use App\QueryFilters\DocumentFilter;
@@ -24,8 +25,7 @@ class DocumentService
         private readonly UpdateDocumentAction $updateDocumentAction,
         private readonly DeleteDocumentAction $deleteDocumentAction,
         private readonly DownloadDocumentAction $downloadDocumentAction,
-    ) {
-    }
+    ) {}
 
     /**
      * Base query with permissions.
@@ -37,9 +37,9 @@ class DocumentService
         $query = Document::query()
             ->whereBelongsTo($currentWorker->company)
             ->with([
-                'constructionSite',
-                'siteManager',
-                'uploader',
+                'constructionSite' => fn ($site) => $site->where('company_id', $currentWorker->company_id),
+                'siteManager' => fn ($manager) => $manager->where('company_id', $currentWorker->company_id),
+                'uploader' => fn ($worker) => $worker->where('company_id', $currentWorker->company_id),
             ]);
 
         if ($currentWorker->isAdmin()) {
@@ -83,12 +83,14 @@ class DocumentService
             403,
         );
 
+        $this->ensureAttribution($currentWorker, $data->constructionSiteId, $data->siteManagerId);
+
         return DB::transaction(function () use (
             $data,
             $currentWorker,
         ) {
 
-            $documents = new Collection();
+            $documents = new Collection;
 
             foreach ($data->files as $file) {
 
@@ -140,10 +142,14 @@ class DocumentService
         ?string $reason = null,
     ): Document {
 
+        abort_unless($document->company_id === $currentWorker->company_id, 404);
+
         abort_unless(
             $currentWorker->isAdmin(),
             403,
         );
+
+        $this->ensureAttribution($currentWorker, $data->constructionSiteId, $data->siteManagerId);
 
         return $this->updateDocumentAction->execute(
             document: $document,
@@ -158,6 +164,8 @@ class DocumentService
         Worker $currentWorker,
         string $reason,
     ): void {
+
+        abort_unless($document->company_id === $currentWorker->company_id, 404);
 
         abort_unless(
             $currentWorker->isAdmin(),
@@ -176,6 +184,8 @@ class DocumentService
         Worker $currentWorker,
     ): StreamedResponse {
 
+        abort_unless($document->company_id === $currentWorker->company_id, 404);
+
         abort_unless(
             $this->queryForWorker($currentWorker)
                 ->whereKey($document->id)
@@ -186,5 +196,17 @@ class DocumentService
         return $this->downloadDocumentAction->execute(
             $document,
         );
+    }
+
+    private function ensureAttribution(Worker $actor, int $siteId, ?int $managerId): void
+    {
+        abort_unless(ConstructionSite::query()->where('company_id', $actor->company_id)->whereKey($siteId)->exists(), 404);
+
+        if ($managerId === null) {
+            return;
+        }
+
+        $manager = Worker::query()->where('company_id', $actor->company_id)->findOrFail($managerId);
+        abort_unless($manager->isSiteManager(), 422);
     }
 }

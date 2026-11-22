@@ -8,6 +8,7 @@ use App\DTO\DeliveryNote\UpdateDeliveryNoteData;
 use App\Enums\LogEvent;
 use App\Models\DailyLog;
 use App\Models\DeliveryNote;
+use App\Models\Supplier;
 use App\Models\Worker;
 use App\Services\Logging\LoggingService;
 use App\Traits\EnsuresDailyLogIsEditable;
@@ -32,8 +33,10 @@ class UpdateDeliveryNoteAction extends BaseAction
         ?string $reason,
     ): DeliveryNote {
 
-        $this->ensureEditable($dailyLog);
         $this->ensureCanModify($dailyLog, $currentWorker);
+        $this->ensureDailyLogChild($dailyLog, $deliveryNote);
+        $this->ensureEditable($dailyLog);
+        Supplier::query()->where('company_id', $dailyLog->company_id)->findOrFail($data->supplierId);
 
         return $this->transaction(function () use (
             $deliveryNote,

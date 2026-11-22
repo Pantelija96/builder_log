@@ -22,7 +22,10 @@ class WorkerResource extends JsonResource
             'is_active' => $this->is_active,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
-            'is_available' => $this->is_available,
+            'is_available' => $this->is_available && (
+                (! $this->isOperator() && ! $this->isDriver())
+                || (! $this->has_occupied_machine && ! $this->has_current_attendance)
+            ),
             'company' => new CompanyResource($this->whenLoaded('company')),
             'construction_sites' => ConstructionSiteResource::collection($this->whenLoaded('constructionSites')),
         ];

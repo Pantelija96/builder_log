@@ -19,11 +19,11 @@ class ConstructionSiteService
         private readonly CreateConstructionSiteAction $createAction,
         private readonly UpdateConstructionSiteAction $updateAction,
         private readonly DeleteConstructionSiteAction $deleteAction,
-    ) {
-    }
+    ) {}
 
-    public function getAll(Worker $worker, GetConstructionSitesData $data,): Collection {
-        $query = ConstructionSite::query();
+    public function getAll(Worker $worker, GetConstructionSitesData $data): Collection
+    {
+        $query = ConstructionSite::query()->where('company_id', $worker->company_id);
 
         if ($worker->isSiteManager()) {
             $query->whereHas(
@@ -37,7 +37,7 @@ class ConstructionSiteService
         $query->with([
             'company',
             'todayDailyLog',
-            'siteManagers',
+            'siteManagers' => fn ($managers) => $managers->where('workers.company_id', $worker->company_id),
         ]);
 
         $query = (new ConstructionSiteFilter($data))
@@ -54,23 +54,25 @@ class ConstructionSiteService
             ) use ($worker) {
                 $dailyLog = $constructionSite->todayDailyLog;
 
-                $constructionSite->can_select =
-                    $dailyLog === null
-                    || $dailyLog->site_manager_id === $worker->id;
+                $constructionSite->can_select = $worker->isSiteManager()
+                    ? $worker->is_active
+                    : $dailyLog === null;
             }
         );
 
         return $constructionSites;
     }
 
-    public function create(CreateConstructionSiteData $data, Worker $currentWorker,): ConstructionSite {
+    public function create(CreateConstructionSiteData $data, Worker $currentWorker): ConstructionSite
+    {
         return $this->createAction->execute(
             data: $data,
             currentWorker: $currentWorker,
         );
     }
 
-    public function update(ConstructionSite $constructionSite, UpdateConstructionSiteData $data, Worker $currentWorker,): ConstructionSite {
+    public function update(ConstructionSite $constructionSite, UpdateConstructionSiteData $data, Worker $currentWorker): ConstructionSite
+    {
         return $this->updateAction->execute(
             constructionSite: $constructionSite,
             data: $data,
@@ -78,7 +80,8 @@ class ConstructionSiteService
         );
     }
 
-    public function delete(ConstructionSite $constructionSite, Worker $currentWorker, string $reason,): void {
+    public function delete(ConstructionSite $constructionSite, Worker $currentWorker, string $reason): void
+    {
         $this->deleteAction->execute(
             constructionSite: $constructionSite,
             currentWorker: $currentWorker,
