@@ -5,10 +5,10 @@ Izmene su ograničene na prezentaciju u `BuilderLogPWA/`. Nisu menjani API poziv
 ## Izmenjeni fajlovi
 
 - `src/main.jsx`: import desktop stilova.
-- `src/com/s2d2/radulovic/screens/admin/AdminHomeActivity.jsx`: postojeći prikaz i njegove podstranice obavijeni zajedničkim okvirom.
-- `src/com/s2d2/radulovic/screens/manager/ManagerHomeActivity.jsx`: isti prezentacioni okvir za poslovođu.
-- `src/com/s2d2/radulovic/ui/components/DesktopShell.jsx`: nova zajednička komponenta bočne navigacije, zaglavlja i korisničkih podataka. Dobija postojeći meni i postojeće callback funkcije; nema sopstveno poslovno stanje, API pozive ili proveru uloga.
-- `src/com/s2d2/radulovic/ui/theme/Desktop.css`: izolovani desktop rasporedi.
+- `src/com/s2d2/builderlog/screens/admin/AdminHomeActivity.jsx`: postojeći prikaz i njegove podstranice obavijeni zajedničkim okvirom.
+- `src/com/s2d2/builderlog/screens/manager/ManagerHomeActivity.jsx`: isti prezentacioni okvir za poslovođu.
+- `src/com/s2d2/builderlog/ui/components/DesktopShell.jsx`: nova zajednička komponenta bočne navigacije, zaglavlja i korisničkih podataka. Dobija postojeći meni i postojeće callback funkcije; nema sopstveno poslovno stanje, API pozive ili proveru uloga.
+- `src/com/s2d2/builderlog/ui/theme/Desktop.css`: izolovani desktop rasporedi.
 - `DESKTOP-UI.md`: ovaj izveštaj.
 
 ## Raspored
@@ -44,7 +44,7 @@ Pošto puna aplikacija ima postojeći problem sa nedostajućim modulom, napravlj
 
 ## Ograničenje pune provere
 
-`npm run build` ne prolazi zbog već postojećeg nedostajućeg fajla `src/com/s2d2/radulovic/utils/DateSorting.js`. Uvoze ga:
+`npm run build` ne prolazi zbog već postojećeg nedostajućeg fajla `src/com/s2d2/builderlog/utils/DateSorting.js`. Uvoze ga:
 
 - `screens/manager/TasksActivity.jsx`
 - `screens/admin/AdminExpensesByManagerActivity.jsx`

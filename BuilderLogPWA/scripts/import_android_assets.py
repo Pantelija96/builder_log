@@ -216,7 +216,7 @@ def build(source):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, default=Path.cwd().parent / "Radulovic")
+    parser.add_argument("--source", type=Path, default=Path(__file__).resolve().parents[3] / "BuilderLog")
     parser.add_argument("--write", action="store_true")
     args = parser.parse_args()
     outputs, manifest = build(args.source.resolve())

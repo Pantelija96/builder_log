@@ -1,6 +1,0 @@
-﻿sifra;first_name;last_name;role;username;password;phone;email;hourly_rate;is_active
-R1;Test;Administrator;admin;primer.admin;Primer123!;-;-;-;1
-R2;Marko;Marković;site_manager;primer.sef;Primer123!;-;-;-;1
-R3;Petar;Petrović;worker;primer.radnik;Primer123!;-;-;1000;1
-R4;Milan;Ilić;operator;primer.bagerista;Primer123!;-;-;950,50;1
-R5;Jovan;Jovanović;driver;primer.vozac;Primer123!;-;-;800.00;1

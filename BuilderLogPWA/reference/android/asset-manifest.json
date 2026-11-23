@@ -1,5 +1,5 @@
 {
-  "sourceProject": "Radulovic",
+  "sourceProject": "BuilderLog",
   "sourceCommit": "cda0929def095382fc3b8a56e062a73d859b2c31",
   "vectorCount": 61,
   "notes": [
@@ -12,6 +12,8 @@
   ],
   "assets": {
     "assets/drawable/balance_scale.svg": "11a89fc8e2d3855065bda6e6cc9bc781121e987dfdd67d200629ad00113bd734",
+    "assets/drawable/builderlog_logo.svg": "dc96e0cc61ce3d681736736b6503cb7db9470b952d7c0a68112da5c10c7e9a9c",
+    "assets/drawable/builderlog_logo_circle.svg": "b474c9056715a42b16cc40a59ece5309956efed6cfa037bc25b76d5f93bcdc39",
     "assets/drawable/construction_loading_1.svg": "853f073aadfaf35d02dbb9b9490b1e3db251458fdb1a73447d858e4176a719d0",
     "assets/drawable/construction_loading_2.svg": "067b90da455face1b29d12aa9e55bd71276aefc100385b3172ddc06a6b7513af",
     "assets/drawable/construction_loading_3.svg": "ba2faffe7c04d40efd9ab4379949b4727bd133f9a427e1b4a1ffb9b2604661f9",
@@ -72,11 +74,9 @@
     "assets/drawable/ic_wallet_black.svg": "936f4a1471e629f0363562822f3093c22acd1af0aff0d891fd18d9a45cedb6e2",
     "assets/drawable/ic_worker_hour.svg": "c1af2726f3b7749df181165326aae117e495b0a20beceeafc5c7ce28e0684ad9",
     "assets/drawable/ic_workers_black_no_bg_original_proportions.svg": "7d631ee8567040e13972be9adfa47bb0f95f9a089a86f6f292da8d8b6a12e293",
-    "assets/drawable/radulovic_logo.svg": "dc96e0cc61ce3d681736736b6503cb7db9470b952d7c0a68112da5c10c7e9a9c",
-    "assets/drawable/radulovic_logo_circle.svg": "b474c9056715a42b16cc40a59ece5309956efed6cfa037bc25b76d5f93bcdc39",
     "assets/drawable/splash_screen_background.svg": "8905b3ca555e98c07bbf11c300c670af7f64ca0b51e25ea4d99868d73c762f47",
     "assets/icons/ic_launcher.svg": "88064faf46f5e50ca76334de933a81ea52e4fd964a7a9a74810d487424d32a48",
     "assets/icons/ic_launcher_round.svg": "88064faf46f5e50ca76334de933a81ea52e4fd964a7a9a74810d487424d32a48",
-    "assets/values/strings.json": "ab93d3ae394ebe0c11ee505806a47eea435194d8ab37967b8414635bb1a193ed"
+    "assets/values/strings.json": "a96ccdcfc600600c9eed9df8ea501b004e134498d42f85a4e70dbc63071b570b"
   }
 }

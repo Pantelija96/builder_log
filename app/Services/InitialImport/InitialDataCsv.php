@@ -32,39 +32,53 @@ class InitialDataCsv
 
     public function read(string $directory): array
     {
+        if (! is_dir($directory) || ! is_readable($directory)) {
+            throw ValidationException::withMessages(['directory' => 'CSV direktorijum ne postoji ili nije čitljiv.']);
+        }
         $data = [];
         $errors = [];
 
         foreach (self::HEADERS as $file => $header) {
             $path = rtrim($directory, '/').'/'.$file.'.csv';
+            $data[$file] = [];
+            if (! file_exists($path)) {
+                continue;
+            }
             if (! is_file($path) || ! is_readable($path)) {
-                $errors[$file.'.csv'][] = 'Fajl nedostaje ili nije čitljiv.';
+                $errors[$file.'.csv'][] = 'CSV putanja nije čitljiv fajl.';
 
                 continue;
             }
 
             $handle = fopen($path, 'rb');
             try {
-                $columns = fgetcsv($handle, null, ';', '"', '');
-                if (is_array($columns)) {
-                    $columns[0] = preg_replace('/^\xEF\xBB\xBF/', '', $columns[0] ?? '');
+                // Detect the delimiter from the known header, not from decimal values in rows.
+                foreach ([',', ';'] as $delimiter) {
+                    rewind($handle);
+                    $columns = fgetcsv($handle, null, $delimiter, '"', '');
+                    if (is_array($columns)) {
+                        $columns[0] = preg_replace('/^\xEF\xBB\xBF/', '', $columns[0] ?? '');
+                    }
+                    if ($columns === explode(';', $header)) {
+                        break;
+                    }
                 }
                 if ($columns !== explode(';', $header)) {
-                    $errors[$file.'.csv'][] = 'Zaglavlje mora biti: '.$header;
+                    $errors[$file.'.csv'][] = 'Zaglavlje mora sadržati kolone: '.str_replace(';', ',', $header).' (separator , ili ;).';
 
                     continue;
                 }
 
                 $data[$file] = [];
                 $record = 1;
-                while (($values = fgetcsv($handle, null, ';', '"', '')) !== false) {
+                while (($values = fgetcsv($handle, null, $delimiter, '"', '')) !== false) {
                     $record++;
                     if ($values === [null]) {
                         continue;
                     }
                     $location = $file.'.csv, zapis '.$record;
                     if (count($values) !== count($columns)) {
-                        $errors[$location][] = 'Pogrešan broj kolona; separator mora biti tačka-zarez (;).';
+                        $errors[$location][] = 'Pogrešan broj kolona; koristite isti separator kao u zaglavlju.';
 
                         continue;
                     }
@@ -141,14 +155,15 @@ class InitialDataCsv
             }
         }
 
-        if (count($data['firma']) !== 1) {
-            $errors['firma.csv'][] = 'Potreban je tačno jedan red za firmu.';
-        }
-        if (! collect($data['radnici'])->contains(fn ($row) => $row['role'] === 'admin' && $row['is_active'] === '1')) {
-            $errors['radnici.csv'][] = 'Potreban je bar jedan aktivan administrator.';
+        if (count($data['firma']) > 1) {
+            $errors['firma.csv'][] = 'Dozvoljen je najviše jedan red za firmu.';
         }
 
         foreach ($data['masine'] as $record => $row) {
+            // With no company CSV, company-owned machines belong to the selected existing company.
+            if ($row['owner_type'] === 'company' && ! $data['firma']) {
+                continue;
+            }
             $ownerFile = self::OWNER_FILES[$row['owner_type']] ?? null;
             if (! $ownerFile || ! isset($indexes[$ownerFile][$row['owner_sifra']])) {
                 $errors['masine.csv, zapis '.$record.' / owner_sifra'][] = 'Šifra vlasnika ne postoji u odgovarajućem fajlu.';
@@ -204,14 +219,10 @@ class InitialDataCsv
             'radnici' => [
                 'sifra' => $code,
                 'first_name' => ['required', 'string', 'max:100'],
-                'last_name' => ['required', 'string', 'max:100'],
+                'last_name' => ['nullable', 'string', 'max:100'],
                 'role' => ['required', Rule::enum(WorkerRole::class)],
-                'username' => ['required', 'string', 'max:100'],
-                'password' => ['required', 'string', 'min:8', function ($attribute, $value, $fail) {
-                    if (config('hashing.driver') === 'bcrypt' && strlen($value) > 72) {
-                        $fail('Lozinka može imati najviše 72 UTF-8 bajta.');
-                    }
-                }],
+                'username' => ['nullable', 'required_if:role,admin,site_manager,operator,driver', 'string', 'max:100'],
+                'password' => ['nullable', 'required_if:role,admin,site_manager,operator,driver', 'string'],
                 'phone' => $contact['phone'],
                 'email' => $contact['email'],
                 'hourly_rate' => ['nullable', ...$counter, 'max:99999999.99'],
@@ -233,11 +244,11 @@ class InitialDataCsv
                 'name' => ['required', 'string', 'max:150'],
                 'type' => ['required', Rule::enum(MachineType::class)],
                 'owner_type' => ['required', Rule::enum(OwnerType::class)],
-                'owner_sifra' => $code,
+                'owner_sifra' => ['nullable', 'required_unless:owner_type,company', 'string', 'max:100'],
                 'status' => ['required', Rule::enum(MachineStatus::class)],
                 'license_plate' => ['nullable', 'string', 'max:30'],
                 'image_path' => ['nullable', 'string', 'max:255'],
-                'initial_work_hours' => ['nullable', 'required_if:type,excavator', 'prohibited_if:type,truck', ...$counter, 'max:99999999.99'],
+                'initial_work_hours' => ['nullable', 'prohibited_if:type,truck', ...$counter, 'max:99999999.99'],
                 'initial_mileage' => ['nullable', 'required_if:type,truck', 'prohibited_if:type,excavator', ...$counter, 'max:9999999999.99'],
             ],
             'sefovi_gradilista' => ['gradiliste_sifra' => $code, 'sef_sifra' => $code],

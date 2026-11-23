@@ -197,37 +197,37 @@ Nisu testirane poslovne CRUD mutacije, rad na pravom mobilnom uređaju ili produ
 
 Laravel: `.gitignore`, `routes/web.php`, novi `server.php`, novi `tests/Feature/PwaRoutingTest.php` i ovaj dokument.
 
-React konfiguracija/pakovanje: `.gitignore`, `.env.example`, `package.json`, novi `vite.config.js`, novi `tests/deployment.test.js`, novi `scripts/verify-build.js`, novi `scripts/verify-http.js`, `public/manifest.webmanifest` i novi `src/com/s2d2/radulovic/utils/AssetPaths.js`.
+React konfiguracija/pakovanje: `.gitignore`, `.env.example`, `package.json`, novi `vite.config.js`, novi `tests/deployment.test.js`, novi `scripts/verify-build.js`, novi `scripts/verify-http.js`, `public/manifest.webmanifest` i novi `src/com/s2d2/builderlog/utils/AssetPaths.js`.
 
 U `network/WebUtils.js` promenjen je samo način određivanja API baze. U sledećim komponentama korigovani su isključivo import zajedničke asset baze i lokalni asset URL-ovi:
 
-- `src/com/s2d2/radulovic/screens/admin/AdminConstructionSiteExpensesActivity.jsx`
-- `src/com/s2d2/radulovic/screens/admin/AdminEmployeeForm.jsx`
-- `src/com/s2d2/radulovic/screens/admin/AdminShared.jsx`
-- `src/com/s2d2/radulovic/screens/admin/AdminSubcontractorDetailsActivity.jsx`
-- `src/com/s2d2/radulovic/screens/admin/AdminWorkerPaymentsActivity.jsx`
-- `src/com/s2d2/radulovic/screens/admin/AdminWorkersActivity.jsx`
-- `src/com/s2d2/radulovic/screens/admin/AdminWorkHistoryActivity.jsx`
-- `src/com/s2d2/radulovic/screens/general/LoginActivity.jsx`
-- `src/com/s2d2/radulovic/screens/general/SettingsActivity.jsx`
-- `src/com/s2d2/radulovic/screens/manager/DeliveryNotesActivity.jsx`
-- `src/com/s2d2/radulovic/screens/manager/DocumentsActivity.jsx`
-- `src/com/s2d2/radulovic/screens/manager/ExpensesActivity.jsx`
-- `src/com/s2d2/radulovic/screens/manager/ManagerHomeActivity.jsx`
-- `src/com/s2d2/radulovic/screens/manager/ManagerMachinesScreen.jsx`
-- `src/com/s2d2/radulovic/screens/manager/NotesActivity.jsx`
-- `src/com/s2d2/radulovic/screens/manager/SubcontractorsActivity.jsx`
-- `src/com/s2d2/radulovic/screens/manager/TasksActivity.jsx`
-- `src/com/s2d2/radulovic/screens/manager/WorkersActivity.jsx`
-- `src/com/s2d2/radulovic/ui/components/AttendancePickers.jsx`
-- `src/com/s2d2/radulovic/ui/components/AuthenticatedImage.jsx`
-- `src/com/s2d2/radulovic/ui/components/DesktopShell.jsx`
-- `src/com/s2d2/radulovic/ui/components/DesktopUserMenu.jsx`
-- `src/com/s2d2/radulovic/ui/components/DriverTasksCard.jsx`
-- `src/com/s2d2/radulovic/ui/components/DriverWorkScreen.jsx`
-- `src/com/s2d2/radulovic/ui/components/NetworkLoadingOverlay.jsx`
-- `src/com/s2d2/radulovic/ui/components/SelectionDropdown.jsx`
-- `src/com/s2d2/radulovic/ui/components/StandardSiteDateControls.jsx`
-- `src/com/s2d2/radulovic/ui/components/StartupSplash.jsx`
+- `src/com/s2d2/builderlog/screens/admin/AdminConstructionSiteExpensesActivity.jsx`
+- `src/com/s2d2/builderlog/screens/admin/AdminEmployeeForm.jsx`
+- `src/com/s2d2/builderlog/screens/admin/AdminShared.jsx`
+- `src/com/s2d2/builderlog/screens/admin/AdminSubcontractorDetailsActivity.jsx`
+- `src/com/s2d2/builderlog/screens/admin/AdminWorkerPaymentsActivity.jsx`
+- `src/com/s2d2/builderlog/screens/admin/AdminWorkersActivity.jsx`
+- `src/com/s2d2/builderlog/screens/admin/AdminWorkHistoryActivity.jsx`
+- `src/com/s2d2/builderlog/screens/general/LoginActivity.jsx`
+- `src/com/s2d2/builderlog/screens/general/SettingsActivity.jsx`
+- `src/com/s2d2/builderlog/screens/manager/DeliveryNotesActivity.jsx`
+- `src/com/s2d2/builderlog/screens/manager/DocumentsActivity.jsx`
+- `src/com/s2d2/builderlog/screens/manager/ExpensesActivity.jsx`
+- `src/com/s2d2/builderlog/screens/manager/ManagerHomeActivity.jsx`
+- `src/com/s2d2/builderlog/screens/manager/ManagerMachinesScreen.jsx`
+- `src/com/s2d2/builderlog/screens/manager/NotesActivity.jsx`
+- `src/com/s2d2/builderlog/screens/manager/SubcontractorsActivity.jsx`
+- `src/com/s2d2/builderlog/screens/manager/TasksActivity.jsx`
+- `src/com/s2d2/builderlog/screens/manager/WorkersActivity.jsx`
+- `src/com/s2d2/builderlog/ui/components/AttendancePickers.jsx`
+- `src/com/s2d2/builderlog/ui/components/AuthenticatedImage.jsx`
+- `src/com/s2d2/builderlog/ui/components/DesktopShell.jsx`
+- `src/com/s2d2/builderlog/ui/components/DesktopUserMenu.jsx`
+- `src/com/s2d2/builderlog/ui/components/DriverTasksCard.jsx`
+- `src/com/s2d2/builderlog/ui/components/DriverWorkScreen.jsx`
+- `src/com/s2d2/builderlog/ui/components/NetworkLoadingOverlay.jsx`
+- `src/com/s2d2/builderlog/ui/components/SelectionDropdown.jsx`
+- `src/com/s2d2/builderlog/ui/components/StandardSiteDateControls.jsx`
+- `src/com/s2d2/builderlog/ui/components/StartupSplash.jsx`
 
 Lokalne slike pregleda su u ignorisanom `BuilderLogPWA/.local/integration/` direktorijumu. `BuilderLogPWA/README.md` sadrži kratke komande za razvoj i build.

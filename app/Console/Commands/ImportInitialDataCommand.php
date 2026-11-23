@@ -11,16 +11,17 @@ use Throwable;
 class ImportInitialDataCommand extends Command
 {
     protected $signature = 'initial-data:import
-        {directory : Direktorijum sa sedam CSV fajlova}
+        {directory : Direktorijum sa opcionim CSV fajlovima}
         {--key= : Jedinstvena oznaka početnog uvoza, npr. tosa ili paki}
-        {--dry-run : Provera fajlova i konflikata bez upisa u bazu}';
+        {--dry-run : Provera fajlova i konflikata bez upisa u bazu}
+        {--company-id= : Postojeća firma; bez opcije koristi se jedina firma u bazi}';
 
-    protected $description = 'Proverava i uvozi početne CSV podatke za novu firmu, bez demo seedera.';
+    protected $description = 'Proverava i uvozi početne CSV podatke za novu ili postojeću firmu, bez demo seedera.';
 
     public function handle(InitialDataImporter $importer): int
     {
         try {
-            $result = $importer->run((string) $this->argument('directory'), (string) $this->option('key'), (bool) $this->option('dry-run'));
+            $result = $importer->run((string) $this->argument('directory'), (string) $this->option('key'), (bool) $this->option('dry-run'), $this->option('company-id'));
         } catch (ValidationException $exception) {
             foreach ($exception->errors() as $location => $messages) {
                 foreach ($messages as $message) {
@@ -41,6 +42,7 @@ class ImportInitialDataCommand extends Command
         }
 
         $this->info(match ($result['status']) {
+            'empty' => 'Nema CSV podataka za uvoz. Ništa nije upisano.',
             'validated' => 'Provera uspešna. Ništa nije upisano u bazu.',
             'skipped' => 'Ovaj uvoz je već završen. Nema novih upisa ni izmena.',
             'imported' => 'Uvoz uspešan. ID firme: '.$result['company_id'],

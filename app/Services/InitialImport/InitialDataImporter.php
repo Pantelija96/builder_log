@@ -20,20 +20,41 @@ class InitialDataImporter
 {
     public function __construct(private InitialDataCsv $csv) {}
 
-    public function run(string $directory, string $key, bool $dryRun = false): array
+    public function run(string $directory, string $key, bool $dryRun = false, int|string|null $companyId = null): array
     {
         if (! preg_match('/^[a-z0-9][a-z0-9_-]{0,63}$/D', $key)) {
             throw ValidationException::withMessages(['key' => 'Navedite --key (do 64 mala slova, cifre, - ili _), npr. --key=tosa.']);
         }
+        if ($companyId !== null) {
+            $companyId = filter_var($companyId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($companyId === false) {
+                throw ValidationException::withMessages(['company-id' => 'ID firme mora biti pozitivan ceo broj.']);
+            }
+        }
         $data = $this->csv->read($directory);
-        // Row numbers and optional BOM/blank lines do not change the import's identity.
-        $fingerprint = hash('sha256', json_encode(array_map('array_values', $data), JSON_THROW_ON_ERROR));
+        if (array_sum(array_map('count', $data)) === 0) {
+            return ['status' => 'empty', 'company_id' => null, 'counts' => array_map('count', $data)];
+        }
         if (! Schema::hasTable('initial_data_imports')) {
             throw ValidationException::withMessages(['baza' => 'Nedostaje tabela evidencije uvoza. Najpre pokrenite php artisan migrate.']);
         }
 
-        return DB::transaction(function () use ($data, $key, $fingerprint, $dryRun) {
+        return DB::transaction(function () use ($data, $key, $dryRun, $companyId) {
             $previous = DB::table('initial_data_imports')->where('import_key', $key)->first();
+            $company = null;
+            if ($data['firma']) {
+                if ($companyId !== null) {
+                    throw ValidationException::withMessages(['company-id' => 'Koristite ili firma.csv za novu firmu ili --company-id za postojeću, ne oba.']);
+                }
+            } else {
+                $company = $this->existingCompany($companyId ?? $previous?->company_id);
+            }
+            // Keep old fingerprints for new-company imports; scope partial imports to their company.
+            $contents = array_map('array_values', $data);
+            $fingerprint = hash('sha256', json_encode(
+                $company ? ['company_id' => $company->id, 'files' => $contents] : $contents,
+                JSON_THROW_ON_ERROR,
+            ));
             if ($previous) {
                 if ($previous->fingerprint !== $fingerprint) {
                     throw ValidationException::withMessages(['key' => 'Ovaj uvoz je već završen sa drugim sadržajem. Početni uvoz ne ažurira postojeće podatke.']);
@@ -44,15 +65,18 @@ class InitialDataImporter
             if (DB::table('initial_data_imports')->where('fingerprint', $fingerprint)->exists()) {
                 throw ValidationException::withMessages(['key' => 'Ovi podaci su već uvezeni pod drugim ključem.']);
             }
-            $this->validateDatabaseConflicts($data);
+            $this->validateDatabaseConflicts($data, $company);
 
             if ($dryRun) {
-                return ['status' => 'validated', 'company_id' => null, 'counts' => array_map('count', $data)];
+                return ['status' => 'validated', 'company_id' => $company?->id, 'counts' => array_map('count', $data)];
             }
 
-            $companyRow = reset($data['firma']);
-            $company = Company::create(Arr::except($companyRow, ['sifra']));
-            $models = ['firma' => [$companyRow['sifra'] => $company]];
+            $models = [];
+            if (! $company) {
+                $companyRow = reset($data['firma']);
+                $company = Company::create(Arr::except($companyRow, ['sifra']));
+                $models['firma'][$companyRow['sifra']] = $company;
+            }
 
             foreach ([
                 'radnici' => Worker::class,
@@ -64,8 +88,12 @@ class InitialDataImporter
                     $attributes = Arr::except($row, ['sifra']);
                     $attributes['company_id'] = $company->id;
                     if ($file === 'radnici') {
-                        // CSV passwords are always plaintext, including strings resembling hashes.
-                        $attributes['password'] = Hash::make($attributes['password']);
+                        // The existing database column is NOT NULL; an unknown surname is empty.
+                        $attributes['last_name'] ??= '';
+                        if ($attributes['password'] !== null) {
+                            // CSV passwords are always plaintext, including strings resembling hashes.
+                            $attributes['password'] = Hash::make($attributes['password']);
+                        }
                     }
                     $models[$file][$row['sifra']] = $class::create($attributes);
                 }
@@ -73,7 +101,9 @@ class InitialDataImporter
             foreach ($data['masine'] as $row) {
                 $attributes = Arr::except($row, ['sifra', 'owner_sifra', 'initial_work_hours', 'initial_mileage']);
                 $attributes['company_id'] = $company->id;
-                $attributes['owner_id'] = $models[InitialDataCsv::OWNER_FILES[$row['owner_type']]][$row['owner_sifra']]->id;
+                $attributes['owner_id'] = $row['owner_type'] === 'company'
+                    ? $company->id
+                    : $models[InitialDataCsv::OWNER_FILES[$row['owner_type']]][$row['owner_sifra']]->id;
                 $machine = Machine::create($attributes);
                 if ($row['type'] === 'excavator') {
                     Excavator::create([
@@ -101,7 +131,7 @@ class InitialDataImporter
         });
     }
 
-    private function validateDatabaseConflicts(array $data): void
+    private function validateDatabaseConflicts(array $data, ?Company $company): void
     {
         $errors = [];
         foreach (['radnici' => ['workers', 'username'], 'masine' => ['machines', 'license_plate']] as $file => [$table, $field]) {
@@ -113,11 +143,41 @@ class InitialDataImporter
             }
         }
         $companyRow = reset($data['firma']);
-        if ($companyRow['pib'] !== null && DB::table('companies')->where('pib', $companyRow['pib'])->exists()) {
+        if ($companyRow && $companyRow['pib'] !== null && DB::table('companies')->where('pib', $companyRow['pib'])->exists()) {
             $errors['firma.csv / pib'][] = 'Firma sa ovim PIB-om već postoji. Ovo je uvoz nove firme, ne dopuna postojeće.';
+        }
+        if ($company) {
+            foreach (['dobavljaci' => 'suppliers', 'podizvodjaci' => 'subcontractors'] as $file => $table) {
+                foreach ($data[$file] as $record => $row) {
+                    if ($row['pib'] !== null && DB::table($table)->where('company_id', $company->id)->where('pib', $row['pib'])->exists()) {
+                        $errors[$file.'.csv, zapis '.$record.' / pib'][] = 'PIB već postoji u izabranoj firmi.';
+                    }
+                }
+            }
         }
         if ($errors) {
             throw ValidationException::withMessages($errors);
         }
+    }
+
+    private function existingCompany(?int $companyId): Company
+    {
+        if ($companyId !== null) {
+            $company = Company::find($companyId);
+            if (! $company) {
+                throw ValidationException::withMessages(['company-id' => 'Izabrana firma ne postoji ili je obrisana.']);
+            }
+
+            return $company;
+        }
+        $companies = Company::limit(2)->get();
+        if ($companies->isEmpty()) {
+            throw ValidationException::withMessages(['firma' => 'U bazi nema firme. Napravite firmu ili dostavite firma.csv.']);
+        }
+        if ($companies->count() > 1) {
+            throw ValidationException::withMessages(['company-id' => 'U bazi postoji više firmi. Izaberite ciljnu pomoću --company-id=ID.']);
+        }
+
+        return $companies->first();
     }
 }

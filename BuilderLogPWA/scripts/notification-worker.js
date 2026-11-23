@@ -1,7 +1,7 @@
 import { build } from 'vite';
 import { fileURLToPath } from 'node:url';
 
-const entry = fileURLToPath(new URL('../src/com/s2d2/radulovic/notifications/firebase-messaging-sw.js', import.meta.url));
+const entry = fileURLToPath(new URL('../src/com/s2d2/builderlog/notifications/firebase-messaging-sw.js', import.meta.url));
 const filename = 'firebase-messaging-sw.js';
 
 // Bundle the modular Firebase SDK into a classic worker for installed iOS.

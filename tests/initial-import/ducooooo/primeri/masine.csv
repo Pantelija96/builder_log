@@ -1,4 +1,0 @@
-﻿sifra;name;type;owner_type;owner_sifra;status;license_plate;initial_work_hours;initial_mileage;image_path
-M1;CAT 320;excavator;company;F1;active;-;2500;-;-
-M2;MAN TGS;truck;company;F1;active;TEST-001;-;150000;-
-M3;JCB primer;excavator;subcontractor;P1;active;-;1800;-;-

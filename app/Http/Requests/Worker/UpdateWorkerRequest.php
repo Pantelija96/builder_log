@@ -28,6 +28,7 @@ class UpdateWorkerRequest extends FormRequest
 
             'last_name' => [
                 'sometimes',
+                'nullable',
                 'string',
                 'max:100',
             ],

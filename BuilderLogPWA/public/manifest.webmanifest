@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Radulović gradnja",
-  "short_name": "Radulović",
+  "name": "BuilderLog",
+  "short_name": "BuilderLog",
   "lang": "sr-Latn",
   "start_url": "./",
   "scope": "./",
