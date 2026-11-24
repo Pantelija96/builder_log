@@ -86,7 +86,22 @@ export default class DailyLogUtils {
       onSuccess(workers) {
         DailyLogUtils.getWorkersAttendanceFromServer(dailyLog, {
           onSuccess() {
-            callback.onSuccess(workers);
+            if (dailyLog.getDailyLogDate() !== Session.todayForDailyLog()) {
+              callback.onSuccess(workers);
+              return;
+            }
+            Session.getCurrentlyAvailableWorkersFromServer({
+              onSuccess(workerIds) {
+                const availableIds = new Set(workerIds);
+                for (const worker of workers) {
+                  worker.setAvailableToday(availableIds.has(worker.getId()));
+                }
+                callback.onSuccess(workers);
+              },
+              onFailure(exception) {
+                callback.onFailure(exception);
+              },
+            });
           },
           onFailure(exception) {
             callback.onFailure(exception);

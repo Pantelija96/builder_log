@@ -120,6 +120,12 @@ export default class Session {
    */
 
   /**
+   * @typedef {Object} AvailableWorkersCallback
+   * @property {(workerIds: Array<number>) => void} onSuccess
+   * @property {(exception: Error) => void} onFailure
+   */
+
+  /**
    * @typedef {Object} ManagersCallback
    * @property {(workers: Array<Manager>) => void} onSuccess
    * @property {(exception: Error) => void} onFailure
@@ -708,6 +714,27 @@ export default class Session {
             callback.onSuccess(payments);
         } catch (exception) {
             callback.onFailure(exception);
+        }
+      },
+      onFailure(exception) {
+        callback.onFailure(exception);
+      },
+    });
+  }
+
+  static getCurrentlyAvailableWorkersFromServer(callback) {
+    const endpoint = 'workers/available?role=worker';
+    WebUtils.sendGETRequest(endpoint, {}, { Authorization: Session.#sessionToken }, {
+      onSuccess(responseBody) {
+        try {
+          const workers = new JSONObject(responseBody).getJSONArray('data');
+          const workerIds = [];
+          for (let i = 0; i < workers.length(); i++) {
+            workerIds.push(workers.getJSONObject(i).getInt('id'));
+          }
+          callback.onSuccess(Object.freeze(workerIds));
+        } catch (exception) {
+          callback.onFailure(exception);
         }
       },
       onFailure(exception) {

@@ -86,7 +86,17 @@ export default function WorkersActivity({ onBack }) {
               from === '-' ? 'null' : date + ' ' + from, to === '-' ? 'null' : date + ' ' + to, advance === '-' ? '0' : advance.replaceAll('.', '')));
           }, onFailure: fail,
         });
-      } else DailyLogUtils.createWorkerAttendance(log, editor.worker, from, to, advance, { onSuccess: success, onFailure: fail });
+      } else {
+        DailyLogUtils.createWorkerAttendance(log, editor.worker, from, to, advance, {
+          onSuccess: success,
+          onFailure(exception) {
+            if (exception instanceof WebUtils.HttpException && exception.getStatusCode() === 409) {
+              showToast(editor.worker.getFullName() + ' je već evidentiran na gradilištu u izabranom terminu.', 3500);
+            }
+            fail();
+          },
+        });
+      }
     } catch { fail(); }
   }
   function remove(reason) {
@@ -109,7 +119,11 @@ export default function WorkersActivity({ onBack }) {
   }
   function openEditor(row) { setError(''); setEditor(row); }
   const today = date === TimeUtils.formatDate(new Date());
-  const rows = workers.map(worker => ({ worker, attendance: worker.getAttendance(log?.getDailyLogId()) }))
+  const isTodaysLog = log?.getDailyLogDate() === Session.todayForDailyLog();
+  const rows = workers.map(worker => ({
+    worker,
+    attendance: isTodaysLog && worker.isAvailableToday() ? null : worker.getAttendance(log?.getDailyLogId()),
+  }))
     .filter(row => row.worker.getFullName().toLowerCase().startsWith(search.toLowerCase()))
     .sort((a, b) => a.worker.getFullName() < b.worker.getFullName() ? -1 : a.worker.getFullName() > b.worker.getFullName() ? 1 : 0);
   const groups = [
