@@ -10,8 +10,11 @@ use App\DTO\Requests\GetWorkersData;
 use App\DTO\Worker\CreateWorkerData;
 use App\DTO\Worker\GetWorkerWorkHistoryData;
 use App\DTO\Worker\UpdateWorkerData;
+use App\Enums\WorkerRole;
 use App\Models\Worker;
+use App\QueryFilters\AttendancePeriod;
 use App\QueryFilters\WorkerFilter;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -38,10 +41,16 @@ class WorkerService
         $query = $this->query($actor)
             ->where('company_id', $actor->company_id)
             ->withExists([
+                // The worker availability flag retains the legacy day-scoped policy.
                 'machineAssignments as has_occupied_machine' => fn (Builder $assignments) => $assignments
                     ->whereColumn('machine_assignments.company_id', 'workers.company_id')
                     ->whereDate('machine_assignments.date', $now->toDateString())
-                    ->occupiedAt($now),
+                    ->withMachineLogMatching(fn (Builder $log) => $log->where(fn (Builder $period) => $period
+                        ->whereNull('site_manager_started_at')
+                        ->orWhereNull('site_manager_finished_at')
+                        ->orWhere(fn (Builder $confirmed) => $confirmed
+                            ->where('site_manager_started_at', '<=', $now)
+                            ->where('site_manager_finished_at', '>', $now)))),
                 'attendances as has_current_attendance' => fn (Builder $attendances) => $attendances
                     ->whereColumn('worker_attendances.company_id', 'workers.company_id')
                     ->whereDate('worker_attendances.date', $now->toDateString())
@@ -56,6 +65,26 @@ class WorkerService
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
+    }
+
+    public function getAvailable(Worker $actor, ?WorkerRole $role, CarbonInterface $start, ?CarbonInterface $end): Collection
+    {
+        $workers = $this->query($actor)
+            ->where('workers.company_id', $actor->company_id)
+            ->where('workers.is_active', true)
+            ->whereIn('workers.role', $role === null ? [WorkerRole::WORKER, WorkerRole::OPERATOR, WorkerRole::DRIVER] : [$role])
+            ->whereDoesntHave('attendances', fn (Builder $rows) => AttendancePeriod::attendances(
+                $rows->where('worker_attendances.company_id', $actor->company_id), $start, $end))
+            ->whereDoesntHave('machineAssignments', fn (Builder $rows) => AttendancePeriod::assignments(
+                $rows->where('machine_assignments.company_id', $actor->company_id), $start, $end))
+            ->inDisplayOrder()
+            ->get();
+
+        foreach ($workers as $worker) {
+            $worker->is_available = true;
+        }
+
+        return $workers;
     }
 
     public function findById(int $id, Worker $actor): Worker

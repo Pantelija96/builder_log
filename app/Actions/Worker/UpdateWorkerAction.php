@@ -18,10 +18,15 @@ class UpdateWorkerAction extends BaseAction
         private readonly LoggingService $logging,
     ) {}
 
-    public function execute(Worker $worker, UpdateWorkerData $data, Worker $currentWorker, ?string $reason = null,): Worker {
-        return $this->transaction(function () use ($worker, $data, $currentWorker, $reason,) {
+    public function execute(Worker $worker, UpdateWorkerData $data, Worker $currentWorker, ?string $reason = null): Worker
+    {
+        return $this->transaction(function () use ($worker, $data, $currentWorker, $reason) {
             $oldValues = $worker->getAttributes();
             $values = [];
+
+            if ($data->displayOrder !== null) {
+                $values['display_order'] = $data->displayOrder;
+            }
 
             if (in_array('first_name', $data->providedFields, true)) {
                 $values['first_name'] = $data->firstName;
@@ -63,7 +68,7 @@ class UpdateWorkerAction extends BaseAction
              * Ako frontend šalje construction_site_ids,
              * proveravamo da li je dozvoljeno menjati assignment-e.
              */
-            if (in_array('construction_site_ids', $data->providedFields, true,)) {
+            if (in_array('construction_site_ids', $data->providedFields, true)) {
                 $this->ensureConstructionSitesCanBeUpdated(
                     worker: $worker,
                     data: $data,
@@ -88,7 +93,7 @@ class UpdateWorkerAction extends BaseAction
              * Menjamo many-to-many pivot samo kada je field
              * eksplicitno poslat.
              */
-            if (in_array('construction_site_ids', $data->providedFields, true,)) {
+            if (in_array('construction_site_ids', $data->providedFields, true)) {
                 $worker
                     ->constructionSites()
                     ->sync($data->constructionSiteIds);
@@ -116,7 +121,8 @@ class UpdateWorkerAction extends BaseAction
         });
     }
 
-    private function ensureConstructionSitesCanBeUpdated(Worker $worker, UpdateWorkerData $data, Worker $currentWorker,): void {
+    private function ensureConstructionSitesCanBeUpdated(Worker $worker, UpdateWorkerData $data, Worker $currentWorker): void
+    {
         /*
          * Role koji će worker imati nakon PATCH-a.
          *
@@ -192,7 +198,7 @@ class UpdateWorkerAction extends BaseAction
          * koje već ima Daily Log za danas.
          */
         $hasDailyLogToday = DailyLog::query()
-            ->whereIn('construction_site_id', $removedIds,)
+            ->whereIn('construction_site_id', $removedIds)
             ->whereDate('date', today())
             ->exists();
 
@@ -203,7 +209,8 @@ class UpdateWorkerAction extends BaseAction
         }
     }
 
-    private function ensureSiteManagerRoleCanBeRemoved(Worker $worker,): void {
+    private function ensureSiteManagerRoleCanBeRemoved(Worker $worker): void
+    {
         $constructionSiteIds = $worker
             ->constructionSites()
             ->pluck('construction_sites.id')
@@ -221,7 +228,7 @@ class UpdateWorkerAction extends BaseAction
          * gradilištu, ne dozvoljavamo promenu role.
          */
         $hasDailyLogToday = DailyLog::query()
-            ->whereIn('construction_site_id', $constructionSiteIds,)
+            ->whereIn('construction_site_id', $constructionSiteIds)
             ->whereDate('date', today())
             ->exists();
 

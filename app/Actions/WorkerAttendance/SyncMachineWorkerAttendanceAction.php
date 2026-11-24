@@ -44,7 +44,6 @@ class SyncMachineWorkerAttendanceAction extends BaseAction
             'date' => $assignment->date,
             'started_at' => $startedAt,
             'finished_at' => $finishedAt,
-            'ordinary_worker_day' => null,
             'hourly_rate' => $worker->hourly_rate,
         ];
 

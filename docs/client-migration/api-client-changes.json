@@ -4,24 +4,24 @@
     "migration": "multi-manager",
     "api_prefix": "/api/v1",
     "openapi_version": "3.1.2",
-    "total_operations": 120,
-    "affected_operations": 79,
-    "new_operations": 1,
+    "total_operations": 121,
+    "affected_operations": 82,
+    "new_operations": 2,
     "removed_operations": 0,
-    "changed_request_shapes": 0,
-    "changed_response_shapes": 13,
+    "changed_request_shapes": 2,
+    "changed_response_shapes": 19,
     "authorization_changes": 74,
-    "behavior_changes": 48,
+    "behavior_changes": 49,
     "removed_fields": [
       "DailyLog.site_manager_id",
       "DailyLog.site_manager"
     ],
     "generated_from_current_backend": true,
     "baseline_ref": "443f69a",
-    "counting": "Operation counts are method/path pairs. Flags overlap and count changes to existing operations only; the new select operation is counted separately. Examples are projections of response models and omit unchanged fields when useful.",
+    "counting": "Operation counts are method/path pairs. Flags overlap and count changes to existing operations only; new operations are counted separately. Examples are projections of response models and omit unchanged fields when useful.",
     "baseline_limit": "Historical responses use checked-in baseline code and the M1–M4 inventory. No historical environment was replayed. Arrays list relevant known HTTP outcomes; code-specific behavior and notes qualify each case.",
     "source_mismatches": [
-      "The older migration guide describes manual attendance as WORKER-only. Current FormRequest/action accepts a same-company worker ID without a role restriction; ordinary daily uniqueness applies only to WORKER.",
+      "The older migration guide describes manual attendance as WORKER-only. Current FormRequest/action accepts a same-company worker ID without a role restriction; the former daily limit has been removed.",
       "The older guide shows numeric admin expense total and salary-list worked_hours and a generic salary detail envelope. Current admin expense total and salary-list hours are decimal strings. Salary detail has the resource-only data envelope.",
       "The older guide omits the existing admin-expense 403 and illustrates can_select: true on assigned-sites. The route is administrator-only and assigned-sites does not calculate can_select. The main construction-site list computes a boolean.",
       "Scramble can infer can_select as a string, salary worker_id as a string, and omit real 403 or business 500 conditions on some operations. Controllers, Resources and contract tests take precedence."
@@ -139,6 +139,38 @@
       "after": "Migrated routes scope data to the caller’s company.",
       "client_impact": "Use active-company data and clear stale cross-company caches.",
       "breaking": true
+    },
+    {
+      "id": "interval-worker-movement",
+      "title": "Multiple attendance periods per day",
+      "before": "An ordinary worker was limited to one manual attendance per company and date.",
+      "after": "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker. An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance.",
+      "client_impact": "Query GET /api/v1/workers/available with the proposed start, optional finish, and role. Use the returned WorkerResource list directly; remove all-workers-minus-any-attendance and day-level filters. Writes still recheck overlap.",
+      "breaking": true
+    },
+    {
+      "id": "machine-exact-finish",
+      "title": "Machine release boundaries",
+      "before": "The previous implementation allowed manager-started open machine reservations past midnight.",
+      "after": "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+      "client_impact": "Use machine availability endpoints and submit an explicit finish date for overnight shifts.",
+      "breaking": false
+    },
+    {
+      "id": "point-availability",
+      "title": "Point-in-time worker availability",
+      "before": "The availability endpoint required started_at and queried an entire interval.",
+      "after": "No time parameters check the current instant. at checks a specified instant. started_at selects interval mode.",
+      "client_impact": "Call GET /api/v1/workers/available?role=worker for available now. Use at for an explicit point, or started_at and optional finished_at for a planned interval. Present server candidates directly; never subtract everyone with attendance that day.",
+      "breaking": false
+    },
+    {
+      "id": "worker-display-order",
+      "title": "Default worker display order",
+      "before": "Worker display_order was introduced with default and minimum 1 and ascending numeric ordering. Both are now 0, and the normal group sorts last.",
+      "after": "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed. The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence.",
+      "client_impact": "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it.",
+      "breaking": false
     }
   ],
   "endpoints": [
@@ -863,7 +895,8 @@
         ],
         "behavior": [
           "200; 401; 403 nonmember; 404 foreign/missing parent; 422 invalid filters.",
-          "Membership grants access. The site_manager_id on the child remains attribution."
+          "Membership grants access. The site_manager_id on the child remains attribution.",
+          "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker."
         ]
       },
       "request_changed": false,
@@ -950,8 +983,10 @@
           500
         ],
         "behavior": [
-          "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation or administrator without explicit attribution; 500 locked daily log. 409 duplicate worker/day in another log; 500 duplicate in the same log.",
-          "Manual creation accepts an existing same-company worker ID. The unique company/worker/date rule applies to ordinary WORKER manual attendance. Machine flows generate attendance on managerial confirmation; do not send an additional manual POST for a machine period."
+          "200 on create. 401 without a session. 403 for insufficient DailyLog access. 404 for foreign or missing records. 409 for any overlapping period, including on the same DailyLog. 422 for invalid times or missing attribution. 500 for a locked DailyLog.",
+          "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker.",
+          "An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance.",
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
         ]
       },
       "request_changed": false,
@@ -960,13 +995,17 @@
       "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Create under the active DailyLog ID. Handle blocked writes without creating a second log."
+        "Create under the active DailyLog ID. Handle blocked writes without creating a second log.",
+        "Query GET /api/v1/workers/available with the proposed start, optional finish, and role. Use the returned WorkerResource list directly; remove all-workers-minus-any-attendance and day-level filters. Writes still recheck overlap."
       ],
       "pwa_actions": [
-        "Use the canonical dailyLogId and invalidate that shared list after creation."
+        "Use the canonical dailyLogId and invalidate that shared list after creation.",
+        "Query GET /api/v1/workers/available with the proposed start, optional finish, and role. Use the returned WorkerResource list directly; remove all-workers-minus-any-attendance and day-level filters. Writes still recheck overlap."
       ],
       "notes": [
-        "Manual creation accepts an existing same-company worker ID. The unique company/worker/date rule applies to ordinary WORKER manual attendance. Machine flows generate attendance on managerial confirmation; do not send an additional manual POST for a machine period."
+        "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker.",
+        "An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance.",
+        "Machine flows generate attendance after manager confirmation; avoid duplicating those entries manually."
       ]
     },
     {
@@ -1029,12 +1068,16 @@
           401,
           403,
           404,
+          409,
           422,
           500
         ],
         "behavior": [
           "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log.",
-          "A second member can update or delete. Original attribution and created_by are retained. A parent/child mismatch returns 404."
+          "A second member can update or delete. Original attribution and created_by are retained. A parent/child mismatch returns 404.",
+          "409 if the resulting period overlaps another row. The backend excludes the row being edited.",
+          "Omitting finished_at preserves the existing finish. Explicit finished_at: null reopens the interval and rechecks it through local midnight.",
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
         ]
       },
       "request_changed": false,
@@ -1049,7 +1092,9 @@
         "Update or remove that shared child by ID and refresh its daily list."
       ],
       "notes": [
-        "A second member can update or delete. Original attribution and created_by are retained. A parent/child mismatch returns 404."
+        "A second member can update or delete. Original attribution and created_by are retained. A parent/child mismatch returns 404.",
+        "409 if the resulting period overlaps another row. The backend excludes the row being edited.",
+        "Omitting finished_at preserves the existing finish. Explicit finished_at: null reopens the interval and rechecks it through local midnight."
       ]
     },
     {
@@ -1101,7 +1146,8 @@
         ],
         "behavior": [
           "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log.",
-          "A second member can update or delete. Original attribution and created_by are retained. A parent/child mismatch returns 404."
+          "A second member can update or delete. Original attribution and created_by are retained. A parent/child mismatch returns 404.",
+          "Deleting one row leaves all other periods intact. The compatibility flag is recomputed from the remaining intervals."
         ]
       },
       "request_changed": false,
@@ -3084,7 +3130,8 @@
         ],
         "behavior": [
           "200; 401; 422 for invalid filters where applicable.",
-          "Company and membership constrain the list. Confirmed machine periods can appear more than once per worker/day."
+          "Company and membership constrain the list. Confirmed machine periods can appear more than once per worker/day.",
+          "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker."
         ]
       },
       "request_changed": false,
@@ -3473,7 +3520,8 @@
         ],
         "behavior": [
           "200; 401; 403 wrong role; 404 foreign/missing site or machine; 422 validation; 500 locked or conflicting reservation.",
-          "Self-assignment works before the daily log exists. An existing locked daily log blocks creation."
+          "Self-assignment works before the daily log exists. An existing locked daily log blocks creation.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
         ]
       },
       "request_changed": false,
@@ -3488,7 +3536,8 @@
         "Mark the assignment pending and invalidate available/current/occupied."
       ],
       "notes": [
-        "Self-assignment works before the daily log exists. An existing locked daily log blocks creation."
+        "Self-assignment works before the daily log exists. An existing locked daily log blocks creation.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -3553,7 +3602,9 @@
         ],
         "behavior": [
           "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log. 422 also returned for administrator without manager attribution; 500 also returned for overlaps.",
-          "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request."
+          "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
         ]
       },
       "request_changed": false,
@@ -3568,7 +3619,8 @@
         "Refresh the shared assignment and salary attendance after takeover."
       ],
       "notes": [
-        "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request."
+        "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -3629,7 +3681,9 @@
         ],
         "behavior": [
           "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log. 500 also returned for overlapping periods.",
-          "The original creator remains. Keep excavator and truck validation and null handling distinct."
+          "The original creator remains. Keep excavator and truck validation and null handling distinct.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
         ]
       },
       "request_changed": false,
@@ -3644,7 +3698,8 @@
         "Use separate forms for manager and self updates; disable mutation while locked."
       ],
       "notes": [
-        "The original creator remains. Keep excavator and truck validation and null handling distinct."
+        "The original creator remains. Keep excavator and truck validation and null handling distinct.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -3695,7 +3750,8 @@
         ],
         "behavior": [
           "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log.",
-          "The assignment and linked attendance are soft-deleted with the log."
+          "The assignment and linked attendance are soft-deleted with the log.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
         ]
       },
       "request_changed": false,
@@ -3710,7 +3766,8 @@
         "After success invalidate the log, assignment and worker/machine availability queries."
       ],
       "notes": [
-        "The assignment and linked attendance are soft-deleted with the log."
+        "The assignment and linked attendance are soft-deleted with the log.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -3749,7 +3806,8 @@
         "behavior": [
           "200; 401.",
           "In this example the machine is unavailable. A missing start/end or start <= now < finish is occupied. An empty occupied list for this caller does not mean free.",
-          "This M3 change is to company scoping of the occupancy lookup and shared availability semantics; the occupancy time predicate itself was already used before M3."
+          "This M3 change is to company scoping of the occupancy lookup and shared availability semantics; the occupancy time predicate itself was already used before M3.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
         ]
       },
       "request_changed": false,
@@ -3765,7 +3823,8 @@
       ],
       "notes": [
         "In this example the machine is unavailable. A missing start/end or start <= now < finish is occupied. An empty occupied list for this caller does not mean free.",
-        "This M3 change is to company scoping of the occupancy lookup and shared availability semantics; the occupancy time predicate itself was already used before M3."
+        "This M3 change is to company scoping of the occupancy lookup and shared availability semantics; the occupancy time predicate itself was already used before M3.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -3818,7 +3877,8 @@
         "behavior": [
           "200; 401.",
           "Managers see their participating logs, administrator sees the company, and operators/drivers see their own assignments.",
-          "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource."
+          "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
         ]
       },
       "request_changed": false,
@@ -3834,7 +3894,8 @@
       ],
       "notes": [
         "Managers see their participating logs, administrator sees the company, and operators/drivers see their own assignments.",
-        "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource."
+        "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -3897,7 +3958,8 @@
         ],
         "behavior": [
           "200; 401; 403 wrong role; 404 foreign/missing site or machine; 422 validation; 500 locked or conflicting reservation.",
-          "Self-assignment works before the daily log exists. An existing locked daily log blocks creation."
+          "Self-assignment works before the daily log exists. An existing locked daily log blocks creation.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
         ]
       },
       "request_changed": false,
@@ -3912,7 +3974,8 @@
         "Mark the assignment pending and invalidate available/current/occupied."
       ],
       "notes": [
-        "Self-assignment works before the daily log exists. An existing locked daily log blocks creation."
+        "Self-assignment works before the daily log exists. An existing locked daily log blocks creation.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -3977,7 +4040,9 @@
         ],
         "behavior": [
           "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log. 422 also returned for administrator without manager attribution; 500 also returned for overlaps.",
-          "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request."
+          "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
         ]
       },
       "request_changed": false,
@@ -3992,7 +4057,8 @@
         "Refresh the shared assignment and salary attendance after takeover."
       ],
       "notes": [
-        "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request."
+        "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -4053,7 +4119,9 @@
         ],
         "behavior": [
           "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log. 500 also returned for overlapping periods.",
-          "The original creator remains. Keep excavator and truck validation and null handling distinct."
+          "The original creator remains. Keep excavator and truck validation and null handling distinct.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
         ]
       },
       "request_changed": false,
@@ -4068,7 +4136,8 @@
         "Use separate forms for manager and self updates; disable mutation while locked."
       ],
       "notes": [
-        "The original creator remains. Keep excavator and truck validation and null handling distinct."
+        "The original creator remains. Keep excavator and truck validation and null handling distinct.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -4119,7 +4188,8 @@
         ],
         "behavior": [
           "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log.",
-          "The assignment and linked attendance are soft-deleted with the log."
+          "The assignment and linked attendance are soft-deleted with the log.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
         ]
       },
       "request_changed": false,
@@ -4134,7 +4204,8 @@
         "After success invalidate the log, assignment and worker/machine availability queries."
       ],
       "notes": [
-        "The assignment and linked attendance are soft-deleted with the log."
+        "The assignment and linked attendance are soft-deleted with the log.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -4173,7 +4244,8 @@
         "behavior": [
           "200; 401.",
           "In this example the machine is unavailable. A missing start/end or start <= now < finish is occupied. An empty occupied list for this caller does not mean free.",
-          "This M3 change is to company scoping of the occupancy lookup and shared availability semantics; the occupancy time predicate itself was already used before M3."
+          "This M3 change is to company scoping of the occupancy lookup and shared availability semantics; the occupancy time predicate itself was already used before M3.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
         ]
       },
       "request_changed": false,
@@ -4189,7 +4261,8 @@
       ],
       "notes": [
         "In this example the machine is unavailable. A missing start/end or start <= now < finish is occupied. An empty occupied list for this caller does not mean free.",
-        "This M3 change is to company scoping of the occupancy lookup and shared availability semantics; the occupancy time predicate itself was already used before M3."
+        "This M3 change is to company scoping of the occupancy lookup and shared availability semantics; the occupancy time predicate itself was already used before M3.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -4242,7 +4315,8 @@
         "behavior": [
           "200; 401.",
           "Managers see their participating logs, administrator sees the company, and operators/drivers see their own assignments.",
-          "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource."
+          "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
         ]
       },
       "request_changed": false,
@@ -4258,7 +4332,8 @@
       ],
       "notes": [
         "Managers see their participating logs, administrator sees the company, and operators/drivers see their own assignments.",
-        "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource."
+        "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -4381,7 +4456,8 @@
           "200; 401; 422 for invalid filters where applicable. 404 for a foreign worker_id; 200 with data:null if no visible current assignment.",
           "The site_manager_id query filter on MachineAssignment still means attribution. It differs from the DailyLog membership filter.",
           "When no assignment is visible the successful envelope has data: null.",
-          "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource."
+          "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource.",
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
         ]
       },
       "request_changed": false,
@@ -4398,7 +4474,8 @@
       "notes": [
         "The site_manager_id query filter on MachineAssignment still means attribution. It differs from the DailyLog membership filter.",
         "When no assignment is visible the successful envelope has data: null.",
-        "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource."
+        "The wire model uses a nullable/conditionally present site_manager object. site_manager_id is a nullable database field and optional filter where supported; it is not serialized by MachineAssignmentResource.",
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
       ]
     },
     {
@@ -4406,7 +4483,8 @@
       "path": "/api/v1/construction-sites",
       "change_types": [
         "AUTH_CHANGE",
-        "BEHAVIOR_CHANGE"
+        "BEHAVIOR_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": "NO BODY",
@@ -4452,23 +4530,28 @@
         "behavior": [
           "200; 401; 422 for invalid filters where applicable.",
           "For SITE_MANAGER, can_select represents active permanent assignment. Another manager having opened today’s log does not block selection.",
-          "Runtime can_select is boolean on this list. Related site representations may return null. Use the selection response as authoritative."
+          "Runtime can_select is boolean on this list. Related site representations may return null. Use the selection response as authoritative.",
+          "The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence."
         ]
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
       "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Use can_select and invoke /select on click."
+        "Use can_select and invoke /select on click.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "pwa_actions": [
-        "Connect can_select to the /select action."
+        "Connect can_select to the /select action.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "notes": [
         "For SITE_MANAGER, can_select represents active permanent assignment. Another manager having opened today’s log does not block selection.",
-        "Runtime can_select is boolean on this list. Related site representations may return null. Use the selection response as authoritative."
+        "Runtime can_select is boolean on this list. Related site representations may return null. Use the selection response as authoritative.",
+        "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.",
+        "The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence."
       ]
     },
     {
@@ -4476,7 +4559,8 @@
       "path": "/api/v1/workers",
       "change_types": [
         "AUTH_CHANGE",
-        "BEHAVIOR_CHANGE"
+        "BEHAVIOR_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": "NO BODY",
@@ -4509,7 +4593,8 @@
           "data": [
             {
               "id": 12,
-              "is_available": false
+              "is_available": false,
+              "display_order": 0
             }
           ]
         },
@@ -4521,23 +4606,29 @@
         "behavior": [
           "200; 401; 422 for invalid filters where applicable.",
           "Worker lists are scoped to the company. Operator and driver is_available reflects current machine assignments and attendance.",
-          "For available operators/drivers, use the existing role query (operator or driver) and the returned is_available value. Existing baseline availability may still be false even if there is no active machine."
+          "For available operators/drivers, use the existing role query (operator or driver) and the returned is_available value. Existing baseline availability may still be false even if there is no active machine.",
+          "The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence."
         ]
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
       "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Replace cached results with the response scoped to the active company."
+        "Replace cached results with the response scoped to the active company.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "pwa_actions": [
-        "Key report/list requests by active tenant and reset the view when the tenant changes."
+        "Key report/list requests by active tenant and reset the view when the tenant changes.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "notes": [
         "Worker lists are scoped to the company. Operator and driver is_available reflects current machine assignments and attendance.",
-        "For available operators/drivers, use the existing role query (operator or driver) and the returned is_available value. Existing baseline availability may still be false even if there is no active machine."
+        "For available operators/drivers, use the existing role query (operator or driver) and the returned is_available value. Existing baseline availability may still be false even if there is no active machine.",
+        "For a picker, use /workers/available. Legacy is_available on this list is a compatibility signal and does not describe the requested interval.",
+        "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.",
+        "The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence."
       ]
     },
     {
@@ -4545,7 +4636,8 @@
       "path": "/api/v1/workers/{worker}",
       "change_types": [
         "AUTH_CHANGE",
-        "STATUS_CHANGE"
+        "STATUS_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": "NO BODY",
@@ -4571,7 +4663,8 @@
           "success": true,
           "message": null,
           "data": {
-            "id": 12
+            "id": 12,
+            "display_order": 0
           }
         },
         "status_codes": [
@@ -4585,18 +4678,21 @@
         ]
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
       "behavior_changed": false,
       "breaking": true,
       "android_actions": [
-        "Replace cached results with the response scoped to the active company."
+        "Replace cached results with the response scoped to the active company.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "pwa_actions": [
-        "Key report/list requests by active tenant and reset the view when the tenant changes."
+        "Key report/list requests by active tenant and reset the view when the tenant changes.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "notes": [
-        "Existing financial and child attribution fields are preserved."
+        "Existing financial and child attribution fields are preserved.",
+        "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed."
       ]
     },
     {
@@ -5231,7 +5327,9 @@
       "method": "GET",
       "path": "/api/v1/construction-sites/{constructionSite}/site-managers",
       "change_types": [
-        "AUTH_CHANGE"
+        "AUTH_CHANGE",
+        "BEHAVIOR_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": "NO BODY",
@@ -5260,7 +5358,8 @@
           "message": null,
           "data": [
             {
-              "id": 2
+              "id": 2,
+              "display_order": 0
             }
           ]
         },
@@ -5271,22 +5370,27 @@
         ],
         "behavior": [
           "200; 401. 404 for missing or foreign route ID.",
-          "Existing financial and child attribution fields are preserved."
+          "Existing financial and child attribution fields are preserved.",
+          "The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence."
         ]
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
-      "behavior_changed": false,
+      "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Replace cached results with the response scoped to the active company."
+        "Replace cached results with the response scoped to the active company.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "pwa_actions": [
-        "Key report/list requests by active tenant and reset the view when the tenant changes."
+        "Key report/list requests by active tenant and reset the view when the tenant changes.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "notes": [
-        "Existing financial and child attribution fields are preserved."
+        "Existing financial and child attribution fields are preserved.",
+        "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.",
+        "The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence."
       ]
     },
     {
@@ -5412,9 +5516,10 @@
         ],
         "behavior": [
           "200; 401; 422 for invalid filters where applicable. 403 for non-admin.",
-          "Compensation fields and formulas are unchanged. Reports include confirmed machine periods and preserve ordinary-worker daily uniqueness.",
           "worker_id is numeric; period and total amounts and worked_hours are formatted decimal strings.",
-          "Keep decimal strings on the wire; parse them using the existing currency and duration adapters."
+          "Keep decimal strings on the wire; parse them using the existing currency and duration adapters.",
+          "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker.",
+          "An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance."
         ]
       },
       "request_changed": false,
@@ -5429,8 +5534,8 @@
         "Key report/list requests by active tenant and reset the view when the tenant changes."
       ],
       "notes": [
-        "Compensation fields and formulas are unchanged. Reports include confirmed machine periods and preserve ordinary-worker daily uniqueness.",
-        "worker_id is numeric; period and total amounts and worked_hours are formatted decimal strings."
+        "worker_id is numeric; period and total amounts and worked_hours are formatted decimal strings.",
+        "An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance."
       ]
     },
     {
@@ -5499,9 +5604,9 @@
         ],
         "behavior": [
           "200; 401; 422 for invalid filters where applicable. 404 for missing or foreign route ID.",
-          "Compensation fields and formulas are unchanged. Reports include confirmed machine periods and preserve ordinary-worker daily uniqueness.",
           "The salary detail endpoint returns a resource-only envelope with one data key.",
-          "Compensation formulas and response schema are unchanged. Data eligibility reflects ordinary worker/day uniqueness and confirmed machine periods."
+          "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker.",
+          "An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance."
         ]
       },
       "request_changed": false,
@@ -5516,8 +5621,8 @@
         "Key report/list requests by active tenant and reset the view when the tenant changes."
       ],
       "notes": [
-        "Compensation fields and formulas are unchanged. Reports include confirmed machine periods and preserve ordinary-worker daily uniqueness.",
-        "The salary detail endpoint returns a resource-only envelope with one data key."
+        "The salary detail endpoint returns a resource-only envelope with one data key.",
+        "An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance."
       ]
     },
     {
@@ -6454,6 +6559,341 @@
       "notes": [
         "Standalone documents remain distinct from DailyLog attachments. An optional SITE_MANAGER attribution must belong to the current company."
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workers/available",
+      "change_types": [
+        "NEW"
+      ],
+      "before": {
+        "request": "ENDPOINT DID NOT EXIST",
+        "response": "ENDPOINT DID NOT EXIST",
+        "status_codes": [],
+        "behavior": []
+      },
+      "after": {
+        "request": "NO BODY",
+        "query_parameters": {
+          "role": {
+            "required": false,
+            "values": [
+              "worker",
+              "operator",
+              "driver"
+            ],
+            "default": "all three eligible roles"
+          },
+          "at": {
+            "required": false,
+            "format": "date-time",
+            "description": "Checks a point. With no time parameters the server checks its current time. Cannot be combined with interval parameters."
+          },
+          "started_at": {
+            "required": false,
+            "format": "date-time",
+            "description": "Selects interval mode; required when finished_at is supplied."
+          },
+          "finished_at": {
+            "required": false,
+            "format": "date-time",
+            "description": "Requires started_at and must be later. With started_at alone, interval mode ends at local midnight."
+          }
+        },
+        "response": {
+          "success": true,
+          "message": null,
+          "data": [
+            {
+              "id": 10,
+              "first_name": "Milan",
+              "last_name": "Jović",
+              "full_name": null,
+              "username": "milan",
+              "email": null,
+              "phone": null,
+              "role": "worker",
+              "hourly_rate": "25.00",
+              "is_active": true,
+              "created_at": "2026-11-22T08:00:00.000000Z",
+              "updated_at": "2026-11-22T08:00:00.000000Z",
+              "is_available": true,
+              "company": {
+                "id": 1,
+                "name": "Cole, Mertz and Keeling",
+                "created_at": "2026-11-24T00:16:21.000000Z",
+                "updated_at": "2026-11-24T00:16:21.000000Z"
+              },
+              "construction_sites": [],
+              "display_order": 0
+            }
+          ]
+        },
+        "examples": [
+          {
+            "query": {
+              "role": "worker",
+              "started_at": "2026-11-24T12:00:00+01:00",
+              "finished_at": "2026-11-24T16:00:00+01:00"
+            },
+            "response": {
+              "success": true,
+              "message": null,
+              "data": [
+                {
+                  "id": 10,
+                  "first_name": "Milan",
+                  "last_name": "Jović",
+                  "full_name": null,
+                  "username": "milan",
+                  "email": null,
+                  "phone": null,
+                  "role": "worker",
+                  "hourly_rate": "25.00",
+                  "is_active": true,
+                  "created_at": "2026-11-22T08:00:00.000000Z",
+                  "updated_at": "2026-11-22T08:00:00.000000Z",
+                  "is_available": true,
+                  "company": {
+                    "id": 1,
+                    "name": "Cole, Mertz and Keeling",
+                    "created_at": "2026-11-24T00:16:21.000000Z",
+                    "updated_at": "2026-11-24T00:16:21.000000Z"
+                  },
+                  "construction_sites": [],
+                  "display_order": 0
+                }
+              ]
+            }
+          },
+          {
+            "query": {
+              "role": "worker",
+              "started_at": "2026-11-24T11:30:00+01:00",
+              "finished_at": "2026-11-24T16:00:00+01:00"
+            },
+            "response": {
+              "success": true,
+              "message": null,
+              "data": []
+            }
+          }
+        ],
+        "status_codes": [
+          200,
+          401,
+          422
+        ],
+        "behavior": [
+          "Authenticated company and active workers only. Optional role restricts the three supported roles.",
+          "An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance.",
+          "Return only candidates without an overlapping attendance or machine reservation. is_available is true for each returned candidate.",
+          "A future period never blocks a point before its start. With 08:00–12:00 and 16:00–20:00 on file, a point at 14:00 is free.",
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past.",
+          "The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence."
+        ],
+        "time_modes": [
+          {
+            "mode": "default_point",
+            "parameters": [],
+            "description": "Checks the current server instant in Europe/Belgrade, not the rest of the day."
+          },
+          {
+            "mode": "explicit_point",
+            "parameters": [
+              "at"
+            ],
+            "description": "Checks start <= at < effective finish."
+          },
+          {
+            "mode": "interval",
+            "parameters": [
+              "started_at",
+              "finished_at?"
+            ],
+            "description": "Checks the whole half-open interval. Without finish, ends at local midnight."
+          }
+        ],
+        "invalid_time_combinations": [
+          [
+            "at",
+            "started_at"
+          ],
+          [
+            "at",
+            "finished_at"
+          ],
+          [
+            "finished_at without started_at"
+          ]
+        ]
+      },
+      "request_changed": false,
+      "response_changed": false,
+      "authorization_changed": false,
+      "behavior_changed": false,
+      "breaking": false,
+      "android_actions": [
+        "Call GET /api/v1/workers/available?role=worker for available now. Use at for an explicit point, or started_at and optional finished_at for a planned interval. Present server candidates directly; never subtract everyone with attendance that day.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
+      ],
+      "pwa_actions": [
+        "Call GET /api/v1/workers/available?role=worker for available now. Use at for an explicit point, or started_at and optional finished_at for a planned interval. Present server candidates directly; never subtract everyone with attendance that day.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
+      ],
+      "notes": [
+        "HTTP 200 uses the existing success, message, and data envelope with WorkerResource items. The fixture worker worked 08:00 to 12:00. Include the positive offset as %2B in raw URLs.",
+        "Overlap decisions use recorded attendance and machine periods, not workers.is_available.",
+        "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.",
+        "The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/workers",
+      "change_types": [
+        "REQUEST_CHANGE",
+        "RESPONSE_CHANGE"
+      ],
+      "before": {
+        "request": {
+          "first_name": "Ana",
+          "last_name": "Petrovic",
+          "role": "worker",
+          "username": "ana",
+          "password": "example-password"
+        },
+        "response": {
+          "success": true,
+          "message": "Worker created successfully.",
+          "data": {
+            "id": 10,
+            "first_name": "Ana"
+          }
+        },
+        "status_codes": [
+          200,
+          401,
+          403,
+          422
+        ],
+        "behavior": [
+          "The request had no display_order field."
+        ]
+      },
+      "after": {
+        "request": {
+          "first_name": "Ana",
+          "last_name": "Petrovic",
+          "role": "worker",
+          "username": "ana",
+          "password": "example-password",
+          "display_order": 2
+        },
+        "response": {
+          "success": true,
+          "message": "Worker created successfully.",
+          "data": {
+            "id": 10,
+            "first_name": "Ana",
+            "display_order": 2
+          }
+        },
+        "status_codes": [
+          200,
+          401,
+          403,
+          422
+        ],
+        "behavior": [
+          "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed."
+        ]
+      },
+      "request_changed": true,
+      "response_changed": true,
+      "authorization_changed": false,
+      "behavior_changed": false,
+      "breaking": false,
+      "android_actions": [
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
+      ],
+      "pwa_actions": [
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
+      ],
+      "notes": [
+        "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.",
+        "Response examples show selected fields."
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/workers/{worker}",
+      "change_types": [
+        "REQUEST_CHANGE",
+        "RESPONSE_CHANGE"
+      ],
+      "before": {
+        "request": {
+          "first_name": "Ana"
+        },
+        "response": {
+          "success": true,
+          "message": "Worker updated successfully.",
+          "data": {
+            "id": 10,
+            "first_name": "Ana"
+          }
+        },
+        "status_codes": [
+          200,
+          401,
+          403,
+          404,
+          422
+        ],
+        "behavior": [
+          "The request had no display_order field."
+        ]
+      },
+      "after": {
+        "request": {
+          "display_order": 0
+        },
+        "response": {
+          "success": true,
+          "message": "Worker updated successfully.",
+          "data": {
+            "id": 10,
+            "first_name": "Ana",
+            "display_order": 0
+          }
+        },
+        "status_codes": [
+          200,
+          401,
+          403,
+          404,
+          422
+        ],
+        "behavior": [
+          "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed."
+        ]
+      },
+      "request_changed": true,
+      "response_changed": true,
+      "authorization_changed": false,
+      "behavior_changed": false,
+      "breaking": false,
+      "android_actions": [
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
+      ],
+      "pwa_actions": [
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
+      ],
+      "notes": [
+        "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.",
+        "Response examples show selected fields."
+      ]
     }
   ],
   "models": [
@@ -6551,8 +6991,9 @@
       "added_fields": [],
       "semantic_changes": [
         "site_manager_id retains attendance attribution; machine attendance records the confirmation manager.",
-        "Ordinary manual attendance is unique per company/worker/day. Machine periods may be adjacent and remain separate.",
-        "created_by is the original creator. ordinary_worker_day is internal."
+        "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker.",
+        "An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance.",
+        "created_by is the original creator. The former ordinary_worker_day field was internal and has been removed from the database."
       ],
       "android_migration": [
         "Handle duplicate statuses and upsert by attendance ID."
@@ -6591,15 +7032,29 @@
     {
       "model": "Worker",
       "removed_fields": [],
-      "added_fields": [],
+      "added_fields": [
+        {
+          "name": "display_order",
+          "type": "integer",
+          "nullable": false,
+          "default": 0,
+          "minimum": 0,
+          "maximum": 2147483647
+        }
+      ],
       "semantic_changes": [
-        "Worker index is company-scoped and is_available reflects active machine occupancy and attendance for operator/driver roles, combined with the stored availability flag."
+        "Worker index is company-scoped and is_available reflects active machine occupancy and attendance for operator/driver roles, combined with the stored availability flag.",
+        "On /workers/available the data list, including is_available: true for returned candidates, describes the requested instant or interval.",
+        "Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.",
+        "The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence."
       ],
       "android_migration": [
-        "Use server availability for worker selectors."
+        "Use server availability for worker selectors.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "pwa_migration": [
-        "Avoid computing availability from locally visible assignments."
+        "Avoid computing availability from locally visible assignments.",
+        "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
       ],
       "important_nullability": []
     },
@@ -6741,10 +7196,10 @@
       "client_action": "Do not retry with another company’s IDs."
     },
     {
-      "context": "Ordinary WORKER duplicate manual attendance",
-      "before": "No enforced cross-DailyLog company/worker/day uniqueness.",
-      "after": "409 for another active log of the same company/date; same-log duplicate can still return 500.",
-      "client_action": "Present the existing attendance instead of inserting a duplicate."
+      "context": "WorkerAttendance overlap on POST or PATCH",
+      "before": "The daily limit returned 409 across logs; the same-log duplicate could return 500.",
+      "after": "409 for actual overlap even on the same log. Adjacent periods succeed.",
+      "client_action": "Refresh the candidate list and let the user revise the proposed interval."
     },
     {
       "context": "Admin daily create requiring manager attribution",
@@ -6761,7 +7216,7 @@
     {
       "context": "Machine period overlap or incomplete reservation",
       "before": "Legacy business failure where detected.",
-      "after": "500 on conflicting machine or worker periods. Adjacent fully confirmed intervals are allowed.",
+      "after": "500 on genuine machine or worker period conflicts. Exact finish and local-midnight boundaries are half-open.",
       "client_action": "Refresh server availability and allow users to correct their period."
     },
     {
@@ -6784,7 +7239,10 @@
     "Allow viewing a locked DailyLog and disable create, update, delete, takeover and finish where relevant. Handle refreshed state and stale offline requests.",
     "Handle 403, 404, 409, 422, and known legacy 500 by endpoint. Preserve authentication and unrelated behavior.",
     "Review local database migrations and serializers if persisted. Keep queued mutations bound to their original DailyLog and clear invalid manager/date caches.",
-    "Add or update API parsing, repository, and ViewModel/UI tests where supported; run the existing suites and compile the Android application."
+    "Add or update API parsing, repository, and ViewModel/UI tests where supported; run the existing suites and compile the Android application.",
+    "Query GET /api/v1/workers/available with the proposed start, optional finish, and role. Use the returned WorkerResource list directly; remove all-workers-minus-any-attendance and day-level filters. Writes still recheck overlap. An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance.",
+    "Call GET /api/v1/workers/available?role=worker for available now. Use at for an explicit point, or started_at and optional finished_at for a planned interval. Present server candidates directly; never subtract everyone with attendance that day. Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past.",
+    "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
   ],
   "pwa_required_changes": [
     "Inspect the API client, types, stores, composables/hooks, router/page loading, active-site and DailyLog state, caches, localStorage/sessionStorage, machine and attendance state.",
@@ -6798,7 +7256,10 @@
     "Make locked state read-only for clients and handle conflicts from stale data after refreshing.",
     "Handle endpoint-specific 403, 404, 409, 422 and known business 500 cases without changing unrelated UI.",
     "Migrate stale cache/local storage keys if needed and update types/interfaces/serializers.",
-    "Add or update client parsing, state, cache and UI tests for the shared workflows; run the normal checks and build."
+    "Add or update client parsing, state, cache and UI tests for the shared workflows; run the normal checks and build.",
+    "Query GET /api/v1/workers/available with the proposed start, optional finish, and role. Use the returned WorkerResource list directly; remove all-workers-minus-any-attendance and day-level filters. Writes still recheck overlap. An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance.",
+    "Call GET /api/v1/workers/available?role=worker for available now. Use at for an explicit point, or started_at and optional finished_at for a planned interval. Present server candidates directly; never subtract everyone with attendance that day. Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past.",
+    "Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it."
   ],
   "deprecated_assumptions": [
     "One DailyLog per manager/date.",
@@ -6810,20 +7271,19 @@
     "Treating a self-assignment as paid time.",
     "Equating Company-wide machine availability with the caller’s visible occupied results.",
     "Assuming all business errors use MVC validation status codes.",
-    "Deriving the active server day by slicing the UTC ISO timestamp."
+    "Deriving the active server day by slicing the UTC ISO timestamp.",
+    "One attendance record per worker and business date.",
+    "Subtracting all workers appearing in any attendance today.",
+    "Using the persisted is_available flag to decide whether a proposed period is free."
   ],
   "known_backend_quirks": [
     {
       "id": "legacy-500",
-      "behavior": "Some BusinessException paths return HTTP 500 with generic production text such as Server Error. Lock, same-log attendance duplicate, assignment constraints and machine collisions are examples. Do not classify unrelated 500 errors as business failures."
+      "behavior": "Some BusinessException paths return HTTP 500 with generic production text such as Server Error. Lock, assignment constraints and machine collisions are examples. Do not classify unrelated 500 errors as business failures."
     },
     {
       "id": "scheduler-repeat",
       "behavior": "Repeated scheduler execution can increment excavator total_work_hours again. It is backend-only and should not trigger client-side correction."
-    },
-    {
-      "id": "midnight-periods",
-      "behavior": "Machine overlap remains scoped by assignment date; cross-midnight semantics were not expanded."
     },
     {
       "id": "admin-manager-required",
@@ -6839,7 +7299,7 @@
     },
     {
       "id": "manual-attendance-role",
-      "behavior": "The manual attendance FormRequest checks a worker ID, and the action validates company and duplicates. It does not enforce a WORKER-only role. Clients should still use the machine workflow for machine salary periods."
+      "behavior": "Manual attendance is not role-restricted after validating a same-company ID. Manual and machine intervals conflict globally. Machine attendance should be created through manager confirmation."
     }
   ]
 }

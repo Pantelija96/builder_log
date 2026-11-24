@@ -20,6 +20,9 @@ class UpdateWorkerRequest extends FormRequest
         $worker = $this->route('worker');
 
         return [
+            // Set zero to remove manual priority. Lower positive values appear first.
+            'display_order' => ['sometimes', 'integer:strict', 'min:0', 'max:2147483647'],
+
             'first_name' => [
                 'sometimes',
                 'string',

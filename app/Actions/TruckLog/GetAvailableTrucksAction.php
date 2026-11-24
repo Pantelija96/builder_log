@@ -35,7 +35,6 @@ class GetAvailableTrucksAction
                 function (Builder $assignmentQuery) use ($now, $currentWorker) {
                     $assignmentQuery
                         ->where('company_id', $currentWorker->company_id)
-                        ->whereDate('date', $now->toDateString())
                         ->whereHas(
                             'truckLog',
                             fn (Builder $query) => MachinePeriod::occupiedAt($query, $now)

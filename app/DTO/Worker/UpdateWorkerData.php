@@ -2,8 +2,8 @@
 
 namespace App\DTO\Worker;
 
-use App\Http\Requests\Worker\UpdateWorkerRequest;
 use App\Enums\WorkerRole;
+use App\Http\Requests\Worker\UpdateWorkerRequest;
 
 readonly class UpdateWorkerData
 {
@@ -19,9 +19,10 @@ readonly class UpdateWorkerData
         public array $providedFields,
         public ?float $hourlyRate,
         public array $constructionSiteIds,
+        public ?int $displayOrder = null,
     ) {}
 
-    public static function fromRequest(UpdateWorkerRequest $request,): self
+    public static function fromRequest(UpdateWorkerRequest $request): self
     {
         return new self(
             firstName: $request->has('first_name') ? $request->string('first_name')->toString() : null,
@@ -34,6 +35,7 @@ readonly class UpdateWorkerData
             isActive: $request->has('is_active') ? $request->boolean('is_active') : null,
             providedFields: $request->keys(),
             hourlyRate: $request->has('hourly_rate') ? ($request->input('hourly_rate') !== null ? $request->float('hourly_rate') : null) : null,
+            displayOrder: $request->validated('display_order'),
             constructionSiteIds: $request->input('construction_site_ids', []),
         );
     }

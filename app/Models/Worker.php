@@ -22,7 +22,12 @@ class Worker extends Authenticatable
     use Notifiable;
     use SoftDeletes;
 
+    protected $attributes = [
+        'display_order' => 0,
+    ];
+
     protected $fillable = [
+        'display_order',
         'company_id',
         'first_name',
         'last_name',
@@ -43,12 +48,22 @@ class Worker extends Authenticatable
     protected function casts(): array
     {
         return [
+            'display_order' => 'integer',
             'role' => WorkerRole::class,
             'password' => 'hashed',
             'hourly_rate' => 'decimal:2',
             'is_active' => 'boolean',
             'is_available' => 'boolean',
         ];
+    }
+
+    public function scopeInDisplayOrder(Builder $query): Builder
+    {
+        return $query->orderByRaw('CASE WHEN workers.display_order = 0 THEN 1 ELSE 0 END ASC')
+            ->orderBy('workers.display_order')
+            ->orderBy('workers.first_name')
+            ->orderBy('workers.last_name')
+            ->orderBy('workers.id');
     }
 
     public function scopeSiteManagers(Builder $query): Builder

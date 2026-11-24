@@ -18,15 +18,12 @@ class UpdateExcavatorLogRequest extends FormRequest
                 'sometimes',
                 'nullable',
                 'date',
-                'required_with:site_manager_finished_at',
             ],
 
             'site_manager_finished_at' => [
                 'sometimes',
                 'nullable',
                 'date',
-                'required_with:site_manager_started_at',
-                'after:site_manager_started_at',
             ],
 
             'operator_started_at' => [
@@ -100,7 +97,7 @@ class UpdateExcavatorLogRequest extends FormRequest
                 'max:1000',
             ],
 
-            //helper fields for notification
+            // helper fields for notification
 
             'started' => [
                 'sometimes',

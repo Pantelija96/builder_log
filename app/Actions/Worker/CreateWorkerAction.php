@@ -11,8 +11,9 @@ use App\Models\Worker;
 
 class CreateWorkerAction extends BaseAction
 {
-    public function execute(CreateWorkerData $data, int $companyId,): Worker {
-        return $this->transaction(function () use ($data, $companyId,) {
+    public function execute(CreateWorkerData $data, int $companyId): Worker
+    {
+        return $this->transaction(function () use ($data, $companyId) {
             $this->ensureConstructionSitesAreValid(
                 data: $data,
                 companyId: $companyId,
@@ -29,6 +30,7 @@ class CreateWorkerAction extends BaseAction
                 'email' => $data->email,
                 'is_active' => $data->isActive,
                 'hourly_rate' => $data->hourlyRate,
+                'display_order' => $data->displayOrder,
             ]);
 
             if ($data->role === WorkerRole::SITE_MANAGER) {
@@ -42,7 +44,8 @@ class CreateWorkerAction extends BaseAction
         });
     }
 
-    private function ensureConstructionSitesAreValid(CreateWorkerData $data, int $companyId,): void {
+    private function ensureConstructionSitesAreValid(CreateWorkerData $data, int $companyId): void
+    {
         if (empty($data->constructionSiteIds)) {
             return;
         }

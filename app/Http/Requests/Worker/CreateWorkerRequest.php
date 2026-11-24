@@ -16,6 +16,13 @@ class CreateWorkerRequest extends FormRequest
     public function rules(): array
     {
         return [
+            /**
+             * Zero is unprioritized. Lower positive values appear first, before all zeros.
+             *
+             * @default 0
+             */
+            'display_order' => ['sometimes', 'integer:strict', 'min:0', 'max:2147483647'],
+
             'first_name' => [
                 'required',
                 'string',

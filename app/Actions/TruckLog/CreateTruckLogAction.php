@@ -59,11 +59,9 @@ class CreateTruckLogAction extends BaseAction
                 companyId: $currentWorker->company_id,
             );
 
-            $startedAt =
-                $data->siteManagerStartedAt ?? now();
-
-            $finishedAt =
-                $data->siteManagerFinishedAt;
+            $startedAt = $data->siteManagerStartedAt?->copy()->setTimezone(config('app.timezone'));
+            $finishedAt = $data->siteManagerFinishedAt?->copy()->setTimezone(config('app.timezone'));
+            MachinePeriod::validateManagerTimes($startedAt, $finishedAt);
 
             $selfAssignment =
                 $this->findSelfAssignmentForTakeover(
@@ -72,7 +70,7 @@ class CreateTruckLogAction extends BaseAction
                     workerId: $worker->id,
                     dailyLog: $dailyLog,
                     date: $dailyLog->date->toDateString(),
-                    startedAt: $startedAt,
+                    startedAt: $startedAt ?? now(),
                     finishedAt: $finishedAt,
                 );
 
@@ -106,8 +104,8 @@ class CreateTruckLogAction extends BaseAction
                 ]);
 
                 $truckLog->update([
-                    'site_manager_started_at' => $data->siteManagerStartedAt,
-                    'site_manager_finished_at' => $data->siteManagerFinishedAt,
+                    'site_manager_started_at' => $startedAt,
+                    'site_manager_finished_at' => $finishedAt,
                     'note_site_manager' => $data->noteSiteManager,
                 ]);
 
@@ -121,8 +119,8 @@ class CreateTruckLogAction extends BaseAction
 
                 $this->syncMachineWorkerAttendanceAction->execute(
                     assignment: $selfAssignment->fresh('worker'),
-                    startedAt: $data->siteManagerStartedAt,
-                    finishedAt: $data->siteManagerFinishedAt,
+                    startedAt: $startedAt,
+                    finishedAt: $finishedAt,
                     advancePayment: $data->advancePayment,
                     actor: $currentWorker,
                 );
@@ -170,8 +168,8 @@ class CreateTruckLogAction extends BaseAction
                 'worker_id' => $worker->id,
                 'created_by' => $currentWorker->id,
 
-                'site_manager_started_at' => $data->siteManagerStartedAt,
-                'site_manager_finished_at' => $data->siteManagerFinishedAt,
+                'site_manager_started_at' => $startedAt,
+                'site_manager_finished_at' => $finishedAt,
 
                 'operator_started_at' => null,
                 'operator_finished_at' => null,
@@ -188,8 +186,8 @@ class CreateTruckLogAction extends BaseAction
 
             $this->syncMachineWorkerAttendanceAction->execute(
                 assignment: $machineAssignment->fresh('worker'),
-                startedAt: $data->siteManagerStartedAt,
-                finishedAt: $data->siteManagerFinishedAt,
+                startedAt: $startedAt,
+                finishedAt: $finishedAt,
                 advancePayment: $data->advancePayment,
                 actor: $currentWorker,
             );
@@ -242,12 +240,6 @@ class CreateTruckLogAction extends BaseAction
                 companyId: $currentWorker->company_id,
             );
 
-            $startedAt =
-                $data->operatorStartedAt ?? now();
-
-            $finishedAt =
-                $data->operatorFinishedAt;
-
             $dailyLog = DailyLog::query()
                 ->where(
                     'company_id',
@@ -273,8 +265,8 @@ class CreateTruckLogAction extends BaseAction
                 machineId: $machine->id,
                 workerId: $currentWorker->id,
                 date: today()->toDateString(),
-                start: $startedAt,
-                finish: $finishedAt,
+                start: null,
+                finish: null,
                 machineMessage: 'Truck is already in use during the selected period.',
                 workerMessage: 'Driver is already assigned to another truck during the selected period.',
             );

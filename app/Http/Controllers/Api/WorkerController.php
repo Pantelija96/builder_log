@@ -6,16 +6,20 @@ use App\DTO\Requests\GetWorkersData;
 use App\DTO\Worker\CreateWorkerData;
 use App\DTO\Worker\GetWorkerWorkHistoryData;
 use App\DTO\Worker\UpdateWorkerData;
+use App\Enums\WorkerRole;
 use App\Http\Controllers\ApiController;
 use App\Http\Requests\Get\GetWorkersRequest;
 use App\Http\Requests\Worker\CreateWorkerRequest;
 use App\Http\Requests\Worker\DeleteWorkerRequest;
+use App\Http\Requests\Worker\GetAvailableWorkersRequest;
 use App\Http\Requests\Worker\GetWorkerWorkHistoryRequest;
 use App\Http\Requests\Worker\UpdateWorkerRequest;
 use App\Http\Resources\WorkerResource;
 use App\Http\Resources\WorkerWorkHistoryResource;
 use App\Models\Worker;
+use App\QueryFilters\AttendancePeriod;
 use App\Services\WorkerService;
+use Carbon\CarbonImmutable;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 
@@ -35,6 +39,29 @@ class WorkerController extends ApiController
         return $this->success(
             data: WorkerResource::collection($workers),
         );
+    }
+
+    /**
+     * Find active workers available now, at a point, or for an interval.
+     *
+     * Without time parameters, checks the current server instant in the business timezone.
+     * Use at alone for a point, or started_at with optional finished_at for an interval.
+     * An interval without finished_at ends at local midnight. Boundaries are half-open.
+     * Combining at with interval parameters, or supplying finished_at alone, returns 422.
+     */
+    public function available(GetAvailableWorkersRequest $request): JsonResponse
+    {
+        $start = $request->validated('started_at');
+        $time = $start ?? $request->validated('at');
+        $target = AttendancePeriod::local($time === null ? now() : CarbonImmutable::parse($time));
+        $finish = $request->validated('finished_at');
+        $end = $start === null ? null : AttendancePeriod::effectiveEnd(
+            $target, $finish === null ? null : CarbonImmutable::parse($finish), $target->toDateString(),
+        );
+
+        return $this->success(WorkerResource::collection(
+            $this->workerService->getAvailable($request->user(), $request->enum('role', WorkerRole::class), $target, $end),
+        ));
     }
 
     #[Response(status: 404, description: 'The worker is missing or outside the company.', type: 'array{message: string}')]

@@ -20,10 +20,6 @@ class GetOccupiedTrucksAction extends BaseAction
 
         return MachineAssignment::query()
             ->visibleTo($currentWorker)
-            ->whereDate(
-                'date',
-                $now->toDateString(),
-            )
             ->whereHas(
                 'machine',
                 function (Builder $query) {

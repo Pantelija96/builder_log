@@ -11,6 +11,7 @@ readonly class UpdateWorkerAttendanceData
         public ?Carbon $startedAt = null,
         public ?Carbon $finishedAt = null,
         public ?float $advancePayment = null,
+        public bool $finishProvided = false,
     ) {}
 
     public static function fromRequest(UpdateWorkerAttendanceRequest $request): self
@@ -24,17 +25,25 @@ readonly class UpdateWorkerAttendanceData
                 ? Carbon::parse($request->finished_at)
                 : null,
 
+            finishProvided: $request->exists('finished_at'),
+
             advancePayment: $request->filled('advance_payment')
                 ? (float) $request->advance_payment
                 : null,
         );
     }
+
     public function toUpdateArray(): array
     {
-        return array_filter([
-            'started_at'      => $this->startedAt,
-            'finished_at'     => $this->finishedAt,
+        $values = array_filter([
+            'started_at' => $this->startedAt,
             'advance_payment' => $this->advancePayment,
         ], fn ($value) => $value !== null);
+
+        if ($this->finishProvided || $this->finishedAt !== null) {
+            $values['finished_at'] = $this->finishedAt;
+        }
+
+        return $values;
     }
 }

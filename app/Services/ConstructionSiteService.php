@@ -37,7 +37,7 @@ class ConstructionSiteService
         $query->with([
             'company',
             'todayDailyLog',
-            'siteManagers' => fn ($managers) => $managers->where('workers.company_id', $worker->company_id),
+            'siteManagers' => fn ($managers) => $managers->where('workers.company_id', $worker->company_id)->inDisplayOrder(),
         ]);
 
         $query = (new ConstructionSiteFilter($data))

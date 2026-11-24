@@ -23,19 +23,19 @@ class WorkerAttendanceController extends ApiController
 {
     public function __construct(
         private readonly WorkerAttendanceService $workerAttendanceService,
-    ) {
-    }
+    ) {}
 
     #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
     #[Response(status: 422, description: 'Invalid request or no manager attribution available for an administrator.', type: 'array{message: string, errors?: array<string, list<string>>}')]
-    #[Response(status: 409, description: 'The ordinary worker already has attendance on this date at another site.', type: 'array{message: string}')]
-    #[Response(status: 500, description: 'The daily log is locked or already contains this entry.', type: 'array{message: string}')]
-    public function store(DailyLog $dailyLog, CreateWorkerAttendanceRequest $request,): JsonResponse {
+    #[Response(status: 409, description: 'The worker already has an overlapping period.', type: 'array{message: string}')]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
+    public function store(DailyLog $dailyLog, CreateWorkerAttendanceRequest $request): JsonResponse
+    {
 
         /** @var Worker $worker */
         $worker = auth()->user();
 
-        $attendance = $this->workerAttendanceService->create($dailyLog, CreateWorkerAttendanceData::fromRequest($request), $worker,);
+        $attendance = $this->workerAttendanceService->create($dailyLog, CreateWorkerAttendanceData::fromRequest($request), $worker);
 
         return $this->success(
             WorkerAttendanceResource::make(
@@ -46,7 +46,8 @@ class WorkerAttendanceController extends ApiController
     }
 
     #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
-    public function index(DailyLog $dailyLog, GetWorkerAttendancesRequest $request,): JsonResponse {
+    public function index(DailyLog $dailyLog, GetWorkerAttendancesRequest $request): JsonResponse
+    {
         return $this->success(
             WorkerAttendanceResource::collection(
                 $this->workerAttendanceService->get($dailyLog, GetWorkerAttendancesData::fromRequest($request), $request->user())
@@ -56,13 +57,15 @@ class WorkerAttendanceController extends ApiController
 
     #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
     #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
-    public function update(DailyLog $dailyLog, WorkerAttendance $workerAttendance, UpdateWorkerAttendanceRequest $request,): JsonResponse {
+    #[Response(status: 409, description: 'The worker already has an overlapping period.', type: 'array{message: string}')]
+    public function update(DailyLog $dailyLog, WorkerAttendance $workerAttendance, UpdateWorkerAttendanceRequest $request): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 
         return $this->success(
             WorkerAttendanceResource::make(
-                $this->workerAttendanceService->update($dailyLog, $workerAttendance, UpdateWorkerAttendanceData::fromRequest($request), $worker,)
+                $this->workerAttendanceService->update($dailyLog, $workerAttendance, UpdateWorkerAttendanceData::fromRequest($request), $worker)
             ),
             'Worker attendance updated successfully.'
         );
@@ -70,18 +73,20 @@ class WorkerAttendanceController extends ApiController
 
     #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
     #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
-    public function destroy(DailyLog $dailyLog, WorkerAttendance $workerAttendance, DeleteWorkerAttendanceRequest $request): JsonResponse {
+    public function destroy(DailyLog $dailyLog, WorkerAttendance $workerAttendance, DeleteWorkerAttendanceRequest $request): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 
-        $this->workerAttendanceService->delete(dailyLog: $dailyLog, workerAttendance: $workerAttendance, currentWorker: $worker, reason: $request->string('reason')->toString(),);
+        $this->workerAttendanceService->delete(dailyLog: $dailyLog, workerAttendance: $workerAttendance, currentWorker: $worker, reason: $request->string('reason')->toString());
 
         return $this->success(
             message: 'Worker attendance deleted successfully.'
         );
     }
 
-    public function getAll(GetWorkerAttendancesRequest $request,): JsonResponse {
+    public function getAll(GetWorkerAttendancesRequest $request): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = auth()->user();
 
@@ -95,7 +100,8 @@ class WorkerAttendanceController extends ApiController
         );
     }
 
-    public function absent(GetAbsentWorkersRequest $request,): JsonResponse {
+    public function absent(GetAbsentWorkersRequest $request): JsonResponse
+    {
         /** @var Worker $worker */
         $worker = $request->user();
 

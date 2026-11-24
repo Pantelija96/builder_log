@@ -58,11 +58,9 @@ class CreateExcavatorLogAction extends BaseAction
                 companyId: $currentWorker->company_id,
             );
 
-            $startedAt =
-                $data->siteManagerStartedAt ?? now();
-
-            $finishedAt =
-                $data->siteManagerFinishedAt;
+            $startedAt = $data->siteManagerStartedAt?->copy()->setTimezone(config('app.timezone'));
+            $finishedAt = $data->siteManagerFinishedAt?->copy()->setTimezone(config('app.timezone'));
+            MachinePeriod::validateManagerTimes($startedAt, $finishedAt);
 
             /*
              * Takeover je dozvoljen samo nad stvarnim
@@ -78,7 +76,7 @@ class CreateExcavatorLogAction extends BaseAction
                     workerId: $worker->id,
                     dailyLog: $dailyLog,
                     date: $dailyLog->date->toDateString(),
-                    startedAt: $startedAt,
+                    startedAt: $startedAt ?? now(),
                     finishedAt: $finishedAt,
                 );
 
@@ -117,8 +115,8 @@ class CreateExcavatorLogAction extends BaseAction
                 ]);
 
                 $excavatorLog->update([
-                    'site_manager_started_at' => $data->siteManagerStartedAt,
-                    'site_manager_finished_at' => $data->siteManagerFinishedAt,
+                    'site_manager_started_at' => $startedAt,
+                    'site_manager_finished_at' => $finishedAt,
                     'note_site_manager' => $data->noteSiteManager,
                 ]);
 
@@ -132,8 +130,8 @@ class CreateExcavatorLogAction extends BaseAction
 
                 $this->syncMachineWorkerAttendanceAction->execute(
                     assignment: $selfAssignment->fresh('worker'),
-                    startedAt: $data->siteManagerStartedAt,
-                    finishedAt: $data->siteManagerFinishedAt,
+                    startedAt: $startedAt,
+                    finishedAt: $finishedAt,
                     advancePayment: $data->advancePayment,
                     actor: $currentWorker,
                 );
@@ -189,8 +187,8 @@ class CreateExcavatorLogAction extends BaseAction
                 'worker_id' => $worker->id,
                 'created_by' => $currentWorker->id,
 
-                'site_manager_started_at' => $data->siteManagerStartedAt,
-                'site_manager_finished_at' => $data->siteManagerFinishedAt,
+                'site_manager_started_at' => $startedAt,
+                'site_manager_finished_at' => $finishedAt,
 
                 'operator_started_at' => null,
                 'operator_finished_at' => null,
@@ -208,8 +206,8 @@ class CreateExcavatorLogAction extends BaseAction
 
             $this->syncMachineWorkerAttendanceAction->execute(
                 assignment: $assignment->fresh('worker'),
-                startedAt: $data->siteManagerStartedAt,
-                finishedAt: $data->siteManagerFinishedAt,
+                startedAt: $startedAt,
+                finishedAt: $finishedAt,
                 advancePayment: $data->advancePayment,
                 actor: $currentWorker,
             );
@@ -263,19 +261,6 @@ class CreateExcavatorLogAction extends BaseAction
                 companyId: $currentWorker->company_id,
             );
 
-            /*
-             * Operator može pokrenuti self-assignment.
-             *
-             * Postojeći assignment sa nepotpunim Site Manager
-             * vremenima se smatra zauzetim bez obzira na
-             * operator_finished_at.
-             */
-            $startedAt =
-                $data->operatorStartedAt ?? now();
-
-            $finishedAt =
-                $data->operatorFinishedAt;
-
             $dailyLog = DailyLog::query()
                 ->where(
                     'company_id',
@@ -301,8 +286,8 @@ class CreateExcavatorLogAction extends BaseAction
                 machineId: $machine->id,
                 workerId: $currentWorker->id,
                 date: today()->toDateString(),
-                start: $startedAt,
-                finish: $finishedAt,
+                start: null,
+                finish: null,
                 machineMessage: __('Excavator is already in use during the selected period.'),
                 workerMessage: __('Operator is already assigned during the selected period.'),
             );

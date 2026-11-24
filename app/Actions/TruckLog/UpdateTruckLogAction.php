@@ -82,7 +82,7 @@ class UpdateTruckLogAction extends BaseAction
                 true,
             )) {
                 $values['site_manager_started_at'] =
-                    $data->siteManagerStartedAt;
+                    $data->siteManagerStartedAt?->copy()->setTimezone(config('app.timezone'));
             }
 
             if (in_array(
@@ -91,7 +91,7 @@ class UpdateTruckLogAction extends BaseAction
                 true,
             )) {
                 $values['site_manager_finished_at'] =
-                    $data->siteManagerFinishedAt;
+                    $data->siteManagerFinishedAt?->copy()->setTimezone(config('app.timezone'));
             }
 
             if (in_array(
@@ -243,6 +243,8 @@ class UpdateTruckLogAction extends BaseAction
                         : $truckLog
                             ->site_manager_finished_at;
 
+                MachinePeriod::validateManagerTimes($siteManagerStartedAt, $siteManagerFinishedAt);
+
                 MachinePeriod::ensureAvailable(
                     companyId: $currentWorker->company_id,
                     machineId: $assignment->machine_id,
@@ -251,6 +253,7 @@ class UpdateTruckLogAction extends BaseAction
                     start: $siteManagerStartedAt,
                     finish: $siteManagerFinishedAt,
                     exceptAssignmentId: $assignment->id,
+                    updating: true,
                     machineMessage: 'Truck is already in use during the selected period.',
                     workerMessage: 'Driver is already assigned to another truck during the selected period.',
                 );

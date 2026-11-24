@@ -32,10 +32,26 @@ Do not guess class names or architecture.
 - Keep `site_manager_id` on children where the API exposes it. The `site_manager_id` query parameter on DailyLog filters membership. On MachineAssignment it filters attribution. The existing legacy DailyLog create body still validates its legacy fields. Prefer the select operation for current-day work.
 - Pending machine self-assignment can have null stored `MachineAssignment.site_manager_id`. On wire the resource exposes nullable/conditional `site_manager`; it does not emit a scalar `site_manager_id`. Takeover attributes the actual manager; upsert by the returned log ID. Self-assignment alone creates no salary attendance. A manager-authoritative start drives salary synchronization.
 - If `DailyLog.is_locked` is true, allow authorized viewing and disable create, update, delete, takeover and finish where applicable. Keep the backend authoritative. An administrator can still use the dedicated unlock operation if permitted. Selection can return an already locked log.
-- Handle both 200 and 201 from select. Handle 403 permission failure, 404 for foreign/missing/invisible or wrong-parent records, 409 for known conflicts, and 422 for validation or required attribution. Existing lock, duplicate and overlap cases can use 500; after a generic 500, refresh authoritative state before deciding whether a business condition caused it.
+- Handle both 200 and 201 from select. Handle 403 permission failure, 404 for foreign/missing/invisible or wrong-parent records, 409 for known conflicts, and 422 for validation or required attribution. Attendance overlaps return 409. Existing lock and machine overlap cases can use 500; after a generic 500, refresh authoritative state before deciding whether a business condition caused it.
 - Keep unrelated behavior, current architecture, and API fields as implemented. Do not change the backend, invent compatibility fields, or perform unrelated refactors. Do not invent financial attribution from participants. The client must compile and the existing tests must continue to pass.
 
 
+
+## Current and planned worker selection
+
+- Call GET /api/v1/workers/available?role=worker for available now. Use at for an explicit point, or started_at and optional finished_at for a planned interval. Present server candidates directly; never subtract everyone with attendance that day. Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past.
+- The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker. An open attendance reserves time from its start until the local midnight following attendance.date. Salary uses exactly eight hours per open attendance. A closed attendance uses actual hours. An 08:00–12:00 attendance followed by an open attendance at 12:00 totals 12 salary hours.
+- Distinguish the current instant, an explicit point, and an interval in availability cache keys; refresh current-mode results as time advances. Use the selected period as part of the interval cache key and use attendance IDs for editing/deleting. Refresh candidates after any relevant mutation. A 409 from create or PATCH means the interval must be revised or refreshed. PATCH can explicitly clear finished_at with null; omission preserves it.
+- Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.
+
+## Worker display order
+
+The default changed from 1 to 0. Show 0 as the normal group and use it to clear manual priority. A value of 1 is the highest positive priority.
+
+- Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.
+- The backend lists all positive manual priorities first, in ascending order, and then the normal group (0). Within each equal value it sorts by first_name, last_name, and id ascending. Preserve the backend order unless the user requests another supported sort. Explicit sort/direction on GET /workers takes precedence.
+- Read `display_order` wherever the API uses WorkerResource. The ordering applies to the worker directory, available worker pickers and construction-site manager lists. Preserve attendance, salary and report ordering.
+- Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it.
 
 ## Endpoint changes
 
@@ -688,7 +704,7 @@ ANDROID CHANGE:
 
 Current HTTP outcomes — 200, 401, 403, 404, 409, 422, 500.
 
-Manual creation accepts an existing same-company worker ID. The unique company/worker/date rule applies to ordinary WORKER manual attendance. Machine flows generate attendance on managerial confirmation; do not send an additional manual POST for a machine period.
+Manual creation accepts an existing same-company worker ID. The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker. Machine flows generate attendance on managerial confirmation; do not send an additional manual POST for a machine period.
 
 ### PATCH /api/v1/daily-logs/{dailyLog}/worker-attendances/{workerAttendance}
 
@@ -748,7 +764,7 @@ ANDROID CHANGE:
 
 - Use the child’s existing ID under the canonical DailyLog; preserve reason where required.
 
-Current HTTP outcomes — 200, 401, 403, 404, 422, 500.
+Current HTTP outcomes — 200, 401, 403, 404, 409, 422, 500.
 
 ### DELETE /api/v1/daily-logs/{dailyLog}/worker-attendances/{workerAttendance}
 
@@ -4637,9 +4653,194 @@ ANDROID CHANGE:
 
 Current HTTP outcomes — 200, 401, 403, 404.
 
+### GET /api/v1/workers/available
+
+PREVIOUS REQUEST:
+
+ENDPOINT DID NOT EXIST
+
+CURRENT REQUEST:
+
+NO BODY
+
+Use one timing mode:
+
+- No time parameters checks availability right now. Example `GET /api/v1/workers/available?role=worker`. This is a point query, so future assignments do not exclude a worker.
+- `at` checks an explicit point. Example `GET /api/v1/workers/available?role=worker&at=2026-11-24T14%3A00%3A00%2B01%3A00`.
+- `started_at` with optional `finished_at` checks the entire interval. When the finish is omitted, the interval ends at local midnight.
+
+An `at` value combined with either interval parameter returns 422. A finish without a start also returns 422. `role` is optional and supports `worker`, `operator`, and `driver`. Without a role, all three eligible roles are considered. Encode `+` as `%2B` in raw URLs.
+
+With 08:00–12:00 and 16:00–20:00 recorded, the worker is available at 14:00. A retroactive 10:00–14:00 write still conflicts with 08:00–12:00, regardless of server time. Attendance POST/PATCH remain authoritative and reject stale selections with 409.
+
+PREVIOUS RESPONSE:
+
+ENDPOINT DID NOT EXIST
+
+CURRENT RESPONSE:
+
+HTTP 200 with `success`, `message` and a `data` array of WorkerResource values. These responses were captured with worker 10 having an 08:00–12:00 attendance.
+
+`GET /api/v1/workers/available?role=worker&started_at=2026-11-24T12%3A00%3A00%2B01%3A00&finished_at=2026-11-24T16%3A00%3A00%2B01%3A00`
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 10,
+      "first_name": "Milan",
+      "last_name": "Jović",
+      "full_name": null,
+      "username": "milan",
+      "email": null,
+      "phone": null,
+      "role": "worker",
+      "hourly_rate": "25.00",
+      "is_active": true,
+      "created_at": "2026-11-22T08:00:00.000000Z",
+      "updated_at": "2026-11-22T08:00:00.000000Z",
+      "is_available": true,
+      "display_order": 0,
+      "company": {
+        "id": 1,
+        "name": "Cole, Mertz and Keeling",
+        "created_at": "2026-11-24T00:16:21.000000Z",
+        "updated_at": "2026-11-24T00:16:21.000000Z"
+      },
+      "construction_sites": []
+    }
+  ]
+}
+```
+
+`GET /api/v1/workers/available?role=worker&started_at=2026-11-24T11%3A30%3A00%2B01%3A00&finished_at=2026-11-24T16%3A00%3A00%2B01%3A00`
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": []
+}
+```
+
+ANDROID CHANGE:
+
+- Call GET /api/v1/workers/available?role=worker for available now. Use at for an explicit point, or started_at and optional finished_at for a planned interval. Present server candidates directly; never subtract everyone with attendance that day. Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past.
+
+Current HTTP outcomes — 200, 401, 422.
+
+### POST /api/v1/workers
+
+PREVIOUS REQUEST:
+
+```json
+{
+  "first_name": "Ana",
+  "last_name": "Petrovic",
+  "role": "worker",
+  "username": "ana",
+  "password": "example-password"
+}
+```
+
+CURRENT REQUEST:
+
+```json
+{
+  "first_name": "Ana",
+  "last_name": "Petrovic",
+  "role": "worker",
+  "username": "ana",
+  "password": "example-password",
+  "display_order": 2
+}
+```
+
+PREVIOUS RESPONSE:
+
+```json
+{
+  "success": true,
+  "message": "Worker created successfully.",
+  "data": {
+    "id": 10,
+    "first_name": "Ana"
+  }
+}
+```
+
+CURRENT RESPONSE:
+
+```json
+{
+  "success": true,
+  "message": "Worker created successfully.",
+  "data": {
+    "id": 10,
+    "first_name": "Ana",
+    "display_order": 2
+  }
+}
+```
+
+ANDROID CHANGE:
+
+- Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it. Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.
+
+### PATCH /api/v1/workers/{worker}
+
+PREVIOUS REQUEST:
+
+```json
+{
+  "first_name": "Ana"
+}
+```
+
+CURRENT REQUEST:
+
+```json
+{
+  "display_order": 0
+}
+```
+
+PREVIOUS RESPONSE:
+
+```json
+{
+  "success": true,
+  "message": "Worker updated successfully.",
+  "data": {
+    "id": 10,
+    "first_name": "Ana"
+  }
+}
+```
+
+CURRENT RESPONSE:
+
+```json
+{
+  "success": true,
+  "message": "Worker updated successfully.",
+  "data": {
+    "id": 10,
+    "first_name": "Ana",
+    "display_order": 0
+  }
+}
+```
+
+ANDROID CHANGE:
+
+- Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it. Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.
+
 ## Verification and final return
 
-Exercise site switching, first and repeat selection, shared edits by a different manager, locked reads and writes, the ordinary duplicate rule, nullable pending machines, takeover reusing an ID, and company scoping. Report the commands and results. In the final response include:
+Exercise site switching, first and repeat selection, shared edits by a different manager, locked reads and writes, adjacent attendance, cross-site conflicts, open intervals and exact-finish boundaries, nullable pending machines, takeover reusing an ID, and company scoping. Report the commands and results. In the final response include:
 
 - files modified
 - files created

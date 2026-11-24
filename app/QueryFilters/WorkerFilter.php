@@ -20,14 +20,13 @@ class WorkerFilter extends BaseFilter
 
     public function __construct(
         protected readonly GetWorkersData $data,
-    ) {
-    }
+    ) {}
 
     public function apply(Builder $query): Builder
     {
         $search = $this->data->list->search;
 
-        $sort = $this->resolveSort($this->data->list->sort);
+        $sort = $this->data->list->sort;
 
         return $query
             ->when(
@@ -99,9 +98,10 @@ class WorkerFilter extends BaseFilter
                     $this->data->isActive
                 )
             )
-            ->orderBy(
-                $sort,
-                $this->resolveDirection($this->data->list->direction)
+            ->when(
+                in_array($sort, self::SORTABLE, true),
+                fn (Builder $workers) => $workers->orderBy($sort, $this->resolveDirection($this->data->list->direction)),
+                fn (Builder $workers) => $workers->inDisplayOrder(),
             );
     }
 }

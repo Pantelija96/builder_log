@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class WorkerAttendance extends Model
 {
     use HasFactory;
-    use SoftDeletes;
     use Loggable;
+    use SoftDeletes;
 
     protected $fillable = [
         'company_id',
@@ -28,7 +28,6 @@ class WorkerAttendance extends Model
         'created_by',
         'hourly_rate',
         'machine_assignment_id',
-        'ordinary_worker_day',
     ];
 
     protected function casts(): array

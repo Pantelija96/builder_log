@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\LogEvent;
 use App\QueryFilters\MachinePeriod;
 use App\Traits\Loggable;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -72,11 +73,16 @@ class MachineAssignment extends Model
         return $query;
     }
 
-    public function scopeOccupiedAt(Builder $query, mixed $now): Builder
+    public function scopeOccupiedAt(Builder $query, CarbonInterface $now): Builder
+    {
+        return $query->withMachineLogMatching(fn (Builder $log) => MachinePeriod::occupiedAt($log, $now));
+    }
+
+    public function scopeWithMachineLogMatching(Builder $query, callable $condition): Builder
     {
         return $query->where(fn (Builder $assignments) => $assignments
-            ->whereHas('excavatorLog', fn (Builder $log) => MachinePeriod::occupiedAt($log, $now))
-            ->orWhereHas('truckLog', fn (Builder $log) => MachinePeriod::occupiedAt($log, $now)));
+            ->whereHas('excavatorLog', $condition)
+            ->orWhereHas('truckLog', $condition));
     }
 
     public function isPendingSelfAssignment(): bool

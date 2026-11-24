@@ -27,10 +27,6 @@ class GetCurrentMachineAssignmentAction extends BaseAction
                 'worker_id',
                 $targetWorkerId,
             )
-            ->whereDate(
-                'date',
-                $now->toDateString(),
-            )
             ->occupiedAt($now)
             ->with([
                 'machine',

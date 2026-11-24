@@ -12,8 +12,7 @@ class GetAssignedSiteManagersAction
         return $constructionSite
             ->siteManagers()
             ->where('workers.company_id', $constructionSite->company_id)
-            ->orderBy('first_name')
-            ->orderBy('last_name')
+            ->inDisplayOrder()
             ->get();
     }
 }

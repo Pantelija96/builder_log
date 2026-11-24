@@ -82,7 +82,7 @@ class UpdateExcavatorLogAction extends BaseAction
                 true,
             )) {
                 $values['site_manager_started_at'] =
-                    $data->siteManagerStartedAt;
+                    $data->siteManagerStartedAt?->copy()->setTimezone(config('app.timezone'));
             }
 
             if (in_array(
@@ -91,7 +91,7 @@ class UpdateExcavatorLogAction extends BaseAction
                 true,
             )) {
                 $values['site_manager_finished_at'] =
-                    $data->siteManagerFinishedAt;
+                    $data->siteManagerFinishedAt?->copy()->setTimezone(config('app.timezone'));
             }
 
             if (in_array(
@@ -229,6 +229,8 @@ class UpdateExcavatorLogAction extends BaseAction
                         : $excavatorLog
                             ->site_manager_finished_at;
 
+                MachinePeriod::validateManagerTimes($siteManagerStartedAt, $siteManagerFinishedAt);
+
                 MachinePeriod::ensureAvailable(
                     companyId: $currentWorker->company_id,
                     machineId: $assignment->machine_id,
@@ -237,6 +239,7 @@ class UpdateExcavatorLogAction extends BaseAction
                     start: $siteManagerStartedAt,
                     finish: $siteManagerFinishedAt,
                     exceptAssignmentId: $assignment->id,
+                    updating: true,
                     machineMessage: __('Excavator is already in use during the selected period.'),
                     workerMessage: 'Operator is already assigned during the selected period.',
                 );

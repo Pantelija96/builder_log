@@ -90,6 +90,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/logout-all', [AuthController::class, 'logoutAll']);
 
         Route::get('/workers', [WorkerController::class, 'index']);
+        Route::get('/workers/available', [WorkerController::class, 'available']);
         Route::get('/companies', [CompanyController::class, 'index']);
 //        Route::get('/construction-sites', [ConstructionSiteController::class, 'index']);
 //        Route::get('/suppliers', [SupplierController::class, 'index']);
