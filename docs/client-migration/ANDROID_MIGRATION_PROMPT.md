@@ -32,7 +32,7 @@ Do not guess class names or architecture.
 - Keep `site_manager_id` on children where the API exposes it. The `site_manager_id` query parameter on DailyLog filters membership. On MachineAssignment it filters attribution. The existing legacy DailyLog create body still validates its legacy fields. Prefer the select operation for current-day work.
 - Pending machine self-assignment can have null stored `MachineAssignment.site_manager_id`. On wire the resource exposes nullable/conditional `site_manager`; it does not emit a scalar `site_manager_id`. Takeover attributes the actual manager; upsert by the returned log ID. Self-assignment alone creates no salary attendance. A manager-authoritative start drives salary synchronization.
 - If `DailyLog.is_locked` is true, allow authorized viewing and disable create, update, delete, takeover and finish where applicable. Keep the backend authoritative. An administrator can still use the dedicated unlock operation if permitted. Selection can return an already locked log.
-- Handle both 200 and 201 from select. Handle 403 permission failure, 404 for foreign/missing/invisible or wrong-parent records, 409 for known conflicts, and 422 for validation or required attribution. Attendance overlaps return 409. Existing lock and machine overlap cases can use 500; after a generic 500, refresh authoritative state before deciding whether a business condition caused it.
+- Handle both 200 and 201 from select. Handle 403 permission failure, 404 for foreign/missing/invisible or wrong-parent records, 409 for known conflicts, and 422 for validation or required attribution. Attendance overlaps return 409. Machine overlaps return 409 with a stable error_code. Existing locked-log cases can use 500; after a generic 500, refresh authoritative state before deciding whether a business condition caused it.
 - Keep unrelated behavior, current architecture, and API fields as implemented. Do not change the backend, invent compatibility fields, or perform unrelated refactors. Do not invent financial attribution from participants. The client must compile and the existing tests must continue to pass.
 
 
@@ -2303,7 +2303,9 @@ ANDROID CHANGE:
 
 - Replace cached results with the response scoped to the active company.
 
-Current HTTP outcomes — 200, 401, 422.
+Current HTTP outcomes — 200, 401, 403, 422.
+
+Admin-only live=true uses server now in Europe/Belgrade. Admin-only at uses the supplied ISO instant. Do not combine live (including false) with at; do not combine a point-in-time query with date, date_from, or date_to. live=false keeps historical mode. construction_site_id, worker filters, sorting and pagination remain supported. Historical date queries return each attendance row. Live mode includes active manual and confirmed machine-linked attendance rows using started_at <= at < effective finish. An open row ends at local midnight for display.
 
 ### GET /api/v1/subcontractors
 
@@ -2551,7 +2553,9 @@ ANDROID CHANGE:
 
 - Show a pending reservation with nullable attribution. Expect no salary attendance yet.
 
-Current HTTP outcomes — 200, 401, 403, 404, 422, 500.
+Current HTTP outcomes — 200, 401, 403, 404, 409, 422, 500.
+
+HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500.
 
 ### POST /api/v1/excavator-logs/daily-logs/{dailyLog}
 
@@ -2609,7 +2613,9 @@ ANDROID CHANGE:
 
 - Send managerial times and canonical DailyLog ID. Upsert the returned log by ID; takeover can reuse the self-assigned ID.
 
-Current HTTP outcomes — 200, 401, 403, 404, 422, 500.
+Current HTTP outcomes — 200, 401, 403, 404, 409, 422, 500.
+
+HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500.
 
 ### PATCH /api/v1/excavator-logs/{excavatorLog}
 
@@ -2663,7 +2669,9 @@ ANDROID CHANGE:
 
 - Operator/driver PATCH may include operator fields and machine readings; omit managerial times, note_site_manager and advance_payment.
 
-Current HTTP outcomes — 200, 401, 403, 404, 422, 500.
+Current HTTP outcomes — 200, 401, 403, 404, 409, 422, 500.
+
+HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500.
 
 ### DELETE /api/v1/excavator-logs/{excavatorLog}
 
@@ -2847,7 +2855,9 @@ ANDROID CHANGE:
 
 - Show a pending reservation with nullable attribution. Expect no salary attendance yet.
 
-Current HTTP outcomes — 200, 401, 403, 404, 422, 500.
+Current HTTP outcomes — 200, 401, 403, 404, 409, 422, 500.
+
+HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500.
 
 ### POST /api/v1/truck-logs/daily-logs/{dailyLog}
 
@@ -2905,7 +2915,9 @@ ANDROID CHANGE:
 
 - Send managerial times and canonical DailyLog ID. Upsert the returned log by ID; takeover can reuse the self-assigned ID.
 
-Current HTTP outcomes — 200, 401, 403, 404, 422, 500.
+Current HTTP outcomes — 200, 401, 403, 404, 409, 422, 500.
+
+HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500.
 
 ### PATCH /api/v1/truck-logs/{truckLog}
 
@@ -2959,7 +2971,9 @@ ANDROID CHANGE:
 
 - Operator/driver PATCH may include operator fields and machine readings; omit managerial times, note_site_manager and advance_payment.
 
-Current HTTP outcomes — 200, 401, 403, 404, 422, 500.
+Current HTTP outcomes — 200, 401, 403, 404, 409, 422, 500.
+
+HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500.
 
 ### DELETE /api/v1/truck-logs/{truckLog}
 
@@ -4837,6 +4851,322 @@ CURRENT RESPONSE:
 ANDROID CHANGE:
 
 - Parse Worker.display_order and preserve the server order in worker pickers. Send display_order only when the administrator sets it. Worker.display_order is a non-null integer, default 0. On create and update it is optional; send a JSON integer from 0 to 2147483647. Omitting it on update keeps the current value. Sending 0 removes manual priority. Duplicate values are allowed.
+
+## Live attendance and machine conflict examples
+
+Admin-only live=true uses server now in Europe/Belgrade. Admin-only at uses the supplied ISO instant. Do not combine live (including false) with at; do not combine a point-in-time query with date, date_from, or date_to. live=false keeps historical mode.
+
+construction_site_id, worker filters, sorting and pagination remain supported. Historical date queries return each attendance row. Live mode includes active manual and confirmed machine-linked attendance rows using started_at <= at < effective finish. An open row ends at local midnight for display.
+
+`GET /api/v1/worker-attendances?live=true&construction_site_id=2` → HTTP 200
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 2,
+      "company_id": 1,
+      "daily_log_id": 2,
+      "construction_site_id": 2,
+      "site_manager_id": 2,
+      "worker_id": 3,
+      "date": "2026-11-24",
+      "started_at": "2026-11-24T12:00:00.000000Z",
+      "finished_at": "2026-11-24T16:00:00.000000Z",
+      "worked_time": null,
+      "advance_payment": "0.00",
+      "hourly_rate": "25.00",
+      "created_by": 2,
+      "worker": {
+        "id": 3,
+        "display_order": 0,
+        "first_name": "Ana",
+        "last_name": "Markovic",
+        "full_name": null,
+        "username": "synthetic_worker",
+        "email": null,
+        "phone": null,
+        "role": "worker",
+        "hourly_rate": "25.00",
+        "is_active": true,
+        "created_at": "2026-11-24T13:00:00.000000Z",
+        "updated_at": "2026-11-24T13:00:00.000000Z",
+        "is_available": true
+      },
+      "creator": {
+        "id": 2,
+        "display_order": 0,
+        "first_name": "Mauricio",
+        "last_name": "Lehner",
+        "full_name": null,
+        "username": "pdenesik",
+        "email": null,
+        "phone": null,
+        "role": "site_manager",
+        "hourly_rate": null,
+        "is_active": true,
+        "created_at": "2026-11-24T13:00:00.000000Z",
+        "updated_at": "2026-11-24T13:00:00.000000Z",
+        "is_available": true
+      },
+      "construction_site": {
+        "id": 2,
+        "company_id": 1,
+        "name": "Site B",
+        "description": null,
+        "address": null,
+        "latitude": "-5.1929590",
+        "longitude": "-103.9040460",
+        "status": "active",
+        "created_at": "2026-11-24T13:00:00.000000Z",
+        "updated_at": "2026-11-24T13:00:00.000000Z",
+        "can_select": null
+      },
+      "created_at": "2026-11-24T13:00:00.000000Z",
+      "updated_at": "2026-11-24T13:00:00.000000Z",
+      "machine_assignment_id": null,
+      "machine": null
+    }
+  ]
+}
+```
+
+`GET /api/v1/worker-attendances?date=2026-11-24` → HTTP 200
+
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 1,
+      "company_id": 1,
+      "daily_log_id": 1,
+      "construction_site_id": 1,
+      "site_manager_id": 1,
+      "worker_id": 3,
+      "date": "2026-11-24",
+      "started_at": "2026-11-24T07:00:00.000000Z",
+      "finished_at": "2026-11-24T11:00:00.000000Z",
+      "worked_time": null,
+      "advance_payment": "0.00",
+      "hourly_rate": "25.00",
+      "created_by": 1,
+      "worker": {
+        "id": 3,
+        "display_order": 0,
+        "first_name": "Ana",
+        "last_name": "Markovic",
+        "full_name": null,
+        "username": "synthetic_worker",
+        "email": null,
+        "phone": null,
+        "role": "worker",
+        "hourly_rate": "25.00",
+        "is_active": true,
+        "created_at": "2026-11-24T13:00:00.000000Z",
+        "updated_at": "2026-11-24T13:00:00.000000Z",
+        "is_available": true
+      },
+      "creator": {
+        "id": 1,
+        "display_order": 0,
+        "first_name": "Maudie",
+        "last_name": "Wintheiser",
+        "full_name": null,
+        "username": "goldner.roberto",
+        "email": null,
+        "phone": null,
+        "role": "site_manager",
+        "hourly_rate": null,
+        "is_active": true,
+        "created_at": "2026-11-24T13:00:00.000000Z",
+        "updated_at": "2026-11-24T13:00:00.000000Z",
+        "is_available": true
+      },
+      "construction_site": {
+        "id": 1,
+        "company_id": 1,
+        "name": "Site A",
+        "description": null,
+        "address": null,
+        "latitude": "45.0107960",
+        "longitude": "-127.5282440",
+        "status": "active",
+        "created_at": "2026-11-24T13:00:00.000000Z",
+        "updated_at": "2026-11-24T13:00:00.000000Z",
+        "can_select": null
+      },
+      "created_at": "2026-11-24T13:00:00.000000Z",
+      "updated_at": "2026-11-24T13:00:00.000000Z",
+      "machine_assignment_id": null,
+      "machine": null
+    },
+    {
+      "id": 2,
+      "company_id": 1,
+      "daily_log_id": 2,
+      "construction_site_id": 2,
+      "site_manager_id": 2,
+      "worker_id": 3,
+      "date": "2026-11-24",
+      "started_at": "2026-11-24T12:00:00.000000Z",
+      "finished_at": "2026-11-24T16:00:00.000000Z",
+      "worked_time": null,
+      "advance_payment": "0.00",
+      "hourly_rate": "25.00",
+      "created_by": 2,
+      "worker": {
+        "id": 3,
+        "display_order": 0,
+        "first_name": "Ana",
+        "last_name": "Markovic",
+        "full_name": null,
+        "username": "synthetic_worker",
+        "email": null,
+        "phone": null,
+        "role": "worker",
+        "hourly_rate": "25.00",
+        "is_active": true,
+        "created_at": "2026-11-24T13:00:00.000000Z",
+        "updated_at": "2026-11-24T13:00:00.000000Z",
+        "is_available": true
+      },
+      "creator": {
+        "id": 2,
+        "display_order": 0,
+        "first_name": "Mauricio",
+        "last_name": "Lehner",
+        "full_name": null,
+        "username": "pdenesik",
+        "email": null,
+        "phone": null,
+        "role": "site_manager",
+        "hourly_rate": null,
+        "is_active": true,
+        "created_at": "2026-11-24T13:00:00.000000Z",
+        "updated_at": "2026-11-24T13:00:00.000000Z",
+        "is_available": true
+      },
+      "construction_site": {
+        "id": 2,
+        "company_id": 1,
+        "name": "Site B",
+        "description": null,
+        "address": null,
+        "latitude": "-5.1929590",
+        "longitude": "-103.9040460",
+        "status": "active",
+        "created_at": "2026-11-24T13:00:00.000000Z",
+        "updated_at": "2026-11-24T13:00:00.000000Z",
+        "can_select": null
+      },
+      "created_at": "2026-11-24T13:00:00.000000Z",
+      "updated_at": "2026-11-24T13:00:00.000000Z",
+      "machine_assignment_id": null,
+      "machine": null
+    }
+  ]
+}
+```
+
+Machine 1 already has a confirmed 08:00–12:00 reservation at Site A.
+
+`POST /api/v1/excavator-logs/daily-logs/2`
+
+```json
+{
+  "machine_id": 1,
+  "worker_id": 8,
+  "site_manager_started_at": "2026-11-24 11:00",
+  "site_manager_finished_at": "2026-11-24 15:00"
+}
+```
+
+HTTP 409
+
+```json
+{
+  "success": false,
+  "message": "Excavator is already in use during the selected period.",
+  "errors": null,
+  "error_code": "MACHINE_TIME_CONFLICT"
+}
+```
+
+Worker 7 already has confirmed presence on machine 1 from 08:00 to 12:00 at Site A.
+
+`POST /api/v1/excavator-logs/daily-logs/2`
+
+```json
+{
+  "machine_id": 2,
+  "worker_id": 7,
+  "site_manager_started_at": "2026-11-24 09:00",
+  "site_manager_finished_at": "2026-11-24 15:00"
+}
+```
+
+HTTP 409
+
+```json
+{
+  "success": false,
+  "message": "Operator is already assigned during the selected period.",
+  "errors": null,
+  "error_code": "MACHINE_WORKER_TIME_CONFLICT"
+}
+```
+
+Machine 1 already has a confirmed 08:00–12:00 reservation at Site A.
+
+`POST /api/v1/truck-logs/daily-logs/2`
+
+```json
+{
+  "machine_id": 1,
+  "worker_id": 8,
+  "site_manager_started_at": "2026-11-24 11:00",
+  "site_manager_finished_at": "2026-11-24 15:00"
+}
+```
+
+HTTP 409
+
+```json
+{
+  "success": false,
+  "message": "Truck is already in use during the selected period.",
+  "errors": null,
+  "error_code": "MACHINE_TIME_CONFLICT"
+}
+```
+
+Worker 7 already has confirmed presence on machine 1 from 08:00 to 12:00 at Site A.
+
+`POST /api/v1/truck-logs/daily-logs/2`
+
+```json
+{
+  "machine_id": 2,
+  "worker_id": 7,
+  "site_manager_started_at": "2026-11-24 09:00",
+  "site_manager_finished_at": "2026-11-24 15:00"
+}
+```
+
+HTTP 409
+
+```json
+{
+  "success": false,
+  "message": "Driver is already assigned during the selected period.",
+  "errors": null,
+  "error_code": "MACHINE_WORKER_TIME_CONFLICT"
+}
+```
 
 ## Verification and final return
 

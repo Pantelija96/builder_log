@@ -11,10 +11,12 @@ use App\DTO\WorkerAttendance\UpdateWorkerAttendanceData;
 use App\Models\DailyLog;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
+use App\QueryFilters\AttendancePeriod;
 use App\QueryFilters\WorkerAttendanceFilter;
-use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use App\Traits\EnsuresWorkerCanManageDailyLog;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
+use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Collection;
 
 class WorkerAttendanceService
@@ -51,19 +53,21 @@ class WorkerAttendanceService
         private readonly CreateWorkerAttendanceAction $createWorkerAttendanceAction,
         private readonly UpdateWorkerAttendanceAction $updateWorkerAttendanceAction,
         private readonly DeleteWorkerAttendanceAction $deleteWorkerAttendanceAction,
-    ) {
-    }
+    ) {}
 
-    public function create(DailyLog $dailyLog, CreateWorkerAttendanceData $data, Worker $currentWorker,): WorkerAttendance {
-        return $this->createWorkerAttendanceAction->execute($dailyLog, $data, $currentWorker,)
+    public function create(DailyLog $dailyLog, CreateWorkerAttendanceData $data, Worker $currentWorker): WorkerAttendance
+    {
+        return $this->createWorkerAttendanceAction->execute($dailyLog, $data, $currentWorker)
             ->load(['worker', 'creator']);
     }
 
-    public function findById(int $id,){
+    public function findById(int $id)
+    {
         return WorkerAttendance::find($id);
     }
 
-    public function get(DailyLog $dailyLog, GetWorkerAttendancesData $data, Worker $worker): Collection {
+    public function get(DailyLog $dailyLog, GetWorkerAttendancesData $data, Worker $worker): Collection
+    {
         $this->ensureCanRead($dailyLog, $worker);
 
         return (new WorkerAttendanceFilter($data))
@@ -73,24 +77,31 @@ class WorkerAttendanceService
             ->get();
     }
 
-    public function getAll(Worker $currentWorker, GetWorkerAttendancesData $data,): Collection {
+    public function getAll(Worker $currentWorker, GetWorkerAttendancesData $data, ?CarbonInterface $at = null): Collection
+    {
+        abort_if($at !== null && ! $currentWorker->isAdmin(), 403);
+        $query = $this->globalQuery($currentWorker)
+            ->when($at !== null, fn ($rows) => AttendancePeriod::attendances($rows, $at, null));
+
         return (new WorkerAttendanceFilter($data))
-            ->apply($this->globalQuery($currentWorker))
+            ->apply($query)
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
     }
 
-    public function update(DailyLog $dailyLog, WorkerAttendance $attendance, UpdateWorkerAttendanceData $data, Worker $worker,): WorkerAttendance
+    public function update(DailyLog $dailyLog, WorkerAttendance $attendance, UpdateWorkerAttendanceData $data, Worker $worker): WorkerAttendance
     {
-        return $this->updateWorkerAttendanceAction->execute($dailyLog, $attendance, $data, $worker,);
+        return $this->updateWorkerAttendanceAction->execute($dailyLog, $attendance, $data, $worker);
     }
 
-    public function delete(DailyLog $dailyLog, WorkerAttendance $workerAttendance, Worker $currentWorker, string $reason): void {
+    public function delete(DailyLog $dailyLog, WorkerAttendance $workerAttendance, Worker $currentWorker, string $reason): void
+    {
         $this->deleteWorkerAttendanceAction->execute($dailyLog, $workerAttendance, $currentWorker, $reason);
     }
 
-    public function getAbsentWorkers(Worker $currentWorker, ?string $date = null, ?string $dateFrom = null, ?string $dateTo = null,): array {
+    public function getAbsentWorkers(Worker $currentWorker, ?string $date = null, ?string $dateFrom = null, ?string $dateTo = null): array
+    {
         if ($date !== null) {
             $dateFrom = $date;
             $dateTo = $date;
@@ -146,12 +157,10 @@ class WorkerAttendanceService
 
         $presentByDate = $attendances
             ->groupBy(
-                fn (WorkerAttendance $attendance) =>
-                $attendance->date->toDateString()
+                fn (WorkerAttendance $attendance) => $attendance->date->toDateString()
             )
             ->map(
-                fn ($items) =>
-                $items
+                fn ($items) => $items
                     ->pluck('worker_id')
                     ->unique()
                     ->values()

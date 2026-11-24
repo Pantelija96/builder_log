@@ -8,6 +8,7 @@ use App\DTO\WorkerAttendance\UpdateWorkerAttendanceData;
 use App\Http\Requests\WorkerAttendance\CreateWorkerAttendanceRequest;
 use App\Http\Requests\WorkerAttendance\DeleteWorkerAttendanceRequest;
 use App\Http\Requests\WorkerAttendance\GetAbsentWorkersRequest;
+use App\Http\Requests\WorkerAttendance\GetGlobalWorkerAttendancesRequest;
 use App\Http\Requests\WorkerAttendance\GetWorkerAttendancesRequest;
 use App\Http\Requests\WorkerAttendance\UpdateWorkerAttendanceRequest;
 use App\Http\Resources\WorkerAttendanceResource;
@@ -85,7 +86,15 @@ class WorkerAttendanceController extends ApiController
         );
     }
 
-    public function getAll(GetWorkerAttendancesRequest $request): JsonResponse
+    /**
+     * List historical attendances or view presence at a point in time.
+     *
+     * For administrators, live=true checks server time in Europe/Belgrade, and at checks a supplied instant.
+     * Point-in-time queries support construction_site_id. Do not combine live with at, or a point in time with date, date_from or date_to.
+     * Without a point in time, date filters retain their historical meaning.
+     */
+    #[Response(status: 403, description: 'Only administrators can request point-in-time attendance.', type: 'array{message: string}')]
+    public function getAll(GetGlobalWorkerAttendancesRequest $request): JsonResponse
     {
         /** @var Worker $worker */
         $worker = auth()->user();
@@ -95,6 +104,7 @@ class WorkerAttendanceController extends ApiController
                 $this->workerAttendanceService->getAll(
                     $worker,
                     GetWorkerAttendancesData::fromRequest($request),
+                    $request->attendanceInstant(),
                 )
             )
         );

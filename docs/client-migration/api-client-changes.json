@@ -8,10 +8,10 @@
     "affected_operations": 82,
     "new_operations": 2,
     "removed_operations": 0,
-    "changed_request_shapes": 2,
-    "changed_response_shapes": 19,
+    "changed_request_shapes": 3,
+    "changed_response_shapes": 25,
     "authorization_changes": 74,
-    "behavior_changes": 49,
+    "behavior_changes": 50,
     "removed_fields": [
       "DailyLog.site_manager_id",
       "DailyLog.site_manager"
@@ -3080,7 +3080,10 @@
       "method": "GET",
       "path": "/api/v1/worker-attendances",
       "change_types": [
-        "AUTH_CHANGE"
+        "AUTH_CHANGE",
+        "BEHAVIOR_CHANGE",
+        "STATUS_CHANGE",
+        "REQUEST_CHANGE"
       ],
       "before": {
         "request": "NO BODY",
@@ -3126,27 +3129,272 @@
         "status_codes": [
           200,
           401,
+          403,
           422
         ],
         "behavior": [
           "200; 401; 422 for invalid filters where applicable.",
           "Company and membership constrain the list. Confirmed machine periods can appear more than once per worker/day.",
-          "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker."
+          "The daily attendance limit has been removed. Multiple non-overlapping periods on the same or different sites are valid for the same company and worker.",
+          "Admin-only live=true uses server now in Europe/Belgrade. Admin-only at uses the supplied ISO instant. Do not combine live (including false) with at; do not combine a point-in-time query with date, date_from, or date_to. live=false keeps historical mode.",
+          "construction_site_id, worker filters, sorting and pagination remain supported. Historical date queries return each attendance row. Live mode includes active manual and confirmed machine-linked attendance rows using started_at <= at < effective finish. An open row ends at local midnight for display."
+        ],
+        "query_parameters": {
+          "live": {
+            "type": "boolean",
+            "optional": true,
+            "examples": [
+              true,
+              false
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "optional": true
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "meaning": "Historical attendance business date."
+          },
+          "construction_site_id": {
+            "type": "integer",
+            "optional": true
+          }
+        },
+        "examples": [
+          {
+            "request": "/api/v1/worker-attendances?live=true&construction_site_id=2",
+            "status": 200,
+            "response": {
+              "success": true,
+              "message": null,
+              "data": [
+                {
+                  "id": 2,
+                  "company_id": 1,
+                  "daily_log_id": 2,
+                  "construction_site_id": 2,
+                  "site_manager_id": 2,
+                  "worker_id": 3,
+                  "date": "2026-11-24",
+                  "started_at": "2026-11-24T12:00:00.000000Z",
+                  "finished_at": "2026-11-24T16:00:00.000000Z",
+                  "worked_time": null,
+                  "advance_payment": "0.00",
+                  "hourly_rate": "25.00",
+                  "created_by": 2,
+                  "worker": {
+                    "id": 3,
+                    "display_order": 0,
+                    "first_name": "Ana",
+                    "last_name": "Markovic",
+                    "full_name": null,
+                    "username": "synthetic_worker",
+                    "email": null,
+                    "phone": null,
+                    "role": "worker",
+                    "hourly_rate": "25.00",
+                    "is_active": true,
+                    "created_at": "2026-11-24T13:00:00.000000Z",
+                    "updated_at": "2026-11-24T13:00:00.000000Z",
+                    "is_available": true
+                  },
+                  "creator": {
+                    "id": 2,
+                    "display_order": 0,
+                    "first_name": "Mauricio",
+                    "last_name": "Lehner",
+                    "full_name": null,
+                    "username": "pdenesik",
+                    "email": null,
+                    "phone": null,
+                    "role": "site_manager",
+                    "hourly_rate": null,
+                    "is_active": true,
+                    "created_at": "2026-11-24T13:00:00.000000Z",
+                    "updated_at": "2026-11-24T13:00:00.000000Z",
+                    "is_available": true
+                  },
+                  "construction_site": {
+                    "id": 2,
+                    "company_id": 1,
+                    "name": "Site B",
+                    "description": null,
+                    "address": null,
+                    "latitude": "-5.1929590",
+                    "longitude": "-103.9040460",
+                    "status": "active",
+                    "created_at": "2026-11-24T13:00:00.000000Z",
+                    "updated_at": "2026-11-24T13:00:00.000000Z",
+                    "can_select": null
+                  },
+                  "created_at": "2026-11-24T13:00:00.000000Z",
+                  "updated_at": "2026-11-24T13:00:00.000000Z",
+                  "machine_assignment_id": null,
+                  "machine": null
+                }
+              ]
+            }
+          },
+          {
+            "request": "/api/v1/worker-attendances?date=2026-11-24",
+            "status": 200,
+            "response": {
+              "success": true,
+              "message": null,
+              "data": [
+                {
+                  "id": 1,
+                  "company_id": 1,
+                  "daily_log_id": 1,
+                  "construction_site_id": 1,
+                  "site_manager_id": 1,
+                  "worker_id": 3,
+                  "date": "2026-11-24",
+                  "started_at": "2026-11-24T07:00:00.000000Z",
+                  "finished_at": "2026-11-24T11:00:00.000000Z",
+                  "worked_time": null,
+                  "advance_payment": "0.00",
+                  "hourly_rate": "25.00",
+                  "created_by": 1,
+                  "worker": {
+                    "id": 3,
+                    "display_order": 0,
+                    "first_name": "Ana",
+                    "last_name": "Markovic",
+                    "full_name": null,
+                    "username": "synthetic_worker",
+                    "email": null,
+                    "phone": null,
+                    "role": "worker",
+                    "hourly_rate": "25.00",
+                    "is_active": true,
+                    "created_at": "2026-11-24T13:00:00.000000Z",
+                    "updated_at": "2026-11-24T13:00:00.000000Z",
+                    "is_available": true
+                  },
+                  "creator": {
+                    "id": 1,
+                    "display_order": 0,
+                    "first_name": "Maudie",
+                    "last_name": "Wintheiser",
+                    "full_name": null,
+                    "username": "goldner.roberto",
+                    "email": null,
+                    "phone": null,
+                    "role": "site_manager",
+                    "hourly_rate": null,
+                    "is_active": true,
+                    "created_at": "2026-11-24T13:00:00.000000Z",
+                    "updated_at": "2026-11-24T13:00:00.000000Z",
+                    "is_available": true
+                  },
+                  "construction_site": {
+                    "id": 1,
+                    "company_id": 1,
+                    "name": "Site A",
+                    "description": null,
+                    "address": null,
+                    "latitude": "45.0107960",
+                    "longitude": "-127.5282440",
+                    "status": "active",
+                    "created_at": "2026-11-24T13:00:00.000000Z",
+                    "updated_at": "2026-11-24T13:00:00.000000Z",
+                    "can_select": null
+                  },
+                  "created_at": "2026-11-24T13:00:00.000000Z",
+                  "updated_at": "2026-11-24T13:00:00.000000Z",
+                  "machine_assignment_id": null,
+                  "machine": null
+                },
+                {
+                  "id": 2,
+                  "company_id": 1,
+                  "daily_log_id": 2,
+                  "construction_site_id": 2,
+                  "site_manager_id": 2,
+                  "worker_id": 3,
+                  "date": "2026-11-24",
+                  "started_at": "2026-11-24T12:00:00.000000Z",
+                  "finished_at": "2026-11-24T16:00:00.000000Z",
+                  "worked_time": null,
+                  "advance_payment": "0.00",
+                  "hourly_rate": "25.00",
+                  "created_by": 2,
+                  "worker": {
+                    "id": 3,
+                    "display_order": 0,
+                    "first_name": "Ana",
+                    "last_name": "Markovic",
+                    "full_name": null,
+                    "username": "synthetic_worker",
+                    "email": null,
+                    "phone": null,
+                    "role": "worker",
+                    "hourly_rate": "25.00",
+                    "is_active": true,
+                    "created_at": "2026-11-24T13:00:00.000000Z",
+                    "updated_at": "2026-11-24T13:00:00.000000Z",
+                    "is_available": true
+                  },
+                  "creator": {
+                    "id": 2,
+                    "display_order": 0,
+                    "first_name": "Mauricio",
+                    "last_name": "Lehner",
+                    "full_name": null,
+                    "username": "pdenesik",
+                    "email": null,
+                    "phone": null,
+                    "role": "site_manager",
+                    "hourly_rate": null,
+                    "is_active": true,
+                    "created_at": "2026-11-24T13:00:00.000000Z",
+                    "updated_at": "2026-11-24T13:00:00.000000Z",
+                    "is_available": true
+                  },
+                  "construction_site": {
+                    "id": 2,
+                    "company_id": 1,
+                    "name": "Site B",
+                    "description": null,
+                    "address": null,
+                    "latitude": "-5.1929590",
+                    "longitude": "-103.9040460",
+                    "status": "active",
+                    "created_at": "2026-11-24T13:00:00.000000Z",
+                    "updated_at": "2026-11-24T13:00:00.000000Z",
+                    "can_select": null
+                  },
+                  "created_at": "2026-11-24T13:00:00.000000Z",
+                  "updated_at": "2026-11-24T13:00:00.000000Z",
+                  "machine_assignment_id": null,
+                  "machine": null
+                }
+              ]
+            }
+          }
         ]
       },
-      "request_changed": false,
+      "request_changed": true,
       "response_changed": false,
       "authorization_changed": true,
-      "behavior_changed": false,
+      "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Replace cached results with the response scoped to the active company."
+        "Replace cached results with the response scoped to the active company.",
+        "For admin presence screens request live=true, optionally with construction_site_id. Keep historical date screens on date without live=true."
       ],
       "pwa_actions": [
-        "Key report/list requests by active tenant and reset the view when the tenant changes."
+        "Key report/list requests by active tenant and reset the view when the tenant changes.",
+        "For admin presence screens request live=true, optionally with construction_site_id. Keep historical date screens on date without live=true."
       ],
       "notes": [
-        "Company and membership constrain the list. Confirmed machine periods can appear more than once per worker/day."
+        "Company and membership constrain the list. Confirmed machine periods can appear more than once per worker/day.",
+        "Admin-only live=true uses server now in Europe/Belgrade. Admin-only at uses the supplied ISO instant. Do not combine live (including false) with at; do not combine a point-in-time query with date, date_from, or date_to. live=false keeps historical mode.",
+        "construction_site_id, worker filters, sorting and pagination remain supported. Historical date queries return each attendance row. Live mode includes active manual and confirmed machine-linked attendance rows using started_at <= at < effective finish. An open row ends at local midnight for display."
       ]
     },
     {
@@ -3466,7 +3714,8 @@
       "change_types": [
         "AUTH_CHANGE",
         "BEHAVIOR_CHANGE",
-        "STATUS_CHANGE"
+        "STATUS_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": {
@@ -3515,29 +3764,48 @@
           401,
           403,
           404,
+          409,
           422,
           500
         ],
         "behavior": [
-          "200; 401; 403 wrong role; 404 foreign/missing site or machine; 422 validation; 500 locked or conflicting reservation.",
+          "200; 401; 403 wrong role; 404 foreign/missing site or machine; 422 validation; 500 for a locked log.",
           "Self-assignment works before the daily log exists. An existing locked daily log blocks creation.",
-          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
-        ]
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+          "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
+        ],
+        "error_responses": {
+          "409": {
+            "error_codes": [
+              "MACHINE_TIME_CONFLICT",
+              "MACHINE_WORKER_TIME_CONFLICT"
+            ],
+            "envelope": {
+              "success": false,
+              "message": "string",
+              "errors": null,
+              "error_code": "string"
+            }
+          }
+        }
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
       "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Show a pending reservation with nullable attribution. Expect no salary attendance yet."
+        "Show a pending reservation with nullable attribution. Expect no salary attendance yet.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "pwa_actions": [
-        "Mark the assignment pending and invalidate available/current/occupied."
+        "Mark the assignment pending and invalidate available/current/occupied.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "notes": [
         "Self-assignment works before the daily log exists. An existing locked daily log blocks creation.",
-        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+        "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
       ]
     },
     {
@@ -3546,7 +3814,8 @@
       "change_types": [
         "AUTH_CHANGE",
         "BEHAVIOR_CHANGE",
-        "STATUS_CHANGE"
+        "STATUS_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": {
@@ -3597,30 +3866,87 @@
           401,
           403,
           404,
+          409,
           422,
           500
         ],
         "behavior": [
-          "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log. 422 also returned for administrator without manager attribution; 500 also returned for overlaps.",
+          "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 for a locked log. 422 also returned for administrator without manager attribution; 500 for a locked log.",
           "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request.",
           "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
-          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past.",
+          "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
+        ],
+        "error_responses": {
+          "409": {
+            "error_codes": [
+              "MACHINE_TIME_CONFLICT",
+              "MACHINE_WORKER_TIME_CONFLICT"
+            ],
+            "envelope": {
+              "success": false,
+              "message": "string",
+              "errors": null,
+              "error_code": "string"
+            }
+          }
+        },
+        "conflict_examples": [
+          {
+            "method": "POST",
+            "request": "/api/v1/excavator-logs/daily-logs/2",
+            "body": {
+              "machine_id": 1,
+              "worker_id": 8,
+              "site_manager_started_at": "2026-11-24 11:00",
+              "site_manager_finished_at": "2026-11-24 15:00"
+            },
+            "scenario": "Machine 1 already has a confirmed 08:00–12:00 reservation at Site A.",
+            "status": 409,
+            "response": {
+              "success": false,
+              "message": "Excavator is already in use during the selected period.",
+              "errors": null,
+              "error_code": "MACHINE_TIME_CONFLICT"
+            }
+          },
+          {
+            "method": "POST",
+            "request": "/api/v1/excavator-logs/daily-logs/2",
+            "body": {
+              "machine_id": 2,
+              "worker_id": 7,
+              "site_manager_started_at": "2026-11-24 09:00",
+              "site_manager_finished_at": "2026-11-24 15:00"
+            },
+            "scenario": "Worker 7 already has confirmed presence on machine 1 from 08:00 to 12:00 at Site A.",
+            "status": 409,
+            "response": {
+              "success": false,
+              "message": "Operator is already assigned during the selected period.",
+              "errors": null,
+              "error_code": "MACHINE_WORKER_TIME_CONFLICT"
+            }
+          }
         ]
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
       "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Send managerial times and canonical DailyLog ID. Upsert the returned log by ID; takeover can reuse the self-assigned ID."
+        "Send managerial times and canonical DailyLog ID. Upsert the returned log by ID; takeover can reuse the self-assigned ID.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "pwa_actions": [
-        "Refresh the shared assignment and salary attendance after takeover."
+        "Refresh the shared assignment and salary attendance after takeover.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "notes": [
         "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request.",
-        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+        "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
       ]
     },
     {
@@ -3629,7 +3955,8 @@
       "change_types": [
         "AUTH_CHANGE",
         "BEHAVIOR_CHANGE",
-        "STATUS_CHANGE"
+        "STATUS_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": {
@@ -3676,30 +4003,49 @@
           401,
           403,
           404,
+          409,
           422,
           500
         ],
         "behavior": [
-          "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log. 500 also returned for overlapping periods.",
+          "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 for a locked log. 500 for a locked log.",
           "The original creator remains. Keep excavator and truck validation and null handling distinct.",
           "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
-          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
-        ]
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past.",
+          "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
+        ],
+        "error_responses": {
+          "409": {
+            "error_codes": [
+              "MACHINE_TIME_CONFLICT",
+              "MACHINE_WORKER_TIME_CONFLICT"
+            ],
+            "envelope": {
+              "success": false,
+              "message": "string",
+              "errors": null,
+              "error_code": "string"
+            }
+          }
+        }
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
       "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Operator/driver PATCH may include operator fields and machine readings; omit managerial times, note_site_manager and advance_payment."
+        "Operator/driver PATCH may include operator fields and machine readings; omit managerial times, note_site_manager and advance_payment.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "pwa_actions": [
-        "Use separate forms for manager and self updates; disable mutation while locked."
+        "Use separate forms for manager and self updates; disable mutation while locked.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "notes": [
         "The original creator remains. Keep excavator and truck validation and null handling distinct.",
-        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+        "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
       ]
     },
     {
@@ -3904,7 +4250,8 @@
       "change_types": [
         "AUTH_CHANGE",
         "BEHAVIOR_CHANGE",
-        "STATUS_CHANGE"
+        "STATUS_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": {
@@ -3953,29 +4300,48 @@
           401,
           403,
           404,
+          409,
           422,
           500
         ],
         "behavior": [
-          "200; 401; 403 wrong role; 404 foreign/missing site or machine; 422 validation; 500 locked or conflicting reservation.",
+          "200; 401; 403 wrong role; 404 foreign/missing site or machine; 422 validation; 500 for a locked log.",
           "Self-assignment works before the daily log exists. An existing locked daily log blocks creation.",
-          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
-        ]
+          "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+          "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
+        ],
+        "error_responses": {
+          "409": {
+            "error_codes": [
+              "MACHINE_TIME_CONFLICT",
+              "MACHINE_WORKER_TIME_CONFLICT"
+            ],
+            "envelope": {
+              "success": false,
+              "message": "string",
+              "errors": null,
+              "error_code": "string"
+            }
+          }
+        }
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
       "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Show a pending reservation with nullable attribution. Expect no salary attendance yet."
+        "Show a pending reservation with nullable attribution. Expect no salary attendance yet.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "pwa_actions": [
-        "Mark the assignment pending and invalidate available/current/occupied."
+        "Mark the assignment pending and invalidate available/current/occupied.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "notes": [
         "Self-assignment works before the daily log exists. An existing locked daily log blocks creation.",
-        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+        "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
       ]
     },
     {
@@ -3984,7 +4350,8 @@
       "change_types": [
         "AUTH_CHANGE",
         "BEHAVIOR_CHANGE",
-        "STATUS_CHANGE"
+        "STATUS_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": {
@@ -4035,30 +4402,87 @@
           401,
           403,
           404,
+          409,
           422,
           500
         ],
         "behavior": [
-          "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log. 422 also returned for administrator without manager attribution; 500 also returned for overlaps.",
+          "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 for a locked log. 422 also returned for administrator without manager attribution; 500 for a locked log.",
           "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request.",
           "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
-          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past.",
+          "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
+        ],
+        "error_responses": {
+          "409": {
+            "error_codes": [
+              "MACHINE_TIME_CONFLICT",
+              "MACHINE_WORKER_TIME_CONFLICT"
+            ],
+            "envelope": {
+              "success": false,
+              "message": "string",
+              "errors": null,
+              "error_code": "string"
+            }
+          }
+        },
+        "conflict_examples": [
+          {
+            "method": "POST",
+            "request": "/api/v1/truck-logs/daily-logs/2",
+            "body": {
+              "machine_id": 1,
+              "worker_id": 8,
+              "site_manager_started_at": "2026-11-24 11:00",
+              "site_manager_finished_at": "2026-11-24 15:00"
+            },
+            "scenario": "Machine 1 already has a confirmed 08:00–12:00 reservation at Site A.",
+            "status": 409,
+            "response": {
+              "success": false,
+              "message": "Truck is already in use during the selected period.",
+              "errors": null,
+              "error_code": "MACHINE_TIME_CONFLICT"
+            }
+          },
+          {
+            "method": "POST",
+            "request": "/api/v1/truck-logs/daily-logs/2",
+            "body": {
+              "machine_id": 2,
+              "worker_id": 7,
+              "site_manager_started_at": "2026-11-24 09:00",
+              "site_manager_finished_at": "2026-11-24 15:00"
+            },
+            "scenario": "Worker 7 already has confirmed presence on machine 1 from 08:00 to 12:00 at Site A.",
+            "status": 409,
+            "response": {
+              "success": false,
+              "message": "Driver is already assigned during the selected period.",
+              "errors": null,
+              "error_code": "MACHINE_WORKER_TIME_CONFLICT"
+            }
+          }
         ]
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
       "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Send managerial times and canonical DailyLog ID. Upsert the returned log by ID; takeover can reuse the self-assigned ID."
+        "Send managerial times and canonical DailyLog ID. Upsert the returned log by ID; takeover can reuse the self-assigned ID.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "pwa_actions": [
-        "Refresh the shared assignment and salary attendance after takeover."
+        "Refresh the shared assignment and salary attendance after takeover.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "notes": [
         "The manager who takes over is attributed. An authoritative start triggers salary attendance. Pending reservations and overlaps may block the request.",
-        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+        "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
       ]
     },
     {
@@ -4067,7 +4491,8 @@
       "change_types": [
         "AUTH_CHANGE",
         "BEHAVIOR_CHANGE",
-        "STATUS_CHANGE"
+        "STATUS_CHANGE",
+        "RESPONSE_CHANGE"
       ],
       "before": {
         "request": {
@@ -4114,30 +4539,49 @@
           401,
           403,
           404,
+          409,
           422,
           500
         ],
         "behavior": [
-          "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 locked daily log. 500 also returned for overlapping periods.",
+          "200; 401; 403 insufficient access; 404 foreign, missing, or wrong-parent resource; 422 validation; 500 for a locked log. 500 for a locked log.",
           "The original creator remains. Keep excavator and truck validation and null handling distinct.",
           "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
-          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past."
-        ]
+          "Availability reads are advisory. POST and PATCH validate the entered interval across all company sites and reject overlapping work even when both periods are in the past.",
+          "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
+        ],
+        "error_responses": {
+          "409": {
+            "error_codes": [
+              "MACHINE_TIME_CONFLICT",
+              "MACHINE_WORKER_TIME_CONFLICT"
+            ],
+            "envelope": {
+              "success": false,
+              "message": "string",
+              "errors": null,
+              "error_code": "string"
+            }
+          }
+        }
       },
       "request_changed": false,
-      "response_changed": false,
+      "response_changed": true,
       "authorization_changed": true,
       "behavior_changed": true,
       "breaking": true,
       "android_actions": [
-        "Operator/driver PATCH may include operator fields and machine readings; omit managerial times, note_site_manager and advance_payment."
+        "Operator/driver PATCH may include operator fields and machine readings; omit managerial times, note_site_manager and advance_payment.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "pwa_actions": [
-        "Use separate forms for manager and self updates; disable mutation while locked."
+        "Use separate forms for manager and self updates; disable mutation while locked.",
+        "On 409 use error_code to show whether to select another machine or another worker/time."
       ],
       "notes": [
         "The original creator remains. Keep excavator and truck validation and null handling distinct.",
-        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it."
+        "Machine manager periods use [start, finish); absent manager finish releases at local midnight at the end of the assignment date. Without manager start, the machine is reserved for its business date. Operator/driver finish does not release it.",
+        "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500."
       ]
     },
     {
@@ -7215,9 +7659,9 @@
     },
     {
       "context": "Machine period overlap or incomplete reservation",
-      "before": "Legacy business failure where detected.",
-      "after": "500 on genuine machine or worker period conflicts. Exact finish and local-midnight boundaries are half-open.",
-      "client_action": "Refresh server availability and allow users to correct their period."
+      "before": "HTTP 500 from BusinessException on either reservation conflict.",
+      "after": "HTTP 409 includes error_code MACHINE_TIME_CONFLICT for an overlapping machine reservation or MACHINE_WORKER_TIME_CONFLICT for an overlapping worker reservation. Handle these codes directly; a locked DailyLog may still return 500.",
+      "client_action": "Handle the 409 error_code, then refresh availability."
     },
     {
       "context": "DailyLog lock and unlock",
@@ -7279,7 +7723,7 @@
   "known_backend_quirks": [
     {
       "id": "legacy-500",
-      "behavior": "Some BusinessException paths return HTTP 500 with generic production text such as Server Error. Lock, assignment constraints and machine collisions are examples. Do not classify unrelated 500 errors as business failures."
+      "behavior": "Some BusinessException paths return HTTP 500 with generic production text such as Server Error. A locked log is one example. Do not classify unrelated 500 errors as business failures."
     },
     {
       "id": "scheduler-repeat",

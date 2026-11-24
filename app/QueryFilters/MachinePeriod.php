@@ -2,7 +2,7 @@
 
 namespace App\QueryFilters;
 
-use App\Exceptions\BusinessException;
+use App\Exceptions\MachinePeriodConflict;
 use App\Models\MachineAssignment;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
@@ -62,12 +62,12 @@ class MachinePeriod
         );
 
         if ((clone $assignments)->where('machine_id', $machineId)->withMachineLogMatching($machineConflict)->exists()) {
-            throw new BusinessException($machineMessage);
+            throw new MachinePeriodConflict($machineMessage, MachinePeriodConflict::MACHINE);
         }
 
         $worker = AttendancePeriod::lockWorker($companyId, $workerId);
         if (AttendancePeriod::hasConflict($worker, $machineStart, $machineEnd, exceptAssignment: $exceptAssignmentId)) {
-            throw new BusinessException($workerMessage);
+            throw new MachinePeriodConflict($workerMessage, MachinePeriodConflict::WORKER);
         }
     }
 

@@ -28,7 +28,8 @@ class ExcavatorLogController extends ApiController
 
     #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
     #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
-    #[Response(status: 500, description: 'The daily log is locked or a machine or worker period conflicts.', type: 'array{message: string}')]
+    #[Response(status: 409, description: 'The machine or assigned worker has an overlapping reservation.', type: "array{success: false, message: string, errors: null, error_code: 'MACHINE_TIME_CONFLICT'|'MACHINE_WORKER_TIME_CONFLICT'}")]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     #[Response(status: 422, description: 'Invalid request or a site manager is required for attribution.', type: 'array{message: string, errors?: array<string, list<string>>}')]
     public function store(DailyLog $dailyLog, CreateExcavatorLogRequest $request): JsonResponse
     {
@@ -52,7 +53,8 @@ class ExcavatorLogController extends ApiController
 
     #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
     #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
-    #[Response(status: 500, description: 'The daily log is locked or a machine or worker period conflicts.', type: 'array{message: string}')]
+    #[Response(status: 409, description: 'The machine or assigned worker has an overlapping reservation.', type: "array{success: false, message: string, errors: null, error_code: 'MACHINE_TIME_CONFLICT'|'MACHINE_WORKER_TIME_CONFLICT'}")]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function storeForOperator(CreateExcavatorLogForOperatorRequest $request): JsonResponse
     {
         /** @var Worker $worker */
@@ -73,7 +75,8 @@ class ExcavatorLogController extends ApiController
 
     #[Response(status: 403, description: 'The caller lacks the required role, ownership or daily log membership.', type: 'array{message: string}')]
     #[Response(status: 404, description: 'A referenced record is missing or outside the company or parent daily log.', type: 'array{message: string}')]
-    #[Response(status: 500, description: 'The daily log is locked or a machine or worker period conflicts.', type: 'array{message: string}')]
+    #[Response(status: 409, description: 'The machine or assigned worker has an overlapping reservation.', type: "array{success: false, message: string, errors: null, error_code: 'MACHINE_TIME_CONFLICT'|'MACHINE_WORKER_TIME_CONFLICT'}")]
+    #[Response(status: 500, description: 'The daily log is locked.', type: 'array{message: string}')]
     public function update(ExcavatorLog $excavatorLog, UpdateExcavatorLogRequest $request): JsonResponse
     {
         /** @var Worker $worker */

@@ -255,7 +255,7 @@ class UpdateTruckLogAction extends BaseAction
                     exceptAssignmentId: $assignment->id,
                     updating: true,
                     machineMessage: 'Truck is already in use during the selected period.',
-                    workerMessage: 'Driver is already assigned to another truck during the selected period.',
+                    workerMessage: 'Driver is already assigned during the selected period.',
                 );
             }
 

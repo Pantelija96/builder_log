@@ -20,7 +20,7 @@ class ConcurrentWorkerIntervalTest extends TestCase
         return [
             'overlapping manual creates' => ['overlap', [200, 409], 1],
             'adjacent manual creates' => ['adjacent', [200, 200], 2],
-            'manual and machine overlap' => ['mixed', [], 1],
+            'manual and machine overlap' => ['mixed', [200, 409], 1],
             'concurrent edits create an overlap' => ['update', [200, 409], 2],
         ];
     }
@@ -97,18 +97,15 @@ class ConcurrentWorkerIntervalTest extends TestCase
                 $response = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
                 $statuses[] = $response['status'];
                 if ($response['status'] === 409) {
-                    $this->assertStringContainsString('overlapping period', $response['message']);
-                }
-                if ($response['status'] === 500) {
-                    $this->assertStringContainsString('selected period', $response['message']);
+                    if ($response['error_code'] !== null) {
+                        $this->assertSame('MACHINE_WORKER_TIME_CONFLICT', $response['error_code']);
+                    } else {
+                        $this->assertStringContainsString('overlapping period', $response['message']);
+                    }
                 }
             }
             sort($statuses);
-            if ($scenario === 'mixed') {
-                $this->assertContains($statuses, [[200, 409], [200, 500]]);
-            } else {
-                $this->assertSame($expected, $statuses);
-            }
+            $this->assertSame($expected, $statuses);
             $this->assertSame($count, WorkerAttendance::count());
             $ordered = WorkerAttendance::orderBy('started_at')->get();
             if ($ordered->count() === 2) {
@@ -161,7 +158,7 @@ $request = Illuminate\Http\Request::create($argv[2], $argv[3], server: [
 ], content: $argv[5]);
 $response = $kernel->handle($request);
 $body = json_decode($response->getContent(), true, flags: JSON_THROW_ON_ERROR);
-echo json_encode(['status' => $response->getStatusCode(), 'message' => $body['message'] ?? ''], JSON_THROW_ON_ERROR);
+echo json_encode(['status' => $response->getStatusCode(), 'message' => $body['message'] ?? '', 'error_code' => $body['error_code'] ?? null], JSON_THROW_ON_ERROR);
 PHP_SCRIPT;
 
         return new Process([PHP_BINARY, '-r', $script, $directory.'/start', $url, $method, $token, json_encode($body, JSON_THROW_ON_ERROR)], base_path(), [

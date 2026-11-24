@@ -40,7 +40,7 @@ class MachineOccupancyTest extends TestCase
             ->assertOk()->assertJsonPath('data.machine.id', $machine->id);
         $url = "$prefix/daily-logs/{$new->id}";
         $this->postJson($url, $this->period($machine, $second, '2026-11-24 00:29', '2026-11-24 02:00'))
-            ->assertInternalServerError();
+            ->assertConflict()->assertJsonPath('error_code', 'MACHINE_TIME_CONFLICT');
         $this->at('2026-11-24 00:30');
         $this->assertOccupancy($prefix, $machine, false);
         $this->at('2026-11-24 00:31');
@@ -49,7 +49,7 @@ class MachineOccupancyTest extends TestCase
             ->assertOk()->json('data.id');
 
         $this->patchJson("$prefix/$id", ['site_manager_started_at' => '2026-11-24T00:29:00+01:00'])
-            ->assertInternalServerError();
+            ->assertConflict()->assertJsonPath('error_code', 'MACHINE_TIME_CONFLICT');
         $this->patchJson("$prefix/$id", ['site_manager_started_at' => '2026-11-23T23:30:00Z'])
             ->assertOk()->assertJsonPath('data.site_manager_started_at', '2026-11-23T23:30:00.000000Z');
         $table = $type === 'truck' ? 'truck_logs' : 'excavator_logs';
@@ -107,7 +107,7 @@ class MachineOccupancyTest extends TestCase
         $this->at('2026-11-24 10:01');
         $this->assertOccupancy($prefix, $machine, true);
         $this->postJson("$prefix/daily-logs/{$log->id}", $this->period($machine, $second, '2026-11-24 11:00', '2026-11-24 12:00'))
-            ->assertInternalServerError();
+            ->assertConflict()->assertJsonPath('error_code', 'MACHINE_TIME_CONFLICT');
         $this->at('2026-11-24 23:59');
         $this->assertOccupancy($prefix, $machine, true);
         $this->at('2026-11-25 00:00');
@@ -154,11 +154,54 @@ class MachineOccupancyTest extends TestCase
         $this->assertOccupancy($prefix, $machine, false);
         $url = "$prefix/daily-logs/{$secondLog->id}";
         $this->postJson($url, $this->period($machine, $second, '2026-11-24 10:00', '2026-11-24 14:00'))
-            ->assertInternalServerError();
+            ->assertConflict()->assertJsonPath('error_code', 'MACHINE_TIME_CONFLICT');
         $id = $this->postJson($url, $this->period($machine, $second, '2026-11-24 12:00', '2026-11-24 16:00'))
             ->assertOk()->json('data.id');
         $this->patchJson("$prefix/$id", ['site_manager_started_at' => '2026-11-24 11:59:00'])
-            ->assertInternalServerError();
+            ->assertConflict()->assertJsonPath('error_code', 'MACHINE_TIME_CONFLICT');
+    }
+
+    #[DataProvider('machines')]
+    public function test_self_assignment_and_takeover_share_conflict_contract(string $type, WorkerRole $role): void
+    {
+        [, $a, $firstMachine, $worker, $otherWorker] = $this->fixture($type, $role);
+        $manager = $a->siteManagers()->sole();
+        $b = DailyLog::factory()->for($a->company)->withManager($manager)->create(['date' => '2026-11-24']);
+        $secondMachine = Machine::factory()->for($a->company)->create([
+            'type' => $type, 'owner_type' => 'company', 'owner_id' => $a->company_id,
+        ]);
+        $prefix = "/api/v1/{$type}-logs";
+        $this->at('2026-11-24 09:00');
+        config(['app.debug' => false]);
+        $this->postJson("$prefix/daily-logs/{$a->id}",
+            $this->period($firstMachine, $worker, '2026-11-24 08:00', '2026-11-24 12:00'))->assertOk();
+
+        $machineMessage = ($type === 'truck' ? 'Truck' : 'Excavator').' is already in use during the selected period.';
+        $workerMessage = ($type === 'truck' ? 'Driver' : 'Operator').' is already assigned during the selected period.';
+        Sanctum::actingAs($otherWorker);
+        $this->postJson("$prefix/{$role->value}", [
+            'machine_id' => $firstMachine->id, 'construction_site_id' => $b->construction_site_id,
+        ])->assertConflict()->assertExactJson([
+            'success' => false, 'message' => $machineMessage, 'errors' => null, 'error_code' => 'MACHINE_TIME_CONFLICT',
+        ]);
+
+        $this->at('2026-11-24 14:00');
+        Sanctum::actingAs($worker);
+        $selfId = $this->postJson("$prefix/{$role->value}", [
+            'machine_id' => $secondMachine->id, 'construction_site_id' => $b->construction_site_id,
+            'operator_started_at' => '2026-11-24 14:00',
+        ])->assertOk()->json('data.id');
+        $this->assertDatabaseCount('worker_attendances', 1);
+        Sanctum::actingAs($manager);
+        $url = "$prefix/daily-logs/{$b->id}";
+        $this->postJson($url, $this->period($secondMachine, $worker, '2026-11-24 11:00', '2026-11-24 17:00'))
+            ->assertConflict()->assertExactJson([
+                'success' => false, 'message' => $workerMessage, 'errors' => null, 'error_code' => 'MACHINE_WORKER_TIME_CONFLICT',
+            ]);
+        $this->assertDatabaseCount('worker_attendances', 1);
+        $this->postJson($url, $this->period($secondMachine, $worker, '2026-11-24 12:00', '2026-11-24 17:00'))
+            ->assertOk()->assertJsonPath('data.id', $selfId);
+        $this->assertDatabaseCount('worker_attendances', 2);
     }
 
     private function assertOccupancy(string $prefix, Machine $machine, bool $occupied): void

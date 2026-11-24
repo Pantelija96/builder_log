@@ -93,7 +93,7 @@ class CreateTruckLogAction extends BaseAction
                     finish: $finishedAt,
                     exceptAssignmentId: $selfAssignment->id,
                     machineMessage: 'Truck is already in use during the selected period.',
-                    workerMessage: 'Driver is already assigned to another truck during the selected period.',
+                    workerMessage: 'Driver is already assigned during the selected period.',
                 );
 
                 $oldValues = $selfAssignment->getAttributes();
@@ -148,7 +148,7 @@ class CreateTruckLogAction extends BaseAction
                 start: $startedAt,
                 finish: $finishedAt,
                 machineMessage: 'Truck is already in use during the selected period.',
-                workerMessage: 'Driver is already assigned to another truck during the selected period.',
+                workerMessage: 'Driver is already assigned during the selected period.',
             );
 
             $machineAssignment =
@@ -268,7 +268,7 @@ class CreateTruckLogAction extends BaseAction
                 start: null,
                 finish: null,
                 machineMessage: 'Truck is already in use during the selected period.',
-                workerMessage: 'Driver is already assigned to another truck during the selected period.',
+                workerMessage: 'Driver is already assigned during the selected period.',
             );
 
             $machineAssignment =

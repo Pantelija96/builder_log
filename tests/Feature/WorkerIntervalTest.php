@@ -214,7 +214,7 @@ class WorkerIntervalTest extends TestCase
         $this->postJson($prefix.$a->id, $period($first, '08:00', '12:00'))->assertOk();
         Sanctum::actingAs($b->siteManagers()->sole());
         $this->postJson($this->attendanceUrl($b), $this->period($worker, '11:59', '16:00'))->assertConflict();
-        $this->postJson($prefix.$b->id, $period($second, '11:59', '16:00'))->assertInternalServerError();
+        $this->postJson($prefix.$b->id, $period($second, '11:59', '16:00'))->assertConflict()->assertJsonPath('error_code', 'MACHINE_WORKER_TIME_CONFLICT');
         $this->getJson($this->availableUrl('12:00', '16:00', $role->value))->assertOk()->assertJsonPath('data.0.id', $worker->id);
         $this->getJson($this->pointUrl(self::DAY.'T11:59:59+01:00', $role->value))->assertOk()->assertJsonCount(0, 'data');
         $this->getJson($this->pointUrl(self::DAY.'T12:00:00+01:00', $role->value))->assertOk()->assertJsonPath('data.0.id', $worker->id);
@@ -223,8 +223,29 @@ class WorkerIntervalTest extends TestCase
         $this->assertDatabaseCount('worker_attendances', 2);
 
         $this->postJson($this->attendanceUrl($b), $this->period($worker, '16:00', '17:00'))->assertOk();
-        $this->postJson($prefix.$b->id, $period($second, '16:30', '18:00'))->assertInternalServerError();
+        $this->postJson($prefix.$b->id, $period($second, '16:30', '18:00'))->assertConflict()->assertJsonPath('error_code', 'MACHINE_WORKER_TIME_CONFLICT');
         $this->getJson($this->availableUrl('16:30', '18:00', $role->value))->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_existing_excavator_period_conflicts_after_worker_becomes_a_driver(): void
+    {
+        [$a, $b, $manager, $worker] = $this->fixture(WorkerRole::OPERATOR);
+        $this->mock(WorkerPushNotificationService::class)->shouldReceive('send')->zeroOrMoreTimes();
+        $machine = fn (string $type) => Machine::factory()->for($manager->company)->create([
+            'type' => $type, 'owner_type' => 'company', 'owner_id' => $manager->company_id,
+        ]);
+        $period = fn (Machine $machine, string $start) => [
+            'worker_id' => $worker->id, 'machine_id' => $machine->id,
+            'site_manager_started_at' => self::DAY." $start", 'site_manager_finished_at' => self::DAY.' 16:00',
+        ];
+
+        $this->postJson("/api/v1/excavator-logs/daily-logs/{$a->id}", $period($machine('excavator'), '08:00'))
+            ->assertOk();
+        $worker->update(['role' => WorkerRole::DRIVER]);
+        Sanctum::actingAs($b->siteManagers()->sole());
+        $this->postJson("/api/v1/truck-logs/daily-logs/{$b->id}", $period($machine('truck'), '12:00'))
+            ->assertConflict()->assertJsonPath('error_code', 'MACHINE_WORKER_TIME_CONFLICT');
+        $this->assertDatabaseCount('worker_attendances', 1);
     }
 
     private function fixture(WorkerRole $role = WorkerRole::WORKER): array
