@@ -30,10 +30,11 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
-*.zip
 /storage/firebase/*
 !/storage/firebase/.gitkeep
 .cache/
 /activate-php.sh
 /build.sh
 /BuilderLog-prilozi-revizije/
+/docs
+*.zip
