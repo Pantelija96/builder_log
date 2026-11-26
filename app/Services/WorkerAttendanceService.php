@@ -8,6 +8,7 @@ use App\Actions\WorkerAttendance\UpdateWorkerAttendanceAction;
 use App\DTO\WorkerAttendance\CreateWorkerAttendanceData;
 use App\DTO\WorkerAttendance\GetWorkerAttendancesData;
 use App\DTO\WorkerAttendance\UpdateWorkerAttendanceData;
+use App\Enums\WorkerRole;
 use App\Models\DailyLog;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
@@ -87,6 +88,27 @@ class WorkerAttendanceService
             ->apply($query)
             ->offset($data->list->offset)
             ->limit($data->list->limit)
+            ->get();
+    }
+
+    public function getForBusinessDate(Worker $currentWorker, string $date, ?int $constructionSiteId, ?int $siteManagerId): Collection
+    {
+        return $this->globalQuery($currentWorker)
+            ->withOnly(['worker', 'creator', 'constructionSite'])
+            ->whereDate('worker_attendances.date', $date)
+            ->when($constructionSiteId !== null, fn ($query) => $query->where('construction_site_id', $constructionSiteId))
+            ->when($siteManagerId !== null, fn ($query) => $query->where('site_manager_id', $siteManagerId))
+            ->orderBy('started_at')
+            ->orderBy('id')
+            ->get();
+    }
+
+    public function getAttendanceRoster(Worker $currentWorker): Collection
+    {
+        return Worker::query()
+            ->where('company_id', $currentWorker->company_id)
+            ->whereIn('role', [WorkerRole::WORKER, WorkerRole::OPERATOR, WorkerRole::DRIVER])
+            ->inDisplayOrder()
             ->get();
     }
 

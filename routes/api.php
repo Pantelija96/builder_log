@@ -132,6 +132,7 @@ Route::prefix('v1')->group(function () {
             ->prefix('worker-attendances')
             ->group(function () {
                 Route::get('/absent', 'absent');
+                Route::get('/by-worker', 'byWorker');
                 Route::get('/', 'getAll');
             });
 
