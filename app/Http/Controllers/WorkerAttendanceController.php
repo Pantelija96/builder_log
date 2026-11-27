@@ -12,15 +12,18 @@ use App\Http\Requests\WorkerAttendance\GetGlobalWorkerAttendancesRequest;
 use App\Http\Requests\WorkerAttendance\GetWorkerAttendanceByWorkerRequest;
 use App\Http\Requests\WorkerAttendance\GetWorkerAttendancesRequest;
 use App\Http\Requests\WorkerAttendance\UpdateWorkerAttendanceRequest;
+use App\Http\Resources\LiveAbsentWorkerResource;
 use App\Http\Resources\WorkerAttendancePeriodResource;
 use App\Http\Resources\WorkerAttendanceResource;
 use App\Http\Resources\WorkerResource;
 use App\Models\DailyLog;
 use App\Models\Worker;
 use App\Models\WorkerAttendance;
+use App\QueryFilters\AttendancePeriod;
 use App\Services\WorkerAttendanceService;
 use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class WorkerAttendanceController extends ApiController
 {
@@ -93,7 +96,7 @@ class WorkerAttendanceController extends ApiController
      *
      * For administrators, live=true checks server time in Europe/Belgrade, and at checks a supplied instant.
      * Point-in-time queries support construction_site_id. Do not combine live with at, or a point in time with date, date_from or date_to.
-     * Without a point in time, date filters retain their historical meaning.
+     * Historical date and date range filters return individual attendance entries, including multiple entries per worker.
      */
     #[Response(status: 403, description: 'Only administrators can request point-in-time attendance.', type: 'array{message: string}')]
     public function getAll(GetGlobalWorkerAttendancesRequest $request): JsonResponse
@@ -143,6 +146,32 @@ class WorkerAttendanceController extends ApiController
             ->values());
     }
 
+    /**
+     * List workers in the caller's company who have no active attendance right now, in Europe/Belgrade.
+     *
+     * Each worker has a periods array of finished attendances overlapping today, ordered by start and ID.
+     * The array is empty for a worker who has not worked today.
+     */
+    #[Response(status: 200, description: 'Absent workers and their completed periods for today.', type: 'array{success: true, message: null, data: list<array{date: string, absent_workers: list<LiveAbsentWorkerResource>}>}')]
+    public function absentLive(Request $request): JsonResponse
+    {
+        $clock = AttendancePeriod::local(now());
+
+        return $this->success([[
+            'date' => $clock->toDateString(),
+            'absent_workers' => LiveAbsentWorkerResource::collection(
+                $this->workerAttendanceService->getLiveAbsentWorkers($request->user(), $clock)
+            ),
+        ]]);
+    }
+
+    /**
+     * List absent workers in the caller's company for each requested Europe/Belgrade business date.
+     *
+     * Today a worker is absent without an active attendance at the current time. The start is inclusive,
+     * the finish is exclusive, and an open period ends at local midnight.
+     * On other dates a worker is absent if they have no attendance entry for that business date.
+     */
     public function absent(GetAbsentWorkersRequest $request): JsonResponse
     {
         /** @var Worker $worker */

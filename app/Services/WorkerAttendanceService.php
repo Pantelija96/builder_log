@@ -18,7 +18,9 @@ use App\Traits\EnsuresWorkerCanManageDailyLog;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkerAttendanceService
 {
@@ -81,11 +83,13 @@ class WorkerAttendanceService
     public function getAll(Worker $currentWorker, GetWorkerAttendancesData $data, ?CarbonInterface $at = null): Collection
     {
         abort_if($at !== null && ! $currentWorker->isAdmin(), 403);
-        $query = $this->globalQuery($currentWorker)
-            ->when($at !== null, fn ($rows) => AttendancePeriod::attendances($rows, $at, null));
+        $query = (new WorkerAttendanceFilter($data))->apply($this->globalQuery($currentWorker));
 
-        return (new WorkerAttendanceFilter($data))
-            ->apply($query)
+        if ($at !== null) {
+            AttendancePeriod::attendances($query, $at, null);
+        }
+
+        return $query
             ->offset($data->list->offset)
             ->limit($data->list->limit)
             ->get();
@@ -122,23 +126,9 @@ class WorkerAttendanceService
         $this->deleteWorkerAttendanceAction->execute($dailyLog, $workerAttendance, $currentWorker, $reason);
     }
 
-    public function getAbsentWorkers(Worker $currentWorker, ?string $date = null, ?string $dateFrom = null, ?string $dateTo = null): array
+    private function absentWorkerQuery(Worker $currentWorker): Builder
     {
-        if ($date !== null) {
-            $dateFrom = $date;
-            $dateTo = $date;
-        }
-
-        $from = Carbon::parse($dateFrom)->startOfDay();
-        $to = Carbon::parse($dateTo)->startOfDay();
-
-        /*
-        |--------------------------------------------------------------------------
-        | Workers that participate in attendance system
-        |--------------------------------------------------------------------------
-        */
-
-        $workers = Worker::query()
+        return Worker::query()
             ->where('company_id', $currentWorker->company_id)
             ->where('is_active', true)
             ->whereIn('role', [
@@ -147,46 +137,58 @@ class WorkerAttendanceService
                 'driver',
             ])
             ->orderBy('first_name')
-            ->orderBy('last_name')
+            ->orderBy('last_name');
+    }
+
+    public function getLiveAbsentWorkers(Worker $currentWorker, CarbonInterface $clock): Collection
+    {
+        $companyId = $currentWorker->company_id;
+        $dayStart = $clock->avoidMutation()->startOfDay();
+
+        return $this->absentWorkerQuery($currentWorker)
+            ->whereDoesntHave('attendances', fn (Builder $query) => AttendancePeriod::attendances(
+                $query->where('worker_attendances.company_id', $companyId),
+                $clock,
+                null,
+            ))
+            ->with(['attendances' => fn (HasMany $relation) => AttendancePeriod::attendances(
+                $relation->getQuery()->where('worker_attendances.company_id', $companyId)
+                    ->where('finished_at', '<=', $clock),
+                $dayStart,
+                $clock->avoidMutation()->addSecond(),
+            )->with(['constructionSite', 'creator'])->orderBy('started_at')->orderBy('id')])
             ->get();
+    }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Attendances for whole requested period
-        |--------------------------------------------------------------------------
-        |
-        | One query for the whole period.
-        | We do NOT query the database separately for every day.
-        |
-        */
+    public function getAbsentWorkers(Worker $currentWorker, ?string $date = null, ?string $dateFrom = null, ?string $dateTo = null): array
+    {
+        if ($date !== null) {
+            $dateFrom = $date;
+            $dateTo = $date;
+        }
 
-        $attendances = WorkerAttendance::query()
-            ->where('company_id', $currentWorker->company_id)
-            ->whereBetween('date', [
-                $from->toDateString(),
-                $to->toDateString(),
-            ])
-            ->get([
-                'worker_id',
-                'date',
-            ]);
+        $clock = AttendancePeriod::local(now());
+        $from = Carbon::parse($dateFrom, $clock->getTimezone())->startOfDay();
+        $to = Carbon::parse($dateTo, $clock->getTimezone())->startOfDay();
+        $workers = $this->absentWorkerQuery($currentWorker)->get();
 
-        /*
-        |--------------------------------------------------------------------------
-        | Present workers grouped by date
-        |--------------------------------------------------------------------------
-        */
+        $today = $clock->toDateString();
+        $firstDate = $from->toDateString();
+        $lastDate = $to->toDateString();
+        $query = WorkerAttendance::query()->where('company_id', $currentWorker->company_id);
 
-        $presentByDate = $attendances
-            ->groupBy(
-                fn (WorkerAttendance $attendance) => $attendance->date->toDateString()
-            )
-            ->map(
-                fn ($items) => $items
-                    ->pluck('worker_id')
-                    ->unique()
-                    ->values()
-            );
+        $presentToday = $today >= $firstDate && $today <= $lastDate
+            ? AttendancePeriod::attendances(clone $query, $clock, null)->distinct()->pluck('worker_id')->all()
+            : [];
+
+        $presentByDate = $firstDate === $today && $lastDate === $today
+            ? collect()
+            : $query->whereDate('date', '>=', $firstDate)
+                ->whereDate('date', '<=', $lastDate)
+                ->whereDate('date', '<>', $today)
+                ->get(['worker_id', 'date'])
+                ->groupBy(fn (WorkerAttendance $attendance) => $attendance->date->toDateString())
+                ->map(fn ($attendances) => $attendances->pluck('worker_id')->unique()->all());
 
         /*
         |--------------------------------------------------------------------------
@@ -198,17 +200,11 @@ class WorkerAttendanceService
 
         foreach (CarbonPeriod::create($from, $to) as $day) {
             $dateKey = $day->toDateString();
-
-            $presentWorkerIds = $presentByDate
-                ->get($dateKey, collect());
-
-            $absentWorkers = $workers
-                ->whereNotIn('id', $presentWorkerIds)
-                ->values();
+            $presentWorkerIds = $dateKey === $today ? $presentToday : $presentByDate->get($dateKey, []);
 
             $result[] = [
                 'date' => $dateKey,
-                'absent_workers' => $absentWorkers,
+                'absent_workers' => $workers->whereNotIn('id', $presentWorkerIds)->values(),
             ];
         }
 
