@@ -51,7 +51,7 @@ class WorkerAttendanceController extends ApiController
         );
     }
 
-    #[Response(status: 403, description: 'The caller is not authorized for this daily log or attachment owner.', type: 'array{message: string}')]
+    #[Response(status: 403, description: 'The site manager is not assigned to the construction site.', type: 'array{message: string}')]
     public function index(DailyLog $dailyLog, GetWorkerAttendancesRequest $request): JsonResponse
     {
         return $this->success(
@@ -97,6 +97,7 @@ class WorkerAttendanceController extends ApiController
      * For administrators, live=true checks server time in Europe/Belgrade, and at checks a supplied instant.
      * Point-in-time queries support construction_site_id. Do not combine live with at, or a point in time with date, date_from or date_to.
      * Historical date and date range filters return individual attendance entries, including multiple entries per worker.
+     * Site managers see attendance at their assigned construction sites, regardless of daily log membership.
      */
     #[Response(status: 403, description: 'Only administrators can request point-in-time attendance.', type: 'array{message: string}')]
     public function getAll(GetGlobalWorkerAttendancesRequest $request): JsonResponse
@@ -120,6 +121,7 @@ class WorkerAttendanceController extends ApiController
      *
      * Workers, operators and drivers in the caller's company appear even without a matching period.
      * The optional site and attributed manager filters apply to visible periods. An unmatched worker has an empty periods array.
+     * Site managers see periods at their assigned construction sites, regardless of daily log membership.
      * Periods are ordered by start time, then by attendance ID.
      * An open period has a null finished_at. The creator is the person who recorded that particular entry.
      */

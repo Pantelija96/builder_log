@@ -109,7 +109,7 @@ class AdminLiveAttendanceTest extends TestCase
         $middle = $this->record($b, $worker, '13:00', '17:00');
         $middle->update(['created_by' => $otherManager->id]);
         $otherPeriod = $this->record($b, $secondWorker, '09:00', '11:00');
-        $b->siteManagers()->attach($otherManager);
+        $otherManager->constructionSites()->attach($b->construction_site_id);
         $next = DailyLog::factory()->for($a->company)->create(['date' => '2026-11-25']);
         $this->record($next, $worker, '12:00', '13:00');
         $foreign = DailyLog::factory()->create(['date' => '2026-11-24']);
@@ -159,9 +159,9 @@ class AdminLiveAttendanceTest extends TestCase
         $this->getJson("$url?date=2026-11-24")->assertOk()->assertJsonCount(4, 'data')
             ->assertJsonCount(1, 'data.1.periods')
             ->assertJsonPath('data.1.periods.0.id', $middle->id);
-        $outsideMembership = $this->getJson("$url?date=2026-11-24&construction_site_id={$a->construction_site_id}")
+        $outsideAssignment = $this->getJson("$url?date=2026-11-24&construction_site_id={$a->construction_site_id}")
             ->assertOk()->assertJsonCount(4, 'data')->json('data');
-        $this->assertSame([[], [], [], []], array_column($outsideMembership, 'periods'));
+        $this->assertSame([[], [], [], []], array_column($outsideAssignment, 'periods'));
     }
 
     public function test_live_and_historical_modes_preserve_scope_and_attendance_rows(): void
@@ -219,9 +219,42 @@ class AdminLiveAttendanceTest extends TestCase
         $this->getJson("$url?live=false&at=2026-11-24T13:00:00Z")->assertUnprocessable()->assertJsonValidationErrors('at');
         $this->getJson("$url?at=2026-11-24T13:00:00Z&date_from=2026-11-24")->assertUnprocessable()->assertJsonValidationErrors('date_from');
 
-        Sanctum::actingAs($a->siteManagers()->sole());
+        $manager = $a->siteManagers()->sole();
+        $manager->constructionSites()->attach($a->construction_site_id);
+        Sanctum::actingAs($manager);
         $this->getJson("$url?live=true")->assertForbidden();
         $this->getJson("$url?date=2026-11-24")->assertOk()->assertJsonCount(2, 'data');
+    }
+
+    public function test_managers_at_the_same_site_can_read_the_same_history_without_joining_the_log(): void
+    {
+        $log = DailyLog::factory()->create(['date' => '2026-11-27']);
+        $creator = $log->siteManagers()->sole();
+        $colleague = Worker::factory()->for($log->company)->siteManager()->create();
+        foreach ([$creator, $colleague] as $manager) {
+            $manager->constructionSites()->attach($log->construction_site_id);
+        }
+
+        $worker = Worker::factory()->for($log->company)->create();
+        $entry = $this->record($log, $worker, '08:00', '12:00');
+        $otherLog = DailyLog::factory()->for($log->company)->withManager($colleague)->create(['date' => '2026-11-27']);
+        $this->record($otherLog, $worker, '13:00', '17:00');
+        $foreignLog = DailyLog::factory()->create(['date' => '2026-11-27']);
+        $this->record($foreignLog, Worker::factory()->for($foreignLog->company)->create(), '08:00', '12:00');
+        $history = '/api/v1/worker-attendances?date=2026-11-27';
+        $siteHistory = "$history&construction_site_id={$log->construction_site_id}";
+        $dailyAttendance = "/api/v1/daily-logs/{$log->id}/worker-attendances";
+
+        Sanctum::actingAs($creator);
+        $expected = $this->getJson($history)->assertOk()->assertJsonCount(1, 'data')->json();
+        Sanctum::actingAs($colleague);
+        $this->getJson($history)->assertOk()->assertExactJson($expected);
+        $this->getJson($siteHistory)->assertOk()->assertExactJson($expected);
+        $this->getJson("$history&construction_site_id={$otherLog->construction_site_id}")->assertOk()->assertJsonPath('data', []);
+        $this->getJson($dailyAttendance)->assertOk()->assertJsonPath('data.0.id', $entry->id);
+        $this->getJson("/api/v1/daily-logs/{$otherLog->id}/worker-attendances")->assertForbidden();
+        $this->getJson("/api/v1/daily-logs/{$foreignLog->id}/worker-attendances")->assertNotFound();
+        $this->deleteJson("$dailyAttendance/{$entry->id}", ['reason' => 'Attempt without daily log membership'])->assertForbidden();
     }
 
     private function context(DailyLog $log, Worker $worker): array

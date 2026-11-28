@@ -14,18 +14,16 @@ use App\Models\Worker;
 use App\Models\WorkerAttendance;
 use App\QueryFilters\AttendancePeriod;
 use App\QueryFilters\WorkerAttendanceFilter;
-use App\Traits\EnsuresWorkerCanManageDailyLog;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkerAttendanceService
 {
-    use EnsuresWorkerCanManageDailyLog;
-
     private function query(DailyLog $dailyLog)
     {
         return WorkerAttendance::query()
@@ -42,7 +40,10 @@ class WorkerAttendanceService
     {
         return WorkerAttendance::query()
             ->where('worker_attendances.company_id', $currentWorker->company_id)
-            ->when($currentWorker->isSiteManager(), fn ($query) => $query->whereHas('dailyLog', fn ($logs) => $logs->visibleTo($currentWorker)))
+            ->when($currentWorker->isSiteManager(), fn (Builder $query) => $query->whereIn(
+                'worker_attendances.construction_site_id',
+                $this->assignedSites($currentWorker)->select('construction_sites.id')->getQuery(),
+            ))
             ->with([
                 'worker',
                 'creator',
@@ -50,6 +51,11 @@ class WorkerAttendanceService
                 'siteManager',
                 'machineAssignment.machine',
             ]);
+    }
+
+    private function assignedSites(Worker $worker): BelongsToMany
+    {
+        return $worker->constructionSites()->where('construction_sites.company_id', $worker->company_id);
     }
 
     public function __construct(
@@ -71,7 +77,8 @@ class WorkerAttendanceService
 
     public function get(DailyLog $dailyLog, GetWorkerAttendancesData $data, Worker $worker): Collection
     {
-        $this->ensureCanRead($dailyLog, $worker);
+        abort_unless($dailyLog->company_id === $worker->company_id, 404);
+        abort_if($worker->isSiteManager() && ! $this->assignedSites($worker)->whereKey($dailyLog->construction_site_id)->exists(), 403);
 
         return (new WorkerAttendanceFilter($data))
             ->apply($this->query($dailyLog))
